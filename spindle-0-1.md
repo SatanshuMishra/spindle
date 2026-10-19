@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T11:51:56.541Z
+Updated: 2026-10-19T11:51:57.985Z
 Next ids: c5 D6 R3 S2
 
 ## Goal
@@ -20,9 +20,9 @@ Stage 3, round 6 of MSP spindle on branch mitosis/spindle at 2f186d3 (base feat/
 
 ## Next step
 
-When the round 6 validator returns, save its array as review/round-6/spindle.verdicts.json, run pipeline record and verdict, add the rounds.md line, then fix every confirmed advisory or go to Green.
+Run SHIP=1 ~/.mitosis/spindle/spindle-0-1/run.zsh --resume --proven-head spindle=<full sha of 2f60264>, read its JSON result, open the pull request with create_pull_request using mitosis's title and body, assign the owner, post review/spindle.comment.md, park the thread and report to the parent session.
 
-Needs: D2, D3, D4.
+Needs: D2, D5.
 
 ## Decisions in force
 
