@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T08:31:31.609Z
+Updated: 2026-10-19T08:32:07.064Z
 Next ids: c5 D3 R3 S2
 
 ## Goal
@@ -16,7 +16,7 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-The owner approved the read-back on 2026-10-19; the run is autonomous from here. Interphase phase 8 is done: the six Step tasks are written, the spec and items file rendered, and check_record, check_spec and check_items pass. Phase 9's single spec review is next.
+Pipeline stage 2, first mitosis build running in the background (log ~/.mitosis/spindle/spindle-0-1/build-1.log). The spec is handed off after its one review. The public remote SatanshuMishra/spindle exists, main holds the seed commit, and feat/spindle-0-1 holds the receipts config. The run home ~/.mitosis/spindle/spindle-0-1 holds CHARTER.md, run.zsh, dispatch.zsh, worker-rules.txt, items.json and receipts-answers.json. Run dir: ~/.mitosis/runs/spindle/spindle-0-1. Pipeline anchor: spindle-0-1 at /Users/satanshumishra/.mitosis/spindle/spindle-0-1, thread spindle-0-1: /Users/satanshumishra/.mitosis/spindle/spindle-0-1/run.zsh --plan-only
 
 ## Next step
 
