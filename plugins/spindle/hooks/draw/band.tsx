@@ -135,7 +135,7 @@ export async function drawBand(
   const dismiss = (
     <Button
       key="spindle-dismiss"
-      label="✕"
+      label={e.surface === 'desktop' ? 'Dismiss' : '✕'}
       plain
       role="dismiss"
       onPress={async () => {
