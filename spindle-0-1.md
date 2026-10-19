@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T10:09:08.110Z
+Updated: 2026-10-19T10:09:10.098Z
 Next ids: c5 D4 R3 S2
 
 ## Goal
