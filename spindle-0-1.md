@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T11:07:50.121Z
+Updated: 2026-10-19T11:08:02.427Z
 Next ids: c5 D5 R3 S2
 
 ## Goal
@@ -16,7 +16,7 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Stage 3, round 4 of MSP spindle on branch mitosis/spindle at 2cf784e (base feat/spindle-0-1, previous head 6a29a67). Every round 2 and round 3 blocker and advisory is fixed (M1 in accept.zsh with accept-unloaded.awk, proof review/round-2/mitosis-gate/gate_receipt.py; selecting check review/round-3/narrow-command-match/narrow-command-match.sh prints nothing). Round 4 verdict is loop (review/round-4/spindle.verdict.json): blocker C1 (groupEnd ignores quotes and brackets inside ${...} and $[...]) is of kind narrow command match, diagnosed requirement-wrong because spec 5.11 and its Assumption never bound what running a command means; the diagnosis (review/round-4/spindle.narrow-command-match.diagnosis.json, shell-oracle check review/round-4/narrow-command-match/narrow-command-match.sh) proposes the bound and a quote-aware recursive lexer prototype. Advisory C2 is fixed (0f76302, 89 pass). Amendment 2 through interphase:project is next. C9 keeps one atom per module because the engine refuses an atom imported from another file.
+Stage 3, round 4 of MSP spindle on branch mitosis/spindle at 2cf784e (base feat/spindle-0-1, previous head 6a29a67). Every round 2 and round 3 blocker and advisory is fixed (M1 in accept.zsh with accept-unloaded.awk, proof review/round-2/mitosis-gate/gate_receipt.py; selecting check review/round-3/narrow-command-match/narrow-command-match.sh prints nothing). Round 4 verdict is loop (review/round-4/spindle.verdict.json): blocker C1 (groupEnd ignores quotes and brackets inside ${...} and $[...]) is of kind narrow command match, diagnosed requirement-wrong because spec 5.11 and its Assumption never bound what running a command means; the diagnosis (review/round-4/spindle.narrow-command-match.diagnosis.json, shell-oracle check review/round-4/narrow-command-match/narrow-command-match.sh) proposes the bound and a quote-aware recursive lexer prototype. Advisory C2 is fixed (0f76302, 89 pass). Amendment 2 is handed off (D4: Step command-bound, MSP spindle-amend-2, criteria 5.11 and new 5.19 with the 133-row shell-oracle corpus test); its plan passed (plan id 6a2685d863d8) and its build is running from amend-2.zsh, logging to amend-2-build.log. C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
