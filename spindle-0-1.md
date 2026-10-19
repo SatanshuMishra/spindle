@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T11:51:57.985Z
+Updated: 2026-10-19T11:52:45.904Z
 Next ids: c5 D6 R3 S2
 
 ## Goal
@@ -9,10 +9,10 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Done when
 
-- [ ] c1 The mod passes claude plugin validate and type-checks
-- [ ] c2 claude plugin test covers stage inference and state.json parsing against fixtures shaped like real run homes
-- [ ] c3 The band and pane render against a fixture run
-- [ ] c4 A pull request is open, opened through the pull-request skill
+- [x] c1 The mod passes claude plugin validate and type-checks evidence: claude plugin validate passes in scripts/check.sh and tsc 5.6.3 exits 0 at 2f60264 (review/round-6/spindle.suite.txt); the clean-checkout slow check passed, with the type-check step skipped there per R2
+- [x] c2 claude plugin test covers stage inference and state.json parsing against fixtures shaped like real run homes evidence: claude plugin test passes 96 of 96 at 2f60264, including session-signals stage inference rows, run-files state.json rows and the 133-row command corpus
+- [x] c3 The band and pane render against a fixture run evidence: band.test.tsx and pane.test.tsx render the band and pane against fixture runs and pass (desktop band shows slug, lane and Review R1; desktop pane at Fix shows every section)
+- [x] c4 A pull request is open, opened through the pull-request skill evidence: https://github.com/SatanshuMishra/spindle/pull/1 opened through the GitHub MCP with mitosis's title and body, assigned to SatanshuMishra, review comment posted
 
 ## Where things stand
 
