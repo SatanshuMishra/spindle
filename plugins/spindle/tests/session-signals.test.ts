@@ -395,3 +395,13 @@ test('pipeline clean after an arithmetic shift is Done', async ($, on) => {
 
   expect(await status($)).toContain('stage clean round 0 finished yes')
 })
+
+test('pipeline clean on the line after an arithmetic shift is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'x=$((1<<2))\npipeline clean --repo /home/owner/work/api --slug rate-limit-api')
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})

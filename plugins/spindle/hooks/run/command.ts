@@ -8,10 +8,59 @@ const BLANK = /\s/
 const ASSIGNMENT = /^([A-Za-z_][A-Za-z0-9_]*)=([\s\S]*)$/
 const SHELLS = new Set(['zsh', 'bash', 'sh'])
 
+type Heredoc = { readonly delimiter: string; readonly stripsTabs: boolean }
+
+function heredocDelimiter(text: string, from: number): { readonly heredoc: Heredoc; readonly end: number } {
+  let index = from
+  const stripsTabs = text[index] === '-'
+  if (stripsTabs) index += 1
+  while (text[index] === ' ' || text[index] === '\t') index += 1
+  let delimiter = ''
+  let quote: string | null = null
+  for (; index < text.length; index += 1) {
+    const char = text[index]!
+    if (quote !== null) {
+      if (char === quote) quote = null
+      else delimiter += char
+      continue
+    }
+    if (char === "'" || char === '"') quote = char
+    else if (char === '\\' && index + 1 < text.length) delimiter += text[++index]!
+    else if (BLANK.test(char) || SEPARATORS.has(char) || char === '<' || char === '>') break
+    else delimiter += char
+  }
+  return { heredoc: { delimiter, stripsTabs }, end: index - 1 }
+}
+
+function skipHeredocBodies(text: string, newline: number, pending: readonly Heredoc[]): number {
+  let lineStart = newline + 1
+  for (const { delimiter, stripsTabs } of pending) {
+    while (lineStart <= text.length) {
+      const found = text.indexOf('\n', lineStart)
+      const lineEnd = found === -1 ? text.length : found
+      const line = text.slice(lineStart, lineEnd)
+      lineStart = lineEnd + 1
+      if ((stripsTabs ? line.replace(/^\t+/, '') : line) === delimiter) break
+    }
+  }
+  return lineStart - 1
+}
+
+function arithmeticEnd(text: string, open: number): number {
+  let depth = 0
+  for (let index = open; index < text.length; index += 1) {
+    if (text[index] === '(') depth += 1
+    else if (text[index] === ')') depth -= 1
+    if (depth === 0) return index
+  }
+  return -1
+}
+
 function shellWords(text: string): readonly (readonly string[])[] | null {
   const groups: string[][] = [[]]
   let word: string | null = null
   let quote: '"' | "'" | null = null
+  let pending: Heredoc[] = []
   const finishWord = () => {
     if (word !== null) groups[groups.length - 1]!.push(word)
     word = null
@@ -40,6 +89,32 @@ function shellWords(text: string): readonly (readonly string[])[] | null {
     if (char === "'" || char === '"') {
       quote = char
       word = word ?? ''
+      continue
+    }
+    if (char === '#' && word === null) {
+      const found = text.indexOf('\n', index)
+      index = (found === -1 ? text.length : found) - 1
+      continue
+    }
+    if (char === '(' && following === '(') {
+      const end = arithmeticEnd(text, index)
+      if (end === -1) return null
+      word = (word ?? '') + text.slice(index, end + 1)
+      index = end
+      continue
+    }
+    if (char === '<' && following === '<' && text[index + 2] !== '<') {
+      finishWord()
+      const { heredoc, end } = heredocDelimiter(text, index + 2)
+      pending = [...pending, heredoc]
+      index = end
+      continue
+    }
+    if (char === '\n' && pending.length > 0) {
+      finishWord()
+      groups.push([])
+      index = skipHeredocBodies(text, index, pending)
+      pending = []
       continue
     }
     if (SEPARATORS.has(char)) {
