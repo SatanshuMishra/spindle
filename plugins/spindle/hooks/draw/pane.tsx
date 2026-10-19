@@ -298,6 +298,9 @@ const pipsSpan = (count: number) => (count === 0 ? 0 : count * PIP_STEP - (PIP_S
 
 const pipsPerRow = (room: number) => Math.max(0, Math.floor((room + PIP_STEP - PIP) / PIP_STEP))
 
+const pipGrid = (count: number, perRow: number, top: number): Spot[] =>
+  Array.from({ length: count }, (_, i) => ({ x: (i % perRow) * PIP_STEP, y: top + Math.floor(i / perRow) * PIP_STEP }))
+
 function verdictLayout(maxW: number, round: RoundRow): VerdictLayout {
   const chipW = Math.min(maxW, textWidth(round.outcome, 11) + CHIP_PAD)
   const word = fitText(round.outcome, 11, chipW - CHIP_PAD)
@@ -307,14 +310,14 @@ function verdictLayout(maxW: number, round: RoundRow): VerdictLayout {
   if (beside >= 1) {
     const rows = Math.ceil(candidates / beside)
     const top = rows === 1 ? (CHIP_H - PIP) / 2 : 0
-    const pips = Array.from({ length: candidates }, (_, i) => ({ x: (i % beside) * PIP_STEP, y: top + Math.floor(i / beside) * PIP_STEP }))
+    const pips = pipGrid(candidates, beside, top)
     const chipX = pipsSpan(Math.min(candidates, beside)) + CHIP_GAP
     return { W: chipX + chipW, H: Math.max(CHIP_H, pipsSpan(rows)), chip: { x: chipX, y: 0, w: chipW, word }, pips }
   }
   const below = Math.max(1, pipsPerRow(maxW))
   const rows = Math.ceil(candidates / below)
   const top = CHIP_H + PIP_ROW_GAP
-  const pips = Array.from({ length: candidates }, (_, i) => ({ x: (i % below) * PIP_STEP, y: top + Math.floor(i / below) * PIP_STEP }))
+  const pips = pipGrid(candidates, below, top)
   return {
     W: Math.max(chipW, pipsSpan(Math.min(candidates, below))),
     H: top + pipsSpan(rows),
