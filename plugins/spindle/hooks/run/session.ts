@@ -1,5 +1,7 @@
 import type { EngineInterface } from 'claude-code'
 
+import { isObject, parseJson } from './state'
+
 export type RunLocation = {
   slug: string
   repo: string | null
@@ -11,9 +13,6 @@ export type RunLocation = {
 export type SessionFile = { mitosis: string; path: string }
 
 type RunHome = { path: string; anchor: unknown }
-
-const isObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
 
 const isRunHome = (value: unknown): value is RunHome => isObject(value) && typeof value.path === 'string'
 
@@ -27,17 +26,9 @@ export async function sessionFile($: EngineInterface): Promise<SessionFile | nul
   return { mitosis, path: `${mitosis}/sessions/${id}.json` }
 }
 
-function parse(text: string): unknown {
-  try {
-    return JSON.parse(text)
-  } catch {
-    return undefined
-  }
-}
-
 export function locate(text: string | null, mitosis: string): RunLocation | null {
   if (text === null) return null
-  const session = parse(text)
+  const session = parseJson(text)
   if (!isObject(session)) return null
   const homes = Array.isArray(session.run_homes) ? session.run_homes.filter(isRunHome) : []
   const anchored = homes.find(entry => entry.anchor === session.latest_anchor)

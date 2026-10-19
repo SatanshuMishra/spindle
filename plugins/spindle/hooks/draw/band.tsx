@@ -1,7 +1,8 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, RenderElement, RenderInput } from 'claude-code'
 
-import type { Lane, Role, RunView } from '../../types'
+import type { Role, RunView } from '../../types'
+import { LANE_NAME } from '../run/state'
 import { elapsed } from '../run/summary'
 import { CRAB_BOX, CRAB_CSS, colorOf, costumeOf, crab } from './crew'
 import { togglePane } from './pane'
@@ -14,8 +15,6 @@ const BAND_H = 22
 const BAR_H = 16
 const CELL = 3
 const TERMINAL_BAR = 18
-
-const LANE_NAME: Readonly<Record<Lane, string>> = { full: 'Full', standard: 'Standard' }
 
 type Worker = { role: Role; startedAt: number }
 

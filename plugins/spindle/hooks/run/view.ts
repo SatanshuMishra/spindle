@@ -1,22 +1,12 @@
 import { atom, read, update } from 'claude-code'
 import type { CoreEngineInterface } from 'claude-code'
 
-import type { RunView, Signals } from '../../types'
+import type { RunView } from '../../types'
 import { buildView, isSameRun } from './infer'
+import { NO_SIGNALS } from './state'
 import { changes } from './toasts'
 
 export type ViewDollar = Pick<CoreEngineInterface, 'state' | 'ui'>
-
-export const NO_SIGNALS: Signals = {
-  lane: null,
-  callStage: null,
-  isCleanDone: false,
-  firstCallAt: null,
-  agents: [],
-  isPullRequestRunning: false,
-  pulls: [],
-  costUsd: 0,
-}
 
 const filesState = atom({ plugin: 'spindle', key: 'files' } as const, null)
 const signalsState = atom({ plugin: 'spindle', key: 'signals' } as const, NO_SIGNALS)

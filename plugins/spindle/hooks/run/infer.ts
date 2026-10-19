@@ -1,12 +1,13 @@
 import type { FileFacts, MspRow, MspStatus, Outcome, RoundRow, RunView, Signals, Stage } from '../../types'
 import type { FileText, ReviewRound, RunFiles } from './home'
+import { isObject, parseJson } from './state'
+import type { Json } from './state'
 
 export const STAGES: readonly Stage[] = ['spec', 'build', 'review', 'fix', 'ship', 'integrate', 'clean']
 
 const OUTCOMES: readonly Outcome[] = ['green', 'loop', 'diagnose', 'blocked', 'hard-failure']
 const FAILED_LANE = new Set(['failed', 'blocked', 'merge-blocked'])
 
-type Json = Record<string, unknown>
 type Parsed<T> = { kind: 'absent' } | { kind: 'bad' } | { kind: 'ok'; value: T }
 
 type PlanMsp = { label: string }
@@ -24,17 +25,7 @@ type RunState = {
 
 type Verdict = { outcome: Outcome; blockers: number; advisories: number }
 
-const isObject = (value: unknown): value is Json => typeof value === 'object' && value !== null && !Array.isArray(value)
-
 const stringOr = <T>(value: unknown, fallback: T): string | T => (typeof value === 'string' ? value : fallback)
-
-function parseJson(text: string): unknown {
-  try {
-    return JSON.parse(text)
-  } catch {
-    return undefined
-  }
-}
 
 function parsed<T>(file: FileText, shape: (value: unknown) => T | null): Parsed<T> {
   if (file.kind === 'absent') return { kind: 'absent' }

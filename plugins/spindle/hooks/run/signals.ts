@@ -5,7 +5,8 @@ import type { AgentRow, Lane, Role, Signals, Stage } from '../../types'
 import { isPipelineClean, isRunScript, isShipping, simpleCommands } from './command'
 import { contextMax, contextTokens, stepCost } from './cost'
 import { STAGES, isRunStarted } from './infer'
-import { NO_SIGNALS, refresh } from './view'
+import { NO_SIGNALS } from './state'
+import { refresh } from './view'
 import type { ViewDollar } from './view'
 
 const MAX_AGENTS = 200

@@ -1,7 +1,8 @@
 import { atom, read } from 'claude-code'
 import type { EngineInterface, RenderInput } from 'claude-code'
 
-import type { AgentRow, Lane, MspRow, MspStatus, Outcome, Role, RoundRow, RunView } from '../../types'
+import type { AgentRow, MspRow, MspStatus, Outcome, Role, RoundRow, RunView } from '../../types'
+import { LANE_NAME } from '../run/state'
 import { NO_RUN, elapsed, modelName } from '../run/summary'
 import { ROLE_COLOR, colorOf, costumeOf, crab } from './crew'
 import type { Costume } from './crew'
@@ -34,8 +35,6 @@ const AGENT_H = 44
 const ROUND_H = 50
 const CONTEXT_W = 48
 const MONO = "ui-monospace,'SF Mono',Menlo,monospace"
-
-const LANE_WORD: Readonly<Record<Lane, string>> = { full: 'Full', standard: 'Standard' }
 
 const ROLE_NAME: Readonly<Record<Exclude<Role, 'plain'>, string>> = {
   captain: 'Captain',
@@ -79,7 +78,7 @@ type Working = {
   context: number
 }
 
-const laneWordOf = (view: RunView) => (view.lane === null ? null : `${LANE_WORD[view.lane]} lane`)
+const laneWordOf = (view: RunView) => (view.lane === null ? null : `${LANE_NAME[view.lane]} lane`)
 
 const headerAlt = (view: RunView) => {
   const lane = laneWordOf(view)
