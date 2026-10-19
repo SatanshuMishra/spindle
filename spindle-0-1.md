@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T07:56:02.962Z
+Updated: 2026-10-19T08:13:23.262Z
 Next ids: c5 D1 R1 S2
 
 ## Goal
@@ -16,11 +16,11 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Interphase interview under way, slug spindle-0-1: intent and round 1 are answered and recorded; the record holds 2 seams, 18 criteria and 6 Steps and passes check_record. Round 2 (Q26: two stacked pull requests, run-data then run-ui) awaits the owner.
+The owner approved the read-back on 2026-10-19; the run is autonomous from here. Interphase phase 8 is done: the six Step tasks are written, the spec and items file rendered, and check_record, check_spec and check_items pass. Phase 9's single spec review is next.
 
 ## Next step
 
-Record the Q26 answer as each Step's msp, run check_record --complete, then hold the phase 7 read-back with AskUserQuestion. After approval: create the public SatanshuMishra/spindle remote, seed main (LICENSE, .gitignore, README stub), and continue phases 8-10. Receipts answers are drafted in /var/folders/tz/b798spt96sjfyy924nf0cw4c0000gn/T/tmp.PlNLOGEUst; save them as <home>/receipts-answers.json once the run home exists.
+Dispatch interphase:spec-reviewer once (unattended), fix what would build the wrong thing, re-render and re-check, then phase 10 (glossary, ADR, tree_guard verify, record handed-off). Then pipeline stage 2: create the public SatanshuMishra/spindle remote, seed main (LICENSE, .gitignore, README stub), cut the FEATURE branch, save the receipts answers drafted in /var/folders/tz/b798spt96sjfyy924nf0cw4c0000gn/T/tmp.PlNLOGEUst as <home>/receipts-answers.json, write the run home files and build.
 
 ## Decisions in force
 
