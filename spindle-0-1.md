@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T11:32:25.169Z
+Updated: 2026-10-19T11:36:00.799Z
 Next ids: c5 D5 R3 S2
 
 ## Goal
@@ -16,11 +16,11 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Stage 3, round 5 of MSP spindle on branch mitosis/spindle at 1ae96ff (amendment 2 fast-forwarded in; base feat/spindle-0-1, previous head 2cf784e), 94 tests passing and tsc clean (review/round-5/spindle.suite.txt). Obligations cover criteria 5.1 to 5.19 with the Threats re-appended. The round 4 shell-oracle check now shows only the 7 expected misses plus the captured-output row the corpus marks as a run. Round 5 findings are in review/round-5/spindle.findings.json: S1 MEDIUM (a newline after && ends the list, so a multi-line && chain after pipeline clean never reaches Done) and LOW C1-C3, S2-S3; the validator is judging the 7 candidates (P1 carried, S1 new, five advisories). Fixes, pending its verdict: S1 keeps a newline after &&, || or | as a continuation; C1 backgrounds the whole and-or list; S2 ends a for header at do only as the second word or the first after ; or newline; C2 and S3 move accumulation into one named linear appender, cap substitution depth, and compute decidesStatus in one reverse pass; C3 extracts escapedEnd. C9 keeps one atom per module because the engine refuses an atom imported from another file.
+Stage 3, round 5 of MSP spindle on branch mitosis/spindle at 1ae96ff (amendment 2 merged; base feat/spindle-0-1, previous head 2cf784e), 94 tests passing and tsc clean. Obligations cover criteria 5.1 to 5.19 with the Threats re-appended. Round 5 verdict is diagnose (review/round-5/spindle.verdict.json): P1 is fixed; blocker S1 (kind clean status misread: a newline after && ends the list, so a multi-line && chain after pipeline clean never reaches Done) is out for diagnosis; advisories C2 (in-place push in parseScript) and C3 (duplicated escape loops and quote branches) are confirmed. Planned fix for S1: a newline right after &&, || or | continues the list. C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
-When both round 5 reviewers return, save their arrays as review/round-5/spindle.findings.json, run pipeline candidates, the validator if any, record, verdict and the rounds.md line.
+When the diagnosis returns, save it as review/round-5/spindle.clean-status-misread.diagnosis.json, record it with pipeline diagnosis, re-run pipeline verdict, add the round 5 rounds.md line, then fix S1 with a failing receipt test first plus advisories C2 and C3, and start round 6 with previous head 1ae96ff.
 
 Needs: D2, D3, D4.
 
