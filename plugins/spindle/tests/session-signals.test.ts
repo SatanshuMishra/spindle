@@ -346,3 +346,52 @@ test('a create_pull_request call that rejects leaves no Courier working', async 
   })
   expect((await band.find({ type: 'Text', text: /rate-limit-api/ }))?.text).toContain('0 agents')
 })
+
+test('a heredoc line naming pipeline clean during Review is not Done', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, "cat > notes.md <<'EOF'\npipeline clean ran after the merge\nEOF")
+
+  expect(await status($)).toContain('stage review round 1 finished no')
+})
+
+test('a heredoc line naming run.zsh during Spec is not Build', async ($, on) => {
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+
+  await bash($, "cat > notes.md <<'EOF'\n/home/owner/.mitosis/api/rate-limit-api/run.zsh --plan-only\nEOF")
+
+  expect(await status($)).toContain('stage spec round 0 finished no')
+})
+
+test('a comment naming pipeline clean during Review is not Done', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'true # later; pipeline clean')
+
+  expect(await status($)).toContain('stage review round 1 finished no')
+})
+
+test('pipeline clean after a heredoc holding an apostrophe is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, "cat > notes.md <<EOF\nthe owner's merge\nEOF\npipeline clean --repo /home/owner/work/api --slug rate-limit-api")
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})
+
+test('pipeline clean after an arithmetic shift is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'x=$((1<<2)); pipeline clean --repo /home/owner/work/api --slug rate-limit-api')
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})
