@@ -1,4 +1,4 @@
-import type { FileFacts, MspRow, MspStatus, Outcome, RoundRow, RunView, Signals, Stage } from '../../types'
+import type { FileFacts, MspRow, MspStatus, Outcome, RoundRow, RunIdentity, RunView, Signals, Stage } from '../../types'
 import type { FileText, ReviewRound, RunFiles } from './home'
 import { isObject, parseJson } from './state'
 import type { Json } from './state'
@@ -278,8 +278,6 @@ function withPull(msp: MspRow, signals: Signals): MspRow {
   if (pull === undefined) return msp
   return { ...msp, pr: `#${pull.number}`, status: msp.status === 'failed' ? 'failed' : 'pr' }
 }
-
-type RunIdentity = { readonly slug: string; readonly home: string | null }
 
 export const isSameRun = (one: RunIdentity, other: RunIdentity) => one.slug === other.slug && one.home === other.home
 

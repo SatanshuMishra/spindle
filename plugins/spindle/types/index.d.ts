@@ -58,6 +58,8 @@ export type AgentRow = {
 
 export type PullRow = { head: string; number: string }
 
+export type RunIdentity = { readonly slug: string; readonly home: string | null }
+
 export type Signals = {
   lane: Lane | null
   callStage: Stage | null
@@ -67,7 +69,7 @@ export type Signals = {
   isPullRequestRunning: boolean
   pulls: PullRow[]
   costUsd: number
-  finishedRun?: { slug: string; home: string | null } | null
+  finishedRun?: RunIdentity | null
 }
 
 export type RunView = {
