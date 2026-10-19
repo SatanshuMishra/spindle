@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: active
-Updated: 2026-10-19T20:29:09.714Z
+Updated: 2026-10-19T20:29:13.500Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -31,3 +31,7 @@ Record the user's intent-round answers (I1-I3, split) in docs/specs/spindle-ui-l
 - Pane: plugins/spindle/hooks/draw/pane.tsx
 - Inference: plugins/spindle/hooks/run/infer.ts
 - Stage rule under question: docs/adr/0004-stage-moves-forward.md
+- Spec working files: docs/specs/spindle-ui-legibility.decisions.md, .record.json, .guard.json
+- Mod API types: /private/tmp/claude-501/bundled-skills/2.1.299/18600ad4e74c675e67e3e88b787fb22d/plugin-authoring/types/claude-code.d.ts (ButtonProps, SvgProps.isInteractive, BoxProps.hover)
+- Pipeline event catalogue: ~/.claude/plugins/cache/pipeline/pipeline/0.8.0/docs/telemetry.md
+- Live reference run: ~/.mitosis/field-notes/mac-video-audio-and-recorder-ui (rounds.md, review/round-<n>/)
