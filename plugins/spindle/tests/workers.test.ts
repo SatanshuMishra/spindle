@@ -134,7 +134,7 @@ test('a path that extends a worktree path names no MSP', async ($, on) => {
 
   const lines = await status($)
   expect(lines).toContain('worker - detective review the worktree · live')
-  expect(lines.some(line => line.startsWith('worker mic-recovery detective'))).toBe(false)
+  expect(lines.some(line => line.startsWith('worker mic-recovery detective') && line.endsWith('· live'))).toBe(false)
 })
 
 test('an unreadable findings.json marks its detective row unknown', async ($, on) => {

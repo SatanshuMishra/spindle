@@ -18,6 +18,7 @@ export type Activity = {
   startedAt: number | null
   summary: readonly string[]
   kinds: readonly string[]
+  counts: string
 }
 
 export type MspRow = {
@@ -48,7 +49,7 @@ export type RoundRow = {
 export type RoundFiles = {
   n: number
   msp: string
-  findingSources: readonly { source: string; count: number }[]
+  findingSources: readonly { source: string; count: number }[] | null
   candidates: number | null
   diagnoses: readonly string[]
   smokes: readonly string[]
