@@ -441,3 +441,88 @@ test('a run script outside a run home is not Build', async ($, on) => {
 
   expect(await status($)).toContain('stage spec round 0 finished no')
 })
+
+test('pipeline clean on the line after a here-string is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'grep -c limiter <<< "$out"\npipeline clean --repo /home/owner/work/api --slug rate-limit-api')
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})
+
+test('the run script on the line after a here-string moves Spec to Build', async ($, on) => {
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+
+  await bash($, 'tr a b <<< x\n/home/owner/.mitosis/api/rate-limit-api/run.zsh --plan-only')
+
+  expect(await status($)).toContain('stage build round 0 finished no')
+})
+
+test('pipeline clean on the line after a dollar-bracket shift is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'echo $[1<<2]\npipeline clean --repo /home/owner/work/api --slug rate-limit-api')
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})
+
+test('pipeline clean after an ANSI-C quote holding an escaped quote is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, "echo $'the owner\\'s merge'\npipeline clean --repo /home/owner/work/api --slug rate-limit-api")
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})
+
+test('an ANSI-C quote holding a comment and pipeline clean is not Done', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, "echo $'\\' ; pipeline clean #'")
+
+  expect(await status($)).toContain('stage review round 1 finished no')
+})
+
+test('a cd inside a subshell does not make ./run.zsh a run script', async ($, on) => {
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+
+  await bash($, '(cd /home/owner/.mitosis/api/rate-limit-api); ./run.zsh --plan-only')
+
+  expect(await status($)).toContain('stage spec round 0 finished no')
+})
+
+test('an export inside a subshell does not ship the run script after it', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  await bash($, '(export SHIP=1); /home/owner/.mitosis/api/rate-limit-api/run.zsh --resume')
+
+  expect(await status($)).toContain('stage review round 1 finished no')
+})
+
+test('an unset SHIP before the run script is not Ship', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  await bash($, 'export SHIP=1; unset SHIP; /home/owner/.mitosis/api/rate-limit-api/run.zsh --resume')
+
+  expect(await status($)).toContain('stage review round 1 finished no')
+})
+
+test('a cd out of the run home through .. makes ./run.zsh not a run script', async ($, on) => {
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+
+  await bash($, 'cd /home/owner/.mitosis/api/rate-limit-api && cd ../../../work && ./run.zsh --plan-only')
+
+  expect(await status($)).toContain('stage spec round 0 finished no')
+})
