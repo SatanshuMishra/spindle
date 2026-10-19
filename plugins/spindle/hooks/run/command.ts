@@ -60,26 +60,30 @@ function groupEnd(text: string, open: number): number {
   return -1
 }
 
-type ShellGroup = { readonly words: string[]; readonly scope: number; isPiped: boolean }
+type ShellGroup = { readonly words: readonly string[]; readonly scope: number; readonly isPiped: boolean }
 
 type ShellScript = { readonly groups: readonly ShellGroup[]; readonly parents: readonly number[] }
 
 function shellWords(text: string): ShellScript | null {
   const parents: number[] = [-1]
+  const groups: ShellGroup[] = []
   let scope = 0
-  let isPipedNext = false
-  const groups: ShellGroup[] = [{ words: [], scope, isPiped: false }]
+  let words: string[] = []
+  let groupScope = scope
+  let isPipedIn = false
   let word: string | null = null
   let quote: '"' | "'" | "$'" | null = null
   let pending: Heredoc[] = []
   const finishWord = () => {
-    if (word !== null) groups[groups.length - 1]!.words.push(word)
+    if (word !== null) words.push(word)
     word = null
   }
-  const startGroup = () => {
+  const startGroup = (endsInPipe: boolean) => {
     finishWord()
-    groups.push({ words: [], scope, isPiped: isPipedNext })
-    isPipedNext = false
+    if (words.length > 0) groups.push({ words, scope: groupScope, isPiped: isPipedIn || endsInPipe })
+    words = []
+    groupScope = scope
+    isPipedIn = endsInPipe
   }
   for (let index = 0; index < text.length; index += 1) {
     const char = text[index]!
@@ -153,7 +157,7 @@ function shellWords(text: string): ShellScript | null {
       continue
     }
     if (char === '\n' && pending.length > 0) {
-      startGroup()
+      startGroup(false)
       index = skipHeredocBodies(text, index, pending)
       pending = []
       continue
@@ -161,22 +165,20 @@ function shellWords(text: string): ShellScript | null {
     if (char === '(') {
       parents.push(scope)
       scope = parents.length - 1
-      startGroup()
+      startGroup(false)
       continue
     }
     if (char === ')') {
       scope = Math.max(parents[scope]!, 0)
-      startGroup()
+      startGroup(false)
       continue
     }
     if (char === '|' && following !== '|' && text[index - 1] !== '|') {
-      groups[groups.length - 1]!.isPiped = true
-      isPipedNext = true
-      startGroup()
+      startGroup(true)
       continue
     }
     if (SEPARATORS.has(char)) {
-      startGroup()
+      startGroup(false)
       continue
     }
     if (BLANK.test(char)) {
@@ -186,8 +188,8 @@ function shellWords(text: string): ShellScript | null {
     word = (word ?? '') + char
   }
   if (quote !== null) return null
-  finishWord()
-  return { groups: groups.filter(group => group.words.length > 0), parents }
+  startGroup(false)
+  return { groups, parents }
 }
 
 type ShellContext = { readonly exported: Readonly<Record<string, string>>; readonly directory: string | null }
