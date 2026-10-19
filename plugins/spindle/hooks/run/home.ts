@@ -13,7 +13,9 @@ export type FileCache = Readonly<Record<string, CachedText>>
 export type ReviewRound = {
   n: number
   names: readonly string[]
+  times: Readonly<Record<string, number>>
   verdicts: Readonly<Record<string, FileText>>
+  findings: Readonly<Record<string, FileText>>
 }
 
 export type RunFiles = {
@@ -21,6 +23,7 @@ export type RunFiles = {
   homeEntries: readonly FsEntry[] | null
   rounds: readonly ReviewRound[]
   plan: FileText
+  planMtimeMs: number | null
   state: FileText
   laneNames: readonly string[]
   ledger: FileText
@@ -31,6 +34,7 @@ type Fetched = Wanted & { text: FileText }
 
 const ROUND_FOLDER = /^round-(\d+)$/
 const VERDICT = /^(.+)\.verdict\.json$/
+const FINDINGS = /^(.+)\.findings\.json$/
 
 export async function listing($: EngineInterface, path: string): Promise<readonly FsEntry[] | null> {
   try {
@@ -96,7 +100,16 @@ export async function readRunFiles(
   const { home, runDir, ledger } = location
   if (home === null || runDir === null || ledger === null) {
     return {
-      files: { location, homeEntries: null, rounds: [], plan: ABSENT, state: ABSENT, laneNames: [], ledger: ABSENT },
+      files: {
+        location,
+        homeEntries: null,
+        rounds: [],
+        plan: ABSENT,
+        planMtimeMs: null,
+        state: ABSENT,
+        laneNames: [],
+        ledger: ABSENT,
+      },
       cache: {},
     }
   }
@@ -109,27 +122,33 @@ export async function readRunFiles(
   ])
   const numbers = roundNumbers(reviewEntries)
   const roundEntries = await Promise.all(numbers.map(n => listing($, `${home}/review/round-${n}`)))
-  const verdictFiles = numbers.flatMap((n, i) =>
+  const roundFiles = numbers.flatMap((n, i) =>
     (roundEntries[i] ?? [])
-      .filter(entry => entry.kind === 'file' && VERDICT.test(entry.name))
+      .filter(entry => entry.kind === 'file' && (VERDICT.test(entry.name) || FINDINGS.test(entry.name)))
       .map(entry => ({ path: `${home}/review/round-${n}/${entry.name}`, mtimeMs: entry.mtimeMs })),
   )
   const planFile = fileIn(runEntries, runDir, 'plan.json')
   const stateFile = fileIn(runEntries, runDir, 'state.json')
   const ledgerFile = fileIn(ledgerEntries, parentOf(ledger), nameOf(ledger))
-  const wanted = [planFile, stateFile, ledgerFile, ...verdictFiles].filter((one): one is Wanted => one !== null)
+  const wanted = [planFile, stateFile, ledgerFile, ...roundFiles].filter((one): one is Wanted => one !== null)
   const fetched = await fetchChanged($, wanted, cache)
   const textOf = (file: Wanted | null): FileText =>
     file === null ? ABSENT : (fetched.find(one => one.path === file.path)?.text ?? ABSENT)
   const rounds = numbers.map((n, i) => {
     const entries = (roundEntries[i] ?? []).filter(entry => entry.kind === 'file')
-    const verdicts = Object.fromEntries(
-      entries
-        .map(entry => VERDICT.exec(entry.name)?.[1])
-        .filter((label): label is string => label !== undefined)
-        .map(label => [label, textOf({ path: `${home}/review/round-${n}/${label}.verdict.json`, mtimeMs: 0 })]),
-    )
-    return { n, names: entries.map(entry => entry.name), verdicts }
+    const byLabel = (pattern: RegExp) =>
+      Object.fromEntries(
+        entries
+          .filter(entry => pattern.test(entry.name))
+          .map(entry => [pattern.exec(entry.name)?.[1] ?? '', textOf({ path: `${home}/review/round-${n}/${entry.name}`, mtimeMs: 0 })]),
+      )
+    return {
+      n,
+      names: entries.map(entry => entry.name),
+      times: Object.fromEntries(entries.map(entry => [entry.name, entry.mtimeMs])),
+      verdicts: byLabel(VERDICT),
+      findings: byLabel(FINDINGS),
+    }
   })
   return {
     files: {
@@ -137,6 +156,7 @@ export async function readRunFiles(
       homeEntries,
       rounds,
       plan: textOf(planFile),
+      planMtimeMs: planFile?.mtimeMs ?? null,
       state: textOf(stateFile),
       laneNames: (laneEntries ?? []).filter(entry => entry.kind === 'file').map(entry => entry.name),
       ledger: textOf(ledgerFile),

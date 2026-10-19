@@ -139,6 +139,7 @@ export const agentSpawnSignals: Hook<'agent.spawn'> = async ($, e, next) => {
     role: roleOf(e.subagentType),
     type: e.subagentType,
     description: e.description,
+    prompt: e.prompt,
     model: started.model,
     startedAt: at,
     contextTokens: 0,
@@ -180,7 +181,7 @@ export const turnCompleteSignals: Hook<'turn.complete'> = async ($, e, next) => 
   if (agentId !== undefined) {
     await change($, signals => ({
       ...signals,
-      agents: signals.agents.map(agent => (agent.id === agentId ? { ...agent, isRunning: false } : agent)),
+      agents: signals.agents.map(agent => (agent.id === agentId ? { ...agent, isRunning: false, prompt: '' } : agent)),
     }))
   }
   return next(e)

@@ -4,6 +4,22 @@ export type MspStatus = 'planned' | 'building' | 'built' | 'review' | 'fixing' |
 
 export type Outcome = 'green' | 'loop' | 'diagnose' | 'blocked' | 'hard-failure' | 'unknown'
 
+export type ActivityKind = 'build' | 'round' | 'fix' | 'ship'
+
+export type RoundState = 'suite running' | 'reviewing' | 'validating' | 'diagnosing' | 'status unknown' | Exclude<Outcome, 'diagnose' | 'unknown'>
+
+export type Activity = {
+  kind: ActivityKind
+  round: number | null
+  name: string
+  words: string
+  state: RoundState | null
+  isRunning: boolean
+  startedAt: number | null
+  summary: readonly string[]
+  kinds: readonly string[]
+}
+
 export type MspRow = {
   label: string
   branch: string
@@ -15,6 +31,9 @@ export type MspRow = {
   round: number
   pr: string
   proof: { isRedSeen: boolean; isGreenSeen: boolean } | null
+  activities: readonly Activity[]
+  current: number
+  stage: Stage | 'unknown'
 }
 
 export type RoundRow = {
@@ -26,15 +45,36 @@ export type RoundRow = {
   outcome: Outcome
 }
 
+export type RoundFiles = {
+  n: number
+  msp: string
+  findingSources: readonly { source: string; count: number }[]
+  candidates: number | null
+  diagnoses: readonly string[]
+  smokes: readonly string[]
+}
+
+export type LaneFact = {
+  n: number
+  msp: string
+  tier: string
+  state: 'building' | 'done' | 'failed'
+}
+
 export type FileFacts = {
   slug: string
   repo: string | null
   home: string | null
   runDir: string | null
-  fileStage: Stage | 'unknown' | null
+  hasPlan: 'absent' | 'bad' | 'ok'
+  isStateBad: boolean
+  hasLighthouse: boolean
   highestRound: number
   msps: MspRow[]
   rounds: RoundRow[]
+  roundFiles: RoundFiles[]
+  lanes: LaneFact[]
+  worktrees: readonly { msp: string; path: string }[]
   buildingLanes: number
   buildingTier: string
   oldestMtimeMs: number | null
@@ -49,11 +89,25 @@ export type AgentRow = {
   role: Role
   type: string
   description: string
+  prompt: string
   model: string
   startedAt: number
   contextTokens: number
   contextMax: number
   isRunning: boolean
+}
+
+export type WorkerRole = Role | 'diagnosis' | 'smoke'
+
+export type WorkerRow = {
+  msp: string | null
+  role: WorkerRole
+  words: string
+  isLive: boolean
+  round: number | null
+  model: string | null
+  startedAt: number | null
+  contextShare: number | null
 }
 
 export type PullRow = { head: string; number: string }
@@ -84,6 +138,7 @@ export type RunView = {
   msps: MspRow[]
   rounds: RoundRow[]
   agents: AgentRow[]
+  workers: WorkerRow[]
   buildingLanes: number
   buildingTier: string
   costUsd: number
@@ -96,7 +151,8 @@ declare module 'claude-code' {
       files: FileFacts | null
       signals: Signals
       view: RunView | null
-      dismissedAt: Stage | 'unknown' | null
+      dismissedAt: string | null
+      selectedMsp: string | null
     }
   }
 }
