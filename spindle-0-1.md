@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T09:41:22.163Z
+Updated: 2026-10-19T09:41:38.627Z
 Next ids: c5 D4 R3 S2
 
 ## Goal
@@ -16,7 +16,7 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Pipeline stage 2, first mitosis build running in the background (log ~/.mitosis/spindle/spindle-0-1/build-1.log). The spec is handed off after its one review. The public remote SatanshuMishra/spindle exists, main holds the seed commit, and feat/spindle-0-1 holds the receipts config. The run home ~/.mitosis/spindle/spindle-0-1 holds CHARTER.md, run.zsh, dispatch.zsh, worker-rules.txt, items.json and receipts-answers.json. Run dir: ~/.mitosis/runs/spindle/spindle-0-1. Pipeline anchor: spindle-0-1 at /Users/satanshumishra/.mitosis/spindle/spindle-0-1, thread spindle-0-1: /Users/satanshumishra/.mitosis/spindle/spindle-0-1/run.zsh --plan-only
+Pipeline stage 3, round 1 fix pass for MSP spindle in worktree ~/.mitosis/runs/spindle/spindle-0-1/trees/spindle (branch mitosis/spindle, base feat/spindle-0-1, first build head 1e8876c). Fixed with receipt tests: C1, C2, C5, C4, S2, C6, C7, C9 (C9 keeps one atom per module, since the engine refuses an atom imported from another file); 65 tests pass, tsc and validate clean. C3 was requirement-wrong: amendment 1 (Step second-run, MSP spindle-amend-1, items docs/specs/spindle-0-1.amend-1.items.json) is building in the background (log ~/.mitosis/spindle/spindle-0-1/amend-1-build.log, run dir ~/.mitosis/runs/spindle/spindle-0-1-amend-1). The public remote SatanshuMishra/spindle exists, main holds the seed commit, and feat/spindle-0-1 holds the receipts config. The run home ~/.mitosis/spindle/spindle-0-1 holds CHARTER.md, run.zsh, dispatch.zsh, worker-rules.txt, items.json and receipts-answers.json. Run dir: ~/.mitosis/runs/spindle/spindle-0-1. Pipeline anchor: spindle-0-1 at /Users/satanshumishra/.mitosis/spindle/spindle-0-1, thread spindle-0-1: /Users/satanshumishra/.mitosis/spindle/spindle-0-1/run.zsh --plan-only
 
 ## Next step
 
