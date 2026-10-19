@@ -1,7 +1,7 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T08:30:21.189Z
-Next ids: c5 D2 R1 S2
+Updated: 2026-10-19T08:30:24.693Z
+Next ids: c5 D2 R3 S2
 
 ## Goal
 
@@ -20,13 +20,18 @@ The owner approved the read-back on 2026-10-19; the run is autonomous from here.
 
 ## Next step
 
-Dispatch interphase:spec-reviewer once (unattended), fix what would build the wrong thing, re-render and re-check, then phase 10 (glossary, ADR, tree_guard verify, record handed-off). Then pipeline stage 2: create the public SatanshuMishra/spindle remote, seed main (LICENSE, .gitignore, README stub), cut the FEATURE branch, save the receipts answers drafted in /var/folders/tz/b798spt96sjfyy924nf0cw4c0000gn/T/tmp.PlNLOGEUst as <home>/receipts-answers.json, write the run home files and build.
+Run ~/.mitosis/spindle/spindle-0-1/run.zsh --plan-only, then the first build, from the repository root on feat/spindle-0-1; then stage 3 review per MSP (run-data, run-ui).
+
+Needs: D1.
 
 ## Decisions in force
 
 - D1 Interphase hand-off: build spindle-0-1 as two stacked MSPs: Build now: run --plan-only, then the first build on feat/spindle-0-1 with the run home ~/.mitosis/spindle/spindle-0-1.
 
 ## Open risks
+
+- R1 CI is unproven: claude plugin test on a GitHub runner without a Claude login has never run. Bears on c1.
+- R2 Type-check runs only where the engine has laid its types beside the mod; check.sh skips it otherwise. Bears on c1.
 
 ## Settled, do not reopen
 
