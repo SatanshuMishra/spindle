@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: active
-Updated: 2026-10-19T21:16:47.199Z
+Updated: 2026-10-19T21:16:48.869Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -17,7 +17,7 @@ Grounding facts: the run stage sticks on Ship because a SHIP=1 call or any pushe
 
 ## Next step
 
-Record the owner's revision round 1 answers, rework the record and spec, rebuild the preview in spindle's existing look and open it with `open` in the default browser, then read back for approval.
+Get the owner's requested change to preview 2, update the spec and the preview to match, reopen the preview with `open` in the default browser, then read back for approval.
 
 ## Decisions in force
 
