@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T11:07:47.262Z
+Updated: 2026-10-19T11:07:50.121Z
 Next ids: c5 D5 R3 S2
 
 ## Goal
@@ -20,9 +20,9 @@ Stage 3, round 4 of MSP spindle on branch mitosis/spindle at 2cf784e (base feat/
 
 ## Next step
 
-When the diagnosis returns, save it as review/round-4/spindle.narrow-command-match.diagnosis.json, record it with pipeline diagnosis, re-run pipeline verdict, then fix C1 with receipt tests plus advisory C2 and start round 5 with previous head 2cf784e.
+Build amendment 2: run ~/.mitosis/spindle/spindle-0-1/amend-2.zsh --plan-only, then the build in the background, merge its branch into mitosis/spindle, re-run pipeline obligations with criteria plus 5.11 and 5.19, append the Threats again, and start review round 5 with previous head 2cf784e.
 
-Needs: D2, D3.
+Needs: D2, D3, D4.
 
 ## Decisions in force
 
