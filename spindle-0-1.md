@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T10:41:54.219Z
+Updated: 2026-10-19T10:42:56.858Z
 Next ids: c5 D4 R3 S2
 
 ## Goal
@@ -16,7 +16,7 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Stage 3, round 4 of MSP spindle on branch mitosis/spindle at 2cf784e (base feat/spindle-0-1, previous head 6a29a67). Every round 2 and round 3 blocker and advisory is fixed (M1 in accept.zsh with accept-unloaded.awk, proof review/round-2/mitosis-gate/gate_receipt.py; selecting check review/round-3/narrow-command-match/narrow-command-match.sh prints nothing). The round 4 suite shows 89 pass, check.sh and tsc exit 0; the security reviewer returned four LOW findings, saved in review/round-4/security.json (quotes inside ${...} close the group early, ./.. not normalised, case patterns and |& leak scope, unbounded scope recursion); the code reviewer is still running. C9 keeps one atom per module because the engine refuses an atom imported from another file.
+Stage 3, round 4 of MSP spindle on branch mitosis/spindle at 2cf784e (base feat/spindle-0-1, previous head 6a29a67). Every round 2 and round 3 blocker and advisory is fixed (M1 in accept.zsh with accept-unloaded.awk, proof review/round-2/mitosis-gate/gate_receipt.py; selecting check review/round-3/narrow-command-match/narrow-command-match.sh prints nothing). The round 4 suite shows 89 pass, check.sh and tsc exit 0; round 4 findings are in review/round-4/spindle.findings.json and spindle.md: C1 MEDIUM and S1 LOW (quotes and brackets inside ${...} and $[...] break groupEnd), C2 LOW (ShellGroup.isPiped mutated in place), C3 and S3 LOW (a case pattern's ) and |& leak scope), C4 and S2 LOW (.. in a program path not normalised), S4 LOW (unbounded scope recursion). The validator is judging the 9 candidates. C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
