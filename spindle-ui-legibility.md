@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: active
-Updated: 2026-10-19T20:26:07.583Z
+Updated: 2026-10-19T20:28:56.881Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -15,7 +15,7 @@ Not started.
 
 ## Next step
 
-Run the full-lane interphase interview for the redesign, after answering lighthouse readiness facts.
+Record the user's intent-round answers (I1-I3, split) in docs/specs/spindle-ui-legibility.decisions.md, then ask the first frontier round (seams, step model, band layout, pane drill-down, tooltips, ADR 0004 replacement).
 
 ## Decisions in force
 
