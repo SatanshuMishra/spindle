@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: active
-Updated: 2026-10-19T21:34:56.647Z
+Updated: 2026-10-19T21:35:02.503Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -11,7 +11,7 @@ Redesign spindle's band and Pipeline pane so they fit any width, explain every c
 
 ## Where things stand
 
-Full lane, interphase feature pathway, slug spindle-ui-legibility. The spec, record and items reflect the owner's revised design (spindle's crabs, dotted bar and rail kept; "Pipeline Insights" header; Working now lists typed worker rows filtered by the selected MSP; Review rounds removed; band swaps slug for a copy icon and bar for a stage pill when narrow), and all interphase checks pass. Preview 2 is built in spindle's own look and open in the owner's default browser. At its read-back the owner chose "Change something" without saying what; waiting for that change. Hand-off not yet done.
+Full lane, slug spindle-ui-legibility. The owner approved the read-back of preview 2; interphase handed off (record handed-off, ADR 0005 supersedes ADR 0004, glossary terms Activity, Round state and Worker in the checkout, uncommitted until Ship). Stage 2: FEATURE branch feat/spindle-ui-legibility cut at 3fd829b and pushed; run home ~/.mitosis/spindle/spindle-ui-legibility holds CHARTER.md, run.zsh, dispatch.zsh, worker-rules.txt, items.json and graph.json; plan-only gives three stacked MSPs (activity-model, band, pane), one Lane each. The first build has not started.
 
 Grounding facts: the run stage sticks on Ship because a SHIP=1 call or any pushed MSP sets it and ADR 0004 holds it; the pipeline run skill defines the round files spindle reads (.diff, .suite.txt, .findings.json, .verdicts.json, .verdict.json, .diagnosis.json), while .suite.run is ad hoc; every finding in all 112 verdict files on this machine has a short `kind` label; the pipeline event stream holds only round.verdict lines for the live fireplace run; the mod API has no Button tooltip prop but offers keyed-Box hover cards and `<title>` tooltips in an interactive Svg, and tests can mount at any width and press Buttons.
 
