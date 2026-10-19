@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: active
-Updated: 2026-10-19T20:28:56.881Z
+Updated: 2026-10-19T20:29:09.714Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -11,7 +11,9 @@ Redesign spindle's band and Pipeline pane so they fit any width, explain every c
 
 ## Where things stand
 
-Not started.
+Full lane, interphase feature pathway, slug spindle-ui-legibility. Interview open: intent round (goal, why, success, split into three MSPs inside spindle only) asked, awaiting the user's answers. Lighthouse readiness answered and clear.
+
+Grounding facts: the run stage sticks on Ship because a SHIP=1 call or any pushed MSP sets it and ADR 0004 holds it; round folders already carry per-step markers (.suite.run, .findings.json, .verdicts.json, .verdict.json, diagnoses) and each finding has a short `kind` label; the pipeline event stream holds only round.verdict lines for the live fireplace run; the mod API has no Button tooltip prop but offers keyed-Box hover cards and `<title>` tooltips in an interactive Svg, and tests can mount at any width and press Buttons.
 
 ## Next step
 
