@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
-Status: active
-Updated: 2026-10-19T11:52:58.853Z
+Status: parked
+Updated: 2026-10-19T11:53:02.150Z
 Next ids: c5 D6 R3 S2
 
 ## Goal
@@ -20,7 +20,7 @@ Shipped: MSP spindle is pushed on mitosis/spindle at 2f60264 (review round 6 gre
 
 ## Next step
 
-Run SHIP=1 ~/.mitosis/spindle/spindle-0-1/run.zsh --resume --proven-head spindle=<full sha of 2f60264>, read its JSON result, open the pull request with create_pull_request using mitosis's title and body, assign the owner, post review/spindle.comment.md, park the thread and report to the parent session.
+The owner reviews and merges https://github.com/SatanshuMishra/spindle/pull/1 into feat/spindle-0-1, then starts Integration by saying the MSP pull requests merged.
 
 Needs: D2, D5.
 
