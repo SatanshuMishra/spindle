@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T09:54:50.172Z
+Updated: 2026-10-19T09:56:24.401Z
 Next ids: c5 D4 R3 S2
 
 ## Goal
@@ -20,7 +20,7 @@ Stage 3, review round 2 for MSP spindle on branch mitosis/spindle at d6fe881 (ba
 
 ## Next step
 
-The security reviewer's round 2 array is saved at review/round-2/security.json (S1 MEDIUM heredoc and comment lines read as commands, S2 LOW unlistable folder read as absent). When the code-reviewer returns, collect its array, security.json and the amendment's inconclusive gate as M1 (evidence review/amend-1.gate-rerun.txt) into review/round-2/spindle.findings.json, then candidates, validator, record and verdict.
+When the round 2 validator returns, save its array as review/round-2/spindle.verdicts.json, then pipeline record and verdict for round 2. Round 2 findings (review/round-2/spindle.findings.json): C1 and S1 MEDIUM heredoc and comment lines read as commands, M1 HIGH amendment gate inconclusive (evidence review/amend-1.gate-rerun.txt), advisories C2, C3, C4, S2.
 
 Needs: D2, D3.
 
