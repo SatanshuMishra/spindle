@@ -95,7 +95,10 @@ export const toolCallSignals: Hook<'tool.call'> = async ($, e, next) => {
     firstCallAt: signals.firstCallAt ?? at,
     isPullRequestRunning: signals.isPullRequestRunning || signal.isPullRequest,
   }))
-  const ran = await next(e)
+  const ran = await next(e).catch(async (error: unknown) => {
+    if (signal.isPullRequest) await change($, signals => ({ ...signals, isPullRequestRunning: false }))
+    throw error
+  })
   if (signal.isClean && exitedClean(ran)) {
     await change($, signals => ({ ...signals, isCleanDone: true }))
   }
