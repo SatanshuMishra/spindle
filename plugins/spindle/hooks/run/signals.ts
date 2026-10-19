@@ -4,7 +4,7 @@ import type { Hook } from 'claude-code'
 import type { AgentRow, Lane, Role, Signals, Stage } from '../../types'
 import { isPipelineClean, isRunScript, isShipping, simpleCommands } from './command'
 import { contextMax, contextTokens, stepCost } from './cost'
-import { STAGES } from './infer'
+import { STAGES, isRunStarted } from './infer'
 import { NO_SIGNALS, refresh } from './view'
 import type { ViewDollar } from './view'
 
@@ -142,7 +142,7 @@ export const turnStepSignals: Hook<'turn.step'> = async function* ($, e, next) {
   if (usage === null) return result
   const model = usage.model || e.model
   const [signals, files] = await Promise.all([read($, signalsState), read($, filesState)])
-  const isRunKnown = signals.firstCallAt !== null || files !== null
+  const isRunKnown = isRunStarted(files, signals)
   const agentId = e.agentId
   await change($, current => ({
     ...current,

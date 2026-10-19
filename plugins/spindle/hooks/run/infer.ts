@@ -287,9 +287,11 @@ function withPull(msp: MspRow, signals: Signals): MspRow {
   return { ...msp, pr: `#${pull.number}`, status: msp.status === 'failed' ? 'failed' : 'pr' }
 }
 
+export const isRunStarted = (files: FileFacts | null, signals: Signals) =>
+  signals.callStage !== null || (files?.home ?? null) !== null
+
 export function buildView(files: FileFacts | null, signals: Signals, previous: RunView | null): RunView | null {
-  if (files === null) return null
-  if (files.home === null && signals.callStage === null) return null
+  if (files === null || !isRunStarted(files, signals)) return null
   const stage = stageOf(files, signals, previous)
   return {
     slug: files.slug,
