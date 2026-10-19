@@ -3,7 +3,7 @@ import { expect, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
 import { textWidth } from '../hooks/draw/text'
-import { NOW, build, fireplace, fix, review, spec } from './fixtures/runs'
+import { FH, NOW, build, fireplace, fix, review, spec, withFile } from './fixtures/runs'
 import { harness } from './harness'
 
 const FIRE_SLUG = 'mac-video-audio-and-recorder-ui'
@@ -396,4 +396,78 @@ test('build pane shows the Builder row and proof dots', async ($, on) => {
   const pane = await mountPane($, 'desktop')
   const proof = seenOf(await pane.find({ key: 'msp-proof-limiter-core' }))
   expect(proof.svgs[0]?.source ?? '').toContain('fill="#D0453F"')
+})
+
+test('a finished Judge row says its blocker and advisory counts in words', async ($, on) => {
+  await fireRun($, on)
+  const pane = await mountPane($, 'desktop', 100)
+  await press(pane, VIDEO)
+  const tree = await pane.drawn()
+  const judged = rowsOf(tree).find(row => row.seen.texts[0] === 'Judge' && roundIn(row) === 4)
+  const verdict = judged?.seen.svgs.find(svg => svg.source.includes('data-pip'))
+  const node = placedOf(tree)
+    .map(one => one.node)
+    .find(one => keyOf(one) === judged?.key)
+  const cards = placedOf(node)
+    .filter(one => one.isInCard && one.node.type === 'Text')
+    .map(one => textOf(one.node))
+
+  expect(verdict?.alt).toContain('1 blocker, 1 advisory')
+  expect(cards.some(line => line.includes('1 blocker, 1 advisory'))).toBe(true)
+})
+
+const MANY_FINDINGS = {
+  outcome: 'loop',
+  round: 4,
+  blockers: [{ id: 'B1', severity: 'blocker', kind: 'take lost on sound failure', location: 'Sources/Recorder/Session.swift:40', summary: 'lost take' }],
+  advisories: Array.from({ length: 20 }, (_, i) => ({
+    id: `A${i + 2}`,
+    severity: 'advisory',
+    kind: `advisory kind ${i + 2}`,
+    location: `Sources/Recorder/Session.swift:${50 + i}`,
+    summary: 'an advisory',
+  })),
+  diagnose: [],
+  blocked: [],
+}
+
+type Box = { x: number; y: number; w: number; h: number }
+
+const boxesOf = (source: string, pattern: RegExp): Box[] =>
+  [...source.matchAll(pattern)].map(match => {
+    const tag = match[0]
+    const number = (name: string) => Number(new RegExp(`\\s${name}="([-\\d.]+)"`).exec(tag)?.[1] ?? NaN)
+    return { x: number('x'), y: number('y'), w: number('width'), h: number('height') }
+  })
+
+const overlaps = (a: Box, b: Box) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
+
+test('a verdict never draws its squares under its chip', async ($, on) => {
+  const world = harness(on, withFile(fireplace, `${FH}/review/round-4/${VIDEO}.verdict.json`, MANY_FINDINGS, NOW - 60 * MIN), { now: NOW })
+  world.queueSpawn({ agentId: 'a-judge', model: 'claude-sonnet-5-5' })
+  await world.start($)
+  await spawn($, 'validator', `validate ${VIDEO}`)
+
+  for (const columns of [24, 30, 36, 46, 60, 100]) {
+    const pane = await mountPane($, 'desktop', columns)
+    await press(pane, VIDEO)
+    const pictures = seenOf(await pane.drawn()).allSvgs.filter(svg => svg.source.includes('data-pip'))
+    expect(pictures.length).toBeGreaterThan(0)
+    for (const picture of pictures) {
+      const height = Number(/height="([\d.]+)"/.exec(picture.source)?.[1] ?? NaN)
+      const pips = boxesOf(picture.source, /<rect data-pip[^>]*>/g)
+      const [chip] = boxesOf(picture.source, /<rect(?! data-pip)[^>]*rx="9"[^>]*>/g)
+      expect(chip).toBeDefined()
+      if (chip === undefined) continue
+      expect(chip.x).toBeGreaterThanOrEqual(0)
+      expect(chip.x + chip.w).toBeLessThanOrEqual(picture.width + 0.01)
+      for (const pip of pips) {
+        expect(pip.w).toBe(8)
+        expect(overlaps(pip, chip)).toBe(false)
+        expect(pip.x + pip.w).toBeLessThanOrEqual(picture.width + 0.01)
+        expect(pip.y + pip.h).toBeLessThanOrEqual(height + 0.01)
+      }
+    }
+    await pane.unmount()
+  }
 })
