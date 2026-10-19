@@ -69,8 +69,6 @@ type Span = { readonly from: number; readonly to: number }
 const nested = (records: readonly Parsed[]): readonly Parsed[] =>
   records.map(record => ({ ...record, isQuiet: true, isNested: true }))
 
-const closedAt = (end: number): Scan | null => (end === -1 ? null : { end, records: [] })
-
 function escapedEnd(text: string, from: number, closer: string): number {
   for (let index = from; index < text.length; index += 1) {
     if (text[index] === '\\') index += 1
@@ -122,11 +120,21 @@ function doubleQuoted(text: string, open: number, scope: Scope): Scan | null {
   return null
 }
 
-function quoteAt(text: string, index: number, scope: Scope): Scan | null | undefined {
+type Quote = Scan & { readonly value: string }
+
+const closedQuote = (end: number, value: (end: number) => string): Quote | null =>
+  end === -1 ? null : { end, records: [], value: value(end) }
+
+function quoteAt(text: string, index: number, scope: Scope): Quote | null | undefined {
   const char = text[index]
-  if (char === "'") return closedAt(text.indexOf("'", index + 1))
-  if (char === '"') return doubleQuoted(text, index, scope)
-  if (char === '$' && text[index + 1] === "'") return closedAt(escapedEnd(text, index + 2, "'"))
+  if (char === "'") return closedQuote(text.indexOf("'", index + 1), end => text.slice(index + 1, end))
+  if (char === '"') {
+    const scan = doubleQuoted(text, index, scope)
+    return scan === null ? null : { ...scan, value: unquotedDouble(text.slice(index + 1, scan.end)) }
+  }
+  if (char === '$' && text[index + 1] === "'") {
+    return closedQuote(escapedEnd(text, index + 2, "'"), end => text.slice(index + 2, end).replace(/\\([\s\S])/g, '$1'))
+  }
   return undefined
 }
 
@@ -166,12 +174,6 @@ function backquoted(text: string, open: number, scope: Scope): Scan | null {
 }
 
 const unquotedDouble = (inner: string) => inner.replace(/\\\n/g, '').replace(/\\([$`"\\])/g, '$1')
-
-function quotedValue(text: string, open: number, end: number): string {
-  if (text[open] === "'") return text.slice(open + 1, end)
-  if (text[open] === '"') return unquotedDouble(text.slice(open + 1, end))
-  return text.slice(open + 2, end).replace(/\\([\s\S])/g, '$1')
-}
 
 function nextNonBlank(text: string, from: number): number {
   let index = from
@@ -444,7 +446,7 @@ function parseScript(text: string, from: number, closer: ')' | null, scope: Scop
     if (quote === null) return null
     if (quote !== undefined) {
       if (!top().isDefinition) records = [...records, ...quote.records]
-      append(text.slice(index, quote.end + 1), quotedValue(text, index, quote.end))
+      append(text.slice(index, quote.end + 1), quote.value)
       index = quote.end
       continue
     }
