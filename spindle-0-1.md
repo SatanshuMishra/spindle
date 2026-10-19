@@ -1,7 +1,7 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T06:37:15.338Z
-Next ids: c5 D1 R1 S1
+Updated: 2026-10-19T07:12:44.785Z
+Next ids: c5 D1 R1 S2
 
 ## Goal
 
@@ -27,6 +27,8 @@ Record the owner's intent answers in docs/specs/spindle-0-1.decisions.md, then a
 ## Open risks
 
 ## Settled, do not reopen
+
+- S1 The visual design on the Spindle design page (band, pane, crew costumes, art style) is approved by the owner and is not an interview question.
 
 ## Where the details live
 
