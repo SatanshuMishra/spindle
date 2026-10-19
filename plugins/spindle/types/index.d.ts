@@ -8,8 +8,7 @@ export type ActivityKind = 'build' | 'round' | 'fix' | 'ship'
 
 export type RoundState = 'suite running' | 'reviewing' | 'validating' | 'diagnosing' | 'status unknown' | Exclude<Outcome, 'diagnose' | 'unknown'>
 
-export type Activity = {
-  kind: ActivityKind
+type ActivityFacts = {
   round: number | null
   name: string
   words: string
@@ -18,8 +17,11 @@ export type Activity = {
   startedAt: number | null
   summary: readonly string[]
   kinds: readonly string[]
-  counts: string
 }
+
+export type RoundActivity = ActivityFacts & { kind: 'round'; counts: string }
+
+export type Activity = RoundActivity | (ActivityFacts & { kind: Exclude<ActivityKind, 'round'> })
 
 export type MspRow = {
   label: string
@@ -33,7 +35,7 @@ export type MspRow = {
   pr: string
   proof: { isRedSeen: boolean; isGreenSeen: boolean } | null
   activities: readonly Activity[]
-  current: number
+  current: number | null
   stage: Stage | 'unknown'
 }
 

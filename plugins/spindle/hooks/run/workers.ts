@@ -1,4 +1,4 @@
-import type { Activity, AgentRow, FileFacts, LaneFact, MspRow, RoundFiles, RoundState, Signals, WorkerRow } from '../../types'
+import type { AgentRow, FileFacts, LaneFact, MspRow, RoundActivity, RoundFiles, RoundState, Signals, WorkerRow } from '../../types'
 import { plural } from './summary'
 
 const VERDICT_STATES: ReadonlySet<RoundState> = new Set(['green', 'loop', 'blocked', 'hard-failure', 'diagnosing'])
@@ -73,7 +73,7 @@ const roundRow = (files: RoundFiles, role: WorkerRow['role'], words: string): Wo
   round: files.n,
 })
 
-function judgeWords(activity: Activity): string {
+function judgeWords(activity: RoundActivity): string {
   const outcome = activity.state === 'diagnosing' ? 'diagnose' : (activity.state ?? '')
   return [outcome, activity.counts, activity.kinds[0]].filter((part): part is string => part !== undefined && part !== '').join(' · ')
 }
@@ -83,7 +83,7 @@ const isJudged = (state: RoundState | null) => isVerdictState(state) || state ==
 function roundRows(files: RoundFiles, msps: readonly MspRow[]): WorkerRow[] {
   const verdict = msps
     .find(msp => msp.label === files.msp)
-    ?.activities.find(activity => activity.kind === 'round' && activity.round === files.n && isJudged(activity.state))
+    ?.activities.find((activity): activity is RoundActivity => activity.kind === 'round' && activity.round === files.n && isJudged(activity.state))
   const detectives =
     files.findingSources === null
       ? [roundRow(files, 'detective', 'findings status unknown')]
