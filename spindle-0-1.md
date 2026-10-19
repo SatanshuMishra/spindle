@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T10:06:03.054Z
+Updated: 2026-10-19T10:09:08.110Z
 Next ids: c5 D4 R3 S2
 
 ## Goal
@@ -16,7 +16,7 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Stage 3, round 2 of MSP spindle on branch mitosis/spindle at d6fe881 (base feat/spindle-0-1). Round 2 verdict is diagnose: every round 1 blocker is fixed; blockers C1 (heredoc body lines read as commands, kind loose command match) and M1 (amendment 1 gate inconclusive, kind mitosis gate, evidence review/amend-1.gate-rerun.txt); advisories C2 (SHIP via export or env and cd then ./run.zsh missed) and C4 (run identity declared twice). Both diagnoses are running. C9 keeps one atom per module because the engine refuses an atom imported from another file.
+Stage 3, round 2 of MSP spindle on branch mitosis/spindle at d6fe881 (base feat/spindle-0-1). Round 2 verdict is diagnose: every round 1 blocker is fixed; blockers C1 (heredoc body lines read as commands, kind loose command match) and M1 (amendment 1 gate inconclusive, kind mitosis gate, evidence review/amend-1.gate-rerun.txt); advisories C2 (SHIP via export or env and cd then ./run.zsh missed) and C4 (run identity declared twice). Loose command match is diagnosed fixable and recorded (teach shellWords heredoc bodies and # comments, leaving << inside ((...)) alone; selecting probe review/round-2/loose-command-match.select.ts); the mitosis gate diagnosis is running. C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
