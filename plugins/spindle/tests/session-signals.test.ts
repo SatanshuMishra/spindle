@@ -278,3 +278,22 @@ test('model steps before any run add no cost', async ($, on) => {
 
   expect(await status($)).toContain('cost 0.0000')
 })
+
+test('a create_pull_request call that rejects leaves no Courier working', async ($, on) => {
+  on('tool.call', { tool: 'mcp__github__create_pull_request' }, () => {
+    throw new Error('github said 422')
+  })
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+  await $.tool
+    .call({ tool: 'mcp__github__create_pull_request', head: 'mitosis/limiter-core', base: 'main', title: 't', body: '' } as never)
+    .catch(() => null)
+
+  const band = await $.ui.mount({
+    plugin: 'spindle',
+    surface: 'terminal',
+    component: 'AbovePrompt',
+    props: { hasSurvey: false, isWorking: false, maxRows: 4, bodyColumns: 100, scroll: { offset: 0, bodyRows: 4 }, view: {} },
+  })
+  expect((await band.find({ type: 'Text', text: /rate-limit-api/ }))?.text).toContain('0 agents')
+})
