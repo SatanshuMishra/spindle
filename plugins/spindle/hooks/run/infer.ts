@@ -5,6 +5,7 @@ import type {
   MspRow,
   MspStatus,
   Outcome,
+  RoundActivity,
   RoundFiles,
   RoundRow,
   RoundState,
@@ -187,7 +188,7 @@ function roundRead(round: ReviewRound, label: string, verdictOf: (round: ReviewR
   return { ...base, state: 'suite running', verdict: null }
 }
 
-function roundActivity(read: RoundRead): Activity {
+function roundActivity(read: RoundRead): RoundActivity {
   const isOpen = OPEN_STATES.has(read.state)
   return {
     kind: 'round',
@@ -219,7 +220,6 @@ function fixActivity(read: RoundRead, verdict: Verdict, isFixed: boolean): Activ
     startedAt: read.verdictAt,
     summary: [`Fixing ${countWords(verdict)}`, ...findingLines(verdict.blockers, [])],
     kinds: [...verdict.blockers, ...verdict.advisories],
-    counts: countWords(verdict),
   }
 }
 
@@ -233,7 +233,6 @@ const shipActivity = (words: string, summary: readonly string[], kinds: readonly
   startedAt: null,
   summary,
   kinds,
-  counts: '',
 })
 
 const pullShip = (pr: string) => shipActivity(`pull request ${pr}`, [`Pull request ${pr} open`])
@@ -285,7 +284,6 @@ function buildActivity(build: BuildFacts, hasRounds: boolean): Activity {
     startedAt: build.startedAt,
     summary: [`${build.lanesDone} of ${build.lanesTotal} ${lanes} done`, ...gate, ...failed.map(lane => `Lane ${lane.n} failed`)].slice(0, 4),
     kinds: [],
-    counts: '',
   }
 }
 
@@ -401,7 +399,7 @@ export function inferFacts(files: RunFiles): FileFacts {
           .filter((lane): lane is LaneFact => lane !== null && lane.msp !== '')
   const readsOf = (label: string) =>
     files.rounds.map(round => roundRead(round, label, verdictOf)).filter((read): read is RoundRead => read !== null)
-  const msps: MspRow[] = labels.map((label, i) => {
+  const msps = labels.map((label, i): MspRow => {
     const own = lanes.filter(lane => lane.msp === i)
     const msp = runState?.msps[String(i)]
     const tree = runState?.worktrees.find(one => one.msp === i)
@@ -423,37 +421,34 @@ export function inferFacts(files: RunFiles): FileFacts {
           }
     const lanesDone = own.filter(lane => entryOf(lane.n) !== undefined).length
     const pr = msp?.ship?.pullRequest ?? ''
-    const activities =
-      state.kind === 'bad'
-        ? roundActivities(readsOf(label))
-        : activitiesOf(
-            {
-              lanes: laneFacts.filter(lane => lane.msp === label),
-              lanesDone,
-              lanesTotal: own.length,
-              isCommitted: msp?.state === 'committed',
-              proof,
-              startedAt: files.planMtimeMs,
-            },
-            readsOf(label),
-            pr,
-          )
-    const current = state.kind === 'bad' ? -1 : activities.length - 1
-    return {
+    const facts = {
       label,
       branch: tree?.branch ?? `mitosis/${label}`,
       shipBranch: msp?.ship?.branch ?? null,
-      status: state.kind === 'bad' ? 'unknown' : known.status,
       lanesDone,
       lanesTotal: own.length,
       tier: own[0]?.tier ?? '',
       round: known.round,
       pr,
       proof,
-      activities,
-      current,
-      stage: state.kind === 'bad' ? 'unknown' : stageOfActivity(activities[current]),
     }
+    if (state.kind === 'bad') {
+      return { ...facts, status: 'unknown', activities: roundActivities(readsOf(label)), current: null, stage: 'unknown' }
+    }
+    const activities = activitiesOf(
+      {
+        lanes: laneFacts.filter(lane => lane.msp === label),
+        lanesDone,
+        lanesTotal: own.length,
+        isCommitted: msp?.state === 'committed',
+        proof,
+        startedAt: files.planMtimeMs,
+      },
+      readsOf(label),
+      pr,
+    )
+    const current = activities.length - 1
+    return { ...facts, status: known.status, activities, current, stage: stageOfActivity(activities[current]) }
   })
   const building = laneFacts.filter(lane => lane.state === 'building')
   const candidates = candidatesOf(files.ledger, location.slug)
