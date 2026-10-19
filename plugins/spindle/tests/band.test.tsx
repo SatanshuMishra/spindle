@@ -408,7 +408,7 @@ test('the dismiss button is the X glyph on both surfaces', async ($, on) => {
 })
 
 test('every glyph control is named in words', async ($, on) => {
-  await fireRun($, on)
+  await fireRun($, on, true)
 
   const narrow = await seenAt($, 'desktop', 60)
   expect(narrow.buttons.find(button => button.key === 'spindle-name')).toEqual({ key: 'spindle-name', drawn: '◉', name: 'Copy the thread name' })

@@ -23,6 +23,9 @@ const DOT = '●'
 const ICON = '◉'
 const DISMISS = '✕'
 const DISMISS_HINT = 'Hide until an MSP moves to a new activity'
+const ICON_NAME = 'Copy the thread name'
+const COUNT_NAME = 'Show the Pipeline pane'
+const DISMISS_NAME = 'Hide the band'
 
 type Worker = { role: Role; startedAt: number }
 
@@ -64,7 +67,7 @@ const nameHintOf = (view: RunView) => {
   return lane === null ? view.slug : `${view.slug} · ${lane} lane`
 }
 
-const countHintOf = (working: number) => `Show the Pipeline pane · ${working} working now`
+const countHintOf = (working: number) => `${COUNT_NAME} · ${working} working now`
 
 const mspLinesOf = (view: RunView, now: number): readonly string[] =>
   view.msps.map(msp => {
@@ -182,22 +185,30 @@ function controlsOf($: EngineInterface, ui: BandElements, view: RunView): Contro
     icon: hint(
       ui,
       'spindle-name-hint',
-      <Button key="spindle-name" label={ICON} plain onPress={press => void $.ui.copy({ text: view.slug, surface: press.surface })} />,
+      <Button key="spindle-name" label={ICON_NAME} plain onPress={press => void $.ui.copy({ text: view.slug, surface: press.surface })}>
+        {ICON}
+      </Button>,
       [nameHintOf(view)],
     ),
-    count: <Button key="spindle-crew" label={`×${workingOf(view).length}`} plain onPress={() => void togglePane($)} />,
+    count: (
+      <Button key="spindle-crew" label={COUNT_NAME} plain onPress={() => void togglePane($)}>
+        {`×${workingOf(view).length}`}
+      </Button>
+    ),
     dismiss: hint(
       ui,
       'spindle-dismiss-hint',
       <Button
         key="spindle-dismiss"
-        label={DISMISS}
+        label={DISMISS_NAME}
         plain
         role="dismiss"
         onPress={async () => {
           await update($, dismissedState, () => activitySignature(view))
         }}
-      />,
+      >
+        {DISMISS}
+      </Button>,
       [DISMISS_HINT],
     ),
   }
