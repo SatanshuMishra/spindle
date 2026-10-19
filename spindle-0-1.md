@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T11:42:00.580Z
+Updated: 2026-10-19T11:43:18.320Z
 Next ids: c5 D5 R3 S2
 
 ## Goal
@@ -16,11 +16,11 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Stage 3, round 6 of MSP spindle on branch mitosis/spindle at 2f186d3 (base feat/spindle-0-1, previous head 1ae96ff), 96 tests passing and tsc clean. Every round 5 blocker and advisory is fixed: S1 (kind clean status misread, diagnosis review/round-5/spindle.clean-status-misread.diagnosis.json, selecting check review/round-5/clean-status-misread/select.ts prints nothing), C2 and C3. Obligations cover criteria 5.1 to 5.19 with the Threats. C9 keeps one atom per module because the engine refuses an atom imported from another file.
+Stage 3, round 6 of MSP spindle on branch mitosis/spindle at 2f186d3 (base feat/spindle-0-1, previous head 1ae96ff), 96 tests passing and tsc clean. Every round 5 blocker and advisory is fixed: S1 (kind clean status misread, diagnosis review/round-5/spindle.clean-status-misread.diagnosis.json, selecting check review/round-5/clean-status-misread/select.ts prints nothing), C2 and C3. Round 6 diff, suite (96 pass, tsc clean) and briefs are in review/round-6; code and security reviewers are running. Obligations cover criteria 5.1 to 5.19 with the Threats. C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
-Write review/round-6 diff and suite at 2f186d3, then run code and security reviewers with previous head 1ae96ff, earlier findings rounds 1 to 5 and diagnoses round-5 clean-status-misread, then candidates, validator, record, verdict and the rounds.md line.
+When both round 6 reviewers return, save their arrays as review/round-6/spindle.findings.json, then run candidates, the validator if any, record, verdict and the rounds.md line.
 
 Needs: D2, D3, D4.
 
