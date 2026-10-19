@@ -47,6 +47,7 @@ export function harness(on: On, initial: Fixture | null, options: HarnessOptions
     closed: readonly string[]
     panes: readonly UiPane[]
     toasts: readonly string[]
+    copies: readonly string[]
     writes: readonly Recorded[]
     bash: readonly { match: string; exitCode: number }[]
     tools: Readonly<Record<string, unknown>>
@@ -60,6 +61,7 @@ export function harness(on: On, initial: Fixture | null, options: HarnessOptions
     closed: [],
     panes: [],
     toasts: [],
+    copies: [],
     writes: [],
     bash: [],
     tools: {},
@@ -115,6 +117,10 @@ export function harness(on: On, initial: Fixture | null, options: HarnessOptions
     change({ toasts: [...world.toasts, e.text] })
     return { value: undefined }
   })
+  on('ui.copy', (_$, e) => {
+    change({ copies: [...world.copies, e.text] })
+    return { value: { isCopied: true as const } }
+  })
 
   on('fs.write', (_$, e) => {
     record({ op: 'fs.write', detail: e.path })
@@ -159,6 +165,7 @@ export function harness(on: On, initial: Fixture | null, options: HarnessOptions
     opened: () => world.opened,
     closed: () => world.closed,
     toasts: () => world.toasts,
+    copies: () => world.copies,
     writes: () => world.writes,
     answerBash: (match: string, exitCode: number) => change({ bash: [...world.bash, { match, exitCode }] }),
     answerTool: (tool: string, result: unknown) => change({ tools: { ...world.tools, [tool]: result } }),
