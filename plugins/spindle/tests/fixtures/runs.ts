@@ -284,6 +284,11 @@ export const otherThread = fixture({
   [SF]: file(sessionFile([{ path: H, anchor: ANCHOR }], ANCHOR, 'quota-api'), NOW - 48 * MIN),
 })
 
+export const cleaned = fixture({
+  [SF]: integrate.files[SF] as FixtureFile,
+  [L]: integrate.files[L] as FixtureFile,
+})
+
 export const withFile = (base: Fixture, path: string, value: unknown, mtimeMs: number): Fixture =>
   fixture({ ...base.files, [path]: file(value, mtimeMs) })
 

@@ -40,6 +40,14 @@ export async function listing($: EngineInterface, path: string): Promise<readonl
   }
 }
 
+export async function isGone($: EngineInterface, path: string): Promise<boolean> {
+  try {
+    return !(await $.fs.exists(path))
+  } catch {
+    return false
+  }
+}
+
 async function readText($: EngineInterface, path: string): Promise<FileText> {
   try {
     const text = await $.fs.read(path)
