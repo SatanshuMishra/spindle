@@ -2,6 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { Hook } from 'claude-code'
 
 import type { AgentRow, Lane, Role, Signals, Stage } from '../../types'
+import { isPipelineClean, isRunScript, isShipping, simpleCommands } from './command'
 import { contextMax, contextTokens, stepCost } from './cost'
 import { STAGES } from './infer'
 import { NO_SIGNALS, refresh } from './view'
@@ -38,6 +39,14 @@ function laneOf(args: string): Lane | null {
   return null
 }
 
+function bashSignal(text: string): CallSignal {
+  const commands = simpleCommands(text) ?? []
+  if (commands.some(isPipelineClean)) return { ...NO_CALL, stage: 'clean', isClean: true }
+  const runs = commands.filter(isRunScript)
+  if (runs.length === 0) return NO_CALL
+  return { ...NO_CALL, stage: runs.some(isShipping) ? 'ship' : 'build' }
+}
+
 function callSignal(tool: string, input: Readonly<Record<string, unknown>>): CallSignal {
   if (tool === 'Skill') {
     const skill = textOf(input.skill)
@@ -46,14 +55,7 @@ function callSignal(tool: string, input: Readonly<Record<string, unknown>>): Cal
     if (skill === 'lighthouse:test') return { ...NO_CALL, stage: 'integrate' }
     return NO_CALL
   }
-  if (tool === 'Bash') {
-    const command = textOf(input.command)
-    if (command.includes('pipeline clean')) return { ...NO_CALL, stage: 'clean', isClean: true }
-    if (command.includes('/.mitosis/') && command.includes('/run.zsh')) {
-      return { ...NO_CALL, stage: command.includes('SHIP=1') ? 'ship' : 'build' }
-    }
-    return NO_CALL
-  }
+  if (tool === 'Bash') return bashSignal(textOf(input.command))
   if (tool.endsWith('create_pull_request')) return { ...NO_CALL, stage: 'ship', isPullRequest: true }
   return NO_CALL
 }
