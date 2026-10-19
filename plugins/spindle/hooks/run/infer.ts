@@ -267,7 +267,7 @@ function stageOf(files: FileFacts, signals: Signals, previous: RunView | null): 
         : call === null
           ? files.fileStage
           : laterOf(files.fileStage, call)
-  if (previous === null || previous.slug !== files.slug || previous.stage === 'unknown' || merged === 'unknown') {
+  if (previous === null || !isSameRun(previous, files) || previous.stage === 'unknown' || merged === 'unknown') {
     return merged
   }
   const isBehind = STAGES.indexOf(previous.stage) > STAGES.indexOf(merged)
@@ -287,6 +287,10 @@ function withPull(msp: MspRow, signals: Signals): MspRow {
   return { ...msp, pr: `#${pull.number}`, status: msp.status === 'failed' ? 'failed' : 'pr' }
 }
 
+type RunIdentity = { readonly slug: string; readonly home: string | null }
+
+export const isSameRun = (one: RunIdentity, other: RunIdentity) => one.slug === other.slug && one.home === other.home
+
 export const isRunStarted = (files: FileFacts | null, signals: Signals) =>
   signals.callStage !== null || (files?.home ?? null) !== null
 
@@ -296,6 +300,7 @@ export function buildView(files: FileFacts | null, signals: Signals, previous: R
   return {
     slug: files.slug,
     repo: files.repo,
+    home: files.home,
     stage,
     round: stage === 'review' || stage === 'fix' || stage === 'unknown' ? files.highestRound : 0,
     isFinished: signals.isCleanDone,

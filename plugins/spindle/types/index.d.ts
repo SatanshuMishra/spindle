@@ -72,6 +72,7 @@ export type Signals = {
 export type RunView = {
   slug: string
   repo: string | null
+  home: string | null
   stage: Stage | 'unknown'
   round: number
   isFinished: boolean

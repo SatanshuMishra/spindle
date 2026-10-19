@@ -1,5 +1,6 @@
 import type { MspRow, RoundRow, RunView } from '../../types'
 import { stageInfo } from '../draw/text'
+import { isSameRun } from './infer'
 
 const stageWord = (view: RunView) => (view.isFinished ? 'Done' : (stageInfo(view.stage)?.name ?? null))
 
@@ -25,6 +26,6 @@ const pullToasts = (before: RunView, after: RunView): string[] =>
     .map(pullToast)
 
 export function changes(before: RunView | null, after: RunView): string[] {
-  if (before === null || before.slug !== after.slug) return []
+  if (before === null || !isSameRun(before, after)) return []
   return [...stageToasts(before, after), ...roundToasts(before, after), ...pullToasts(before, after)]
 }
