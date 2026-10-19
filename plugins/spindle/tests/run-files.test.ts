@@ -193,3 +193,29 @@ test('a changed file is read on the next tick', async ($, on) => {
   expect(mspLine(await status($), 'limiter-core')).toContain(' 2/2 ')
   expect(world.reads().filter(path => path === `${R}/plan.json`).length).toBe(1)
 })
+
+test('unreadable plan.json makes the stage unknown', async ($, on) => {
+  const world = harness(on, build, { now: NOW })
+  world.failRead(`${R}/plan.json`, 'EACCES: permission denied')
+  await world.start($)
+
+  expect(await status($)).toContain('stage unknown round 0 finished no')
+})
+
+test('unreadable verdict makes the stage unknown', async ($, on) => {
+  const world = harness(on, fix, { now: NOW })
+  world.failRead('/home/owner/.mitosis/api/rate-limit-api/review/round-1/limiter-core.verdict.json', 'EFBIG: file is larger than the 4 MiB read cap')
+  await world.start($)
+
+  expect(await status($)).toContain('stage unknown round 1 finished no')
+})
+
+test('unreadable state.json marks MSPs unknown', async ($, on) => {
+  const world = harness(on, build, { now: NOW })
+  world.failRead(`${R}/state.json`, 'EFBIG: file is larger than the 4 MiB read cap')
+  await world.start($)
+
+  const msps = (await status($)).filter(line => line.startsWith('msp '))
+  expect(msps.length).toBe(3)
+  for (const line of msps) expect(line.split(' ')[2]).toBe('unknown')
+})
