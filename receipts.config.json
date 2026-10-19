@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "claim": {
+    "issue_link": "closes #(\\d+)",
+    "downgrade_tags": [
+      "unverified-reasoned",
+      "speculative",
+      "reverted"
+    ]
+  },
+  "build": {
+    "sha_source": "none",
+    "platform": "none",
+    "deploy_host_patterns": [],
+    "environments": {},
+    "verify_against": "none"
+  },
+  "verify": {
+    "test_command": "claude plugin test plugins/spindle",
+    "suite_command": "scripts/check.sh",
+    "live_drive": null
+  },
+  "degrade": {
+    "on_no_receipt": "require-downgrade-tag",
+    "on_unreachable_build": "sha-bind-only"
+  },
+  "agent": {
+    "loop_skills": [
+      "gates"
+    ],
+    "staging_query_patterns": [],
+    "observe": {
+      "confirmed": true,
+      "surface": "the band Claude Code draws above the prompt, the run pane spindle-run, the toasts, and the text /spindle status answers, on the terminal and desktop surfaces",
+      "value": "the exact status lines /spindle status answers, the Svg alt texts and sources and the Text rows of the mounted band and pane, the toast texts, and the absence of any write call",
+      "observe_by": "claude plugin test plugins/spindle, whose tests serve fixture run homes through fs test hooks, raise session events, run /spindle and mount the band and pane with $.ui.mount",
+      "terminal_action": "the hook's answer: the drawn tree, the command's text or the toast call",
+      "build_artifact": "the plugin folder plugins/spindle at the commit, as claude --plugin-dir or the spindle marketplace loads it",
+      "twin": "the drawings in ~/Documents/DevLabs/spindle-design/view.js and crew.js, which the mod ports; the pipeline's and mitosis's own readers of the same run-home files",
+      "dependent": "the owner reading a pipeline run; nothing else consumes the mod's output",
+      "receipt": "a claude plugin test row named for the behaviour in plugins/spindle/tests, red before and green after, checked by ~/.mitosis/spindle/accept.zsh",
+      "compat_boundary": "the run-home, plan.json, state.json, verdict and ledger formats that mitosis and the pipeline write and Spindle reads; the function-hooks API of the installed Claude Code",
+      "reach": {
+        "access": "the claude CLI 2.1.300 or later from the repository root; no credentials",
+        "shortcut": "fixture run homes in plugins/spindle/tests/fixtures/runs.ts served through test fs hooks, so no real run is needed",
+        "fixtures": "synthesized run homes at every stage in plugins/spindle/tests/fixtures/runs.ts",
+        "special_surfaces": [
+          "real paint of the Svg on the desktop app",
+          "a real pipeline run's live files"
+        ]
+      }
+    },
+    "closeout_fixed_statuses": [
+      "Pending Retest",
+      "Verified"
+    ],
+    "repo_name": "spindle",
+    "receipts_version": "0.9.3"
+  },
+  "gates": {
+    "medium": "plugin",
+    "enabled": "all",
+    "disabled": [],
+    "G8": {
+      "integration_branch": "main"
+    }
+  }
+}
