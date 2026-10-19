@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: active
-Updated: 2026-10-19T20:51:39.327Z
+Updated: 2026-10-19T20:53:07.657Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -11,7 +11,7 @@ Redesign spindle's band and Pipeline pane so they fit any width, explain every c
 
 ## Where things stand
 
-Full lane, interphase feature pathway, slug spindle-ui-legibility. Read-back approved. Spec, record (18 criteria, 6 Steps in MSPs activity-model, band, pane) and items written; spec review done and its 13 issues fixed; all checks pass. The owner asked for mock previews of the band and pane before anything is built: the run waits on the owner's verdict on those previews. Hand-off (ADR replacing 0004, guard verify, record status handed-off) not yet done.
+Full lane, interphase feature pathway, slug spindle-ui-legibility. Read-back approved. Spec, record (18 criteria, 6 Steps in MSPs activity-model, band, pane) and items written; spec review done and its 13 issues fixed; all checks pass. The owner asked for mock previews of the band and pane before anything is built: the owner wants changes to the preview and has not yet said which; the run waits on them. Hand-off (ADR replacing 0004, guard verify, record status handed-off) not yet done.
 
 Grounding facts: the run stage sticks on Ship because a SHIP=1 call or any pushed MSP sets it and ADR 0004 holds it; the pipeline run skill defines the round files spindle reads (.diff, .suite.txt, .findings.json, .verdicts.json, .verdict.json, .diagnosis.json), while .suite.run is ad hoc; every finding in all 112 verdict files on this machine has a short `kind` label; the pipeline event stream holds only round.verdict lines for the live fireplace run; the mod API has no Button tooltip prop but offers keyed-Box hover cards and `<title>` tooltips in an interactive Svg, and tests can mount at any width and press Buttons.
 
