@@ -450,7 +450,7 @@ test('a verdict never draws its squares under its chip', async ($, on) => {
 
   for (const columns of [24, 30, 36, 46, 60, 100]) {
     const pane = await mountPane($, 'desktop', columns)
-    await press(pane, VIDEO)
+    if (columns === 24) await press(pane, VIDEO)
     const pictures = seenOf(await pane.drawn()).allSvgs.filter(svg => svg.source.includes('data-pip'))
     expect(pictures.length).toBeGreaterThan(0)
     for (const picture of pictures) {
@@ -470,4 +470,14 @@ test('a verdict never draws its squares under its chip', async ($, on) => {
     }
     await pane.unmount()
   }
+})
+
+test('MSP marks and proof dots name what they show', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  const alts = seenOf(await drawnAt($, 100)).allSvgs.map(svg => svg.alt)
+  for (const label of ['limiter-core', 'redis-store', 'headers-docs']) expect(alts.some(alt => alt.startsWith(`${label}: `))).toBe(true)
+  expect(alts.some(alt => alt === 'Proof: failed without the work, passed with it')).toBe(true)
+  expect(alts.some(alt => alt.includes('●') || alt.includes('○'))).toBe(false)
 })

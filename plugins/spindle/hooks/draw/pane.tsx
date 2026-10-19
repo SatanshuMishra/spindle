@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { Elements, EngineInterface, RenderElement, RenderInput } from 'claude-code'
 
-import type { MspRow, MspStatus, Outcome, Role, RoundRow, RunView, WorkerRole, WorkerRow } from '../../types'
+import type { Activity, MspRow, MspStatus, Outcome, Role, RoundRow, RunView, WorkerRole, WorkerRow } from '../../types'
 import { LANE_NAME } from '../run/state'
 import { NO_RUN, activityNow, currentActivity, elapsed, modelName } from '../run/summary'
 import { ROLE_COLOR, colorOf, costumeOf, crab } from './crew'
@@ -15,6 +15,7 @@ import {
   LANE_COLORS,
   STAGE_TABLE,
   columnsOf,
+  fitText,
   stageIndex,
   stageInfo,
   statusMark,
@@ -34,6 +35,7 @@ const TITLE = 'Pipeline Insights'
 const COST_HINT = "Cost of this session's model calls"
 const TIME_HINT = 'Time since the run started'
 const PROOF_HINT = 'Acceptance test failed without the work (red) and passed with it (green)'
+const VERDICT_LEGEND = 'Red: blocker · yellow: advisory · grey: other candidate'
 const RAIL_H = 44
 const RAIL_LABEL_PX = 10.5
 const RAIL_NAMES_COLUMNS = 60
@@ -161,6 +163,9 @@ const lanesDoneShare = (msp: MspRow) => (msp.lanesTotal > 0 ? Math.min(1, msp.la
 const proofMarks = (msp: MspRow) =>
   msp.proof === null ? '' : `proof ${msp.proof.isRedSeen ? '●' : '○'}${msp.proof.isGreenSeen ? '●' : '○'}`
 
+const proofWords = (msp: MspRow) =>
+  `Proof: ${msp.proof?.isRedSeen ? 'failed without the work' : 'without the work not seen yet'}, ${msp.proof?.isGreenSeen ? 'passed with it' : 'with the work not seen yet'}`
+
 const selectedOf = (view: RunView, stored: string | null) =>
   stored !== null && view.msps.some(msp => msp.label === stored) ? stored : null
 
@@ -191,10 +196,12 @@ const contextHint = (worker: WorkerRow) => `Context ${contextPercent(worker)}%`
 const roundOf = (view: RunView, worker: WorkerRow): RoundRow | undefined =>
   view.rounds.find(round => round.n === worker.round && round.msp === worker.msp)
 
-const firstKindOf = (view: RunView, worker: WorkerRow): string | undefined =>
+const roundActivityOf = (view: RunView, worker: WorkerRow): Activity | undefined =>
   view.msps
     .find(msp => msp.label === worker.msp)
-    ?.activities.find(activity => activity.kind === 'round' && activity.round === worker.round)?.kinds[0]
+    ?.activities.find(activity => activity.kind === 'round' && activity.round === worker.round)
+
+const firstKindOf = (view: RunView, worker: WorkerRow): string | undefined => roundActivityOf(view, worker)?.kinds[0]
 
 const isVerdictRow = (view: RunView, worker: WorkerRow) =>
   worker.role === 'judge' && !worker.isLive && roundOf(view, worker) !== undefined
@@ -279,30 +286,56 @@ function contextSvg(worker: WorkerRow): string {
   )
 }
 
-type VerdictLayout = { W: number; step: number; chipW: number; candidates: number }
+const CHIP_PAD = 18
+const CHIP_GAP = 6
+const PIP_ROW_GAP = 4
+
+type Spot = { x: number; y: number }
+
+type VerdictLayout = { W: number; H: number; chip: Spot & { w: number; word: string }; pips: readonly Spot[] }
+
+const pipsSpan = (count: number) => (count === 0 ? 0 : count * PIP_STEP - (PIP_STEP - PIP))
+
+const pipsPerRow = (room: number) => Math.max(0, Math.floor((room + PIP_STEP - PIP) / PIP_STEP))
 
 function verdictLayout(maxW: number, round: RoundRow): VerdictLayout {
-  const chipW = textWidth(round.outcome, 11) + 18
+  const chipW = Math.min(maxW, textWidth(round.outcome, 11) + CHIP_PAD)
+  const word = fitText(round.outcome, 11, chipW - CHIP_PAD)
   const candidates = Math.max(round.candidates ?? 0, round.blockers + round.advisories)
-  const step = Math.min(PIP_STEP, Math.max(3, (maxW - chipW - 6) / Math.max(1, candidates)))
-  const W = Math.min(maxW, Math.ceil(candidates * step + (candidates > 0 ? 6 : 0) + chipW))
-  return { W, step, chipW, candidates }
+  const beside = pipsPerRow(maxW - chipW - CHIP_GAP)
+  if (candidates === 0) return { W: chipW, H: CHIP_H, chip: { x: 0, y: 0, w: chipW, word }, pips: [] }
+  if (beside >= 1) {
+    const rows = Math.ceil(candidates / beside)
+    const top = rows === 1 ? (CHIP_H - PIP) / 2 : 0
+    const pips = Array.from({ length: candidates }, (_, i) => ({ x: (i % beside) * PIP_STEP, y: top + Math.floor(i / beside) * PIP_STEP }))
+    const chipX = pipsSpan(Math.min(candidates, beside)) + CHIP_GAP
+    return { W: chipX + chipW, H: Math.max(CHIP_H, pipsSpan(rows)), chip: { x: chipX, y: 0, w: chipW, word }, pips }
+  }
+  const below = Math.max(1, pipsPerRow(maxW))
+  const rows = Math.ceil(candidates / below)
+  const top = CHIP_H + PIP_ROW_GAP
+  const pips = Array.from({ length: candidates }, (_, i) => ({ x: (i % below) * PIP_STEP, y: top + Math.floor(i / below) * PIP_STEP }))
+  return {
+    W: Math.max(chipW, pipsSpan(Math.min(candidates, below))),
+    H: top + pipsSpan(rows),
+    chip: { x: 0, y: 0, w: chipW, word },
+    pips,
+  }
 }
 
 function verdictSvg(layout: VerdictLayout, round: RoundRow): string {
-  const { W, step, chipW, candidates } = layout
-  const pips = Array.from({ length: candidates }, (_, i) => {
+  const { W, H, chip } = layout
+  const pips = layout.pips.map(({ x, y }, i) => {
     const kind = i < round.blockers ? 'blocker' : i < round.blockers + round.advisories ? 'advisory' : 'other'
     const paint =
       kind === 'blocker' ? `fill="${FAIL}"` : kind === 'advisory' ? `fill="${ROLE_COLOR.verdict}"` : 'class="sv-k"'
-    return `<rect data-pip="${kind}" x="${i * step}" y="${(CHIP_H - PIP) / 2}" width="${Math.min(PIP, step - 2)}" height="${PIP}" rx="2" ${paint}/>`
+    return `<rect data-pip="${kind}" x="${x}" y="${y}" width="${PIP}" height="${PIP}" rx="2" ${paint}/>`
   }).join('')
-  const chipX = W - chipW
   return svg(
     W,
-    CHIP_H,
-    `${pips}<rect x="${chipX}" y="0" width="${chipW}" height="${CHIP_H}" rx="9" fill="${VERDICT_COLOR[round.outcome]}"/>
-<text x="${chipX + chipW / 2}" y="12.5" text-anchor="middle" font-family="${FONT}" font-size="11" font-weight="600" fill="#fff">${xml(round.outcome)}</text>`,
+    H,
+    `${pips}<rect x="${chip.x}" y="${chip.y}" width="${chip.w}" height="${CHIP_H}" rx="9" fill="${VERDICT_COLOR[round.outcome]}"/>
+<text x="${chip.x + chip.w / 2}" y="${chip.y + 12.5}" text-anchor="middle" font-family="${FONT}" font-size="11" font-weight="600" fill="#fff">${xml(chip.word)}</text>`,
   )
 }
 
@@ -349,16 +382,13 @@ type Room = { columns: number; now: number }
 
 type DesktopElements = PaneElements & Pick<Elements['desktop'], 'Svg'>
 
-function verdictPicture(ui: DesktopElements, key: string, layout: VerdictLayout, round: RoundRow) {
+function verdictPicture(ui: DesktopElements, key: string, layout: VerdictLayout, round: RoundRow, worker: WorkerRow, summary: readonly string[]) {
   const { Svg } = ui
-  return (
-    <Svg
-      key={`${key}-verdict`}
-      source={verdictSvg(layout, round)}
-      alt={`Round ${round.n}: ${round.outcome}`}
-      width={layout.W}
-      height={CHIP_H}
-    />
+  return hint(
+    ui,
+    `${key}-verdict-hint`,
+    <Svg key={`${key}-verdict`} source={verdictSvg(layout, round)} alt={worker.words} width={layout.W} height={layout.H} />,
+    [...summary, VERDICT_LEGEND],
   )
 }
 
@@ -395,7 +425,7 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
           ui,
           `msp-card-${msp.label}`,
           [
-            <Svg key={`msp-mark-${msp.label}`} source={mspMarkSvg(msp, i)} alt={`${msp.label} crab`} width={MARK_W} height={MARK_H} />,
+            <Svg key={`msp-mark-${msp.label}`} source={mspMarkSvg(msp, i)} alt={`${msp.label}: ${MSP_STATUS[msp.status].word}`} width={MARK_W} height={MARK_H} />,
             <Box key={`msp-main-${msp.label}`} flexDirection="column" flexGrow={1}>
               {mspButton($, ui, msp, i, label)}
               <Svg
@@ -417,7 +447,7 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
                 <Text key={`proof-word-${msp.label}`} dimColor size="caption">
                   proof
                 </Text>,
-                <Svg key={`proof-dots-${msp.label}`} source={proofSvg(msp)} alt={proofMarks(msp)} width={PROOF_W} height={PROOF_H} />,
+                <Svg key={`proof-dots-${msp.label}`} source={proofSvg(msp)} alt={proofWords(msp)} width={PROOF_W} height={PROOF_H} />,
               ],
               [PROOF_HINT],
             )}
@@ -451,7 +481,9 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
         <Box key={`${key}-words`} flexDirection="column" flexGrow={1}>
           <Text weight="semibold">{ROLE_NAME[worker.role]}</Text>
           {shown === words ? <Text dimColor>{words}</Text> : hint(ui, `${key}-words-hint`, <Text dimColor>{shown}</Text>, [words])}
-          {round === undefined ? null : verdictPicture(ui, key, verdictLayout(wordsColumns * CELL_PX, round), round)}
+          {round === undefined
+            ? null
+            : verdictPicture(ui, key, verdictLayout(wordsColumns * CELL_PX, round), round, worker, roundActivityOf(view, worker)?.summary ?? [])}
           {kind === undefined ? null : <Text dimColor>{kind}</Text>}
         </Box>
         <Box key={`${key}-right`} flexDirection="column" alignItems="flex-start" width={rightColumns} flexShrink={0}>
