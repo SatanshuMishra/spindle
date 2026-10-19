@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T10:25:55.863Z
+Updated: 2026-10-19T10:30:32.468Z
 Next ids: c5 D4 R3 S2
 
 ## Goal
@@ -16,11 +16,11 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Stage 3, round 3 of MSP spindle on branch mitosis/spindle at 6a29a67 (base feat/spindle-0-1, previous head d6fe881); every round 2 blocker and advisory is fixed (M1 in accept.zsh with accept-unloaded.awk, proof review/round-2/mitosis-gate/gate_receipt.py). Round 3 findings are in review/round-3/spindle.findings.json and spindle.md: C1 and S1 MEDIUM (a here-string <<< is read as a heredoc and hides later lines), C2 and S4 LOW (cd and export context leaks out of subshells, ignores unset and ..), S2 LOW (simpleCommands is quadratic per Bash event), S3 LOW ($'...' quoting unknown). The validator is judging the 7 candidates; the suite shows 80 pass, check.sh and tsc exit 0. C9 keeps one atom per module because the engine refuses an atom imported from another file.
+Stage 3, round 3 of MSP spindle on branch mitosis/spindle at 6a29a67 (base feat/spindle-0-1, previous head d6fe881); every round 2 blocker and advisory is fixed (M1 in accept.zsh with accept-unloaded.awk, proof review/round-2/mitosis-gate/gate_receipt.py). Round 3 verdict is diagnose (review/round-3/spindle.verdict.json): blocker C1 (a here-string <<< is read as a heredoc and hides later lines, kind narrow command match) and advisories C2 (cd and export context leaks out of subshells, unset ignored), S3 ($'...' quoting unknown) and S4 (cd ignores .. and crosses subshells). The narrow command match diagnosis is running. C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
-When both round 3 reviewers return, collect review/round-3/spindle.findings.json and spindle.md, run pipeline candidates, the validator when the count is above zero, record and verdict, and add the round 3 line to rounds.md.
+When the diagnosis returns, save it as review/round-3/spindle.narrow-command-match.diagnosis.json, record it with pipeline diagnosis, re-run pipeline verdict, then fix C1 with a receipt test plus advisories C2, S3 and S4, and start round 4 with previous head 6a29a67.
 
 Needs: D2, D3.
 
