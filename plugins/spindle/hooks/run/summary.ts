@@ -19,6 +19,9 @@ export function elapsed(startedAt: number | null, now: number): string {
   return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`
 }
 
+export const plural = (count: number, word: string) =>
+  `${count} ${count === 1 ? word : word.endsWith('y') ? `${word.slice(0, -1)}ies` : `${word}s`}`
+
 export const currentActivity = (msp: MspRow): Activity | undefined => msp.activities[msp.current]
 
 export const activityNow = (activity: Activity, now: number): string =>

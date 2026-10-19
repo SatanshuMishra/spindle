@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
-import { FIRE_TREES, NOW, build, fireplace, spec } from './fixtures/runs'
+import { FH, FIRE_TREES, NOW, build, fireplace, spec, withFile } from './fixtures/runs'
 import { harness } from './harness'
 
 async function status($: Engine): Promise<string[]> {
@@ -22,6 +22,8 @@ const spawn = ($: Engine, subagentType: string, prompt: string, description: str
   } as never)
 
 const BUTTON_TREE = FIRE_TREES.find(tree => tree.label === 'button-consistency')?.path ?? ''
+const MIC_TREE = FIRE_TREES.find(tree => tree.label === 'mic-recovery')?.path ?? ''
+const VIDEO_ROUND_4 = `${FH}/review/round-4/video-starts-like-a-camera`
 
 test('a validator naming an MSP belongs to it', async ($, on) => {
   const world = harness(on, fireplace, { now: NOW })
@@ -121,4 +123,39 @@ test('a resumed session lists finished workers from files', async ($, on) => {
   ]
   for (const start of judged) expect(lines.some(line => line.startsWith(start) && line.endsWith(' · done'))).toBe(true)
   expect(lines).toContain('worker mic-recovery judge Round 2 · green · no findings · done')
+})
+
+test('a path that extends a worktree path names no MSP', async ($, on) => {
+  const world = harness(on, fireplace, { now: NOW })
+  world.queueSpawn({ agentId: 'a-review', model: 'claude-opus-5-5' })
+  await world.start($)
+
+  await spawn($, 'code-reviewer', `Review the diff in ${MIC_TREE}0 against the spec.`, 'review the worktree')
+
+  const lines = await status($)
+  expect(lines).toContain('worker - detective review the worktree · live')
+  expect(lines.some(line => line.startsWith('worker mic-recovery detective') && line.endsWith('· live'))).toBe(false)
+})
+
+test('an unreadable findings.json marks its detective row unknown', async ($, on) => {
+  const world = harness(on, fireplace, { now: NOW })
+  world.failRead(`${VIDEO_ROUND_4}.findings.json`, 'EFBIG: file is larger than the 4 MiB read cap')
+  await world.start($)
+
+  expect(await status($)).toContain('worker video-starts-like-a-camera detective Round 4 · findings status unknown · done')
+})
+
+test('a findings.json that is not JSON marks its detective row unknown', async ($, on) => {
+  const world = harness(on, withFile(fireplace, `${VIDEO_ROUND_4}.findings.json`, 'not json', NOW - 130 * 60_000), { now: NOW })
+  await world.start($)
+
+  expect(await status($)).toContain('worker video-starts-like-a-camera detective Round 4 · findings status unknown · done')
+})
+
+test('an unreadable verdict keeps its judge row as unknown', async ($, on) => {
+  const world = harness(on, fireplace, { now: NOW })
+  world.failRead(`${VIDEO_ROUND_4}.verdict.json`, 'EFBIG: file is larger than the 4 MiB read cap')
+  await world.start($)
+
+  expect(await status($)).toContain('worker video-starts-like-a-camera judge Round 4 · status unknown · done')
 })
