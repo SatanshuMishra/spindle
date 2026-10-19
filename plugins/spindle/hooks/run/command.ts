@@ -222,6 +222,7 @@ function parseScript(text: string, from: number, closer: ')' | null, scope: Scop
   let isAfterTime = false
   let definition: 'none' | 'name' | 'body' = 'none'
   let isBroken = false
+  let isAtLinebreak = true
   let index = from
 
   const top = () => frames[frames.length - 1]!
@@ -255,6 +256,7 @@ function parseScript(text: string, from: number, closer: ')' | null, scope: Scop
       },
     ]
     definition = 'none'
+    isAtLinebreak = true
   }
   const endCondition = () => {
     const { conditionFrom } = top()
@@ -276,6 +278,7 @@ function parseScript(text: string, from: number, closer: ')' | null, scope: Scop
     endPipeline()
     endCondition()
     frames = frames.slice(0, -1)
+    isAtLinebreak = false
   }
   const expectFrame = (kind: FrameKind, then: () => void) => {
     if (top().kind === kind) then()
@@ -311,15 +314,19 @@ function parseScript(text: string, from: number, closer: ')' | null, scope: Scop
         return true
       case 'elif':
         expectFrame('if', () => setTop({ conditionFrom: records.length }))
+        isAtLinebreak = true
         return true
       case 'then':
         expectFrame('if', endCondition)
+        isAtLinebreak = true
         return true
       case 'else':
         expectFrame('if', () => undefined)
+        isAtLinebreak = true
         return true
       case 'do':
         expectFrame('loop', endCondition)
+        isAtLinebreak = true
         return true
       case 'fi':
         close('if')
@@ -339,6 +346,7 @@ function parseScript(text: string, from: number, closer: ')' | null, scope: Scop
   }
   const finishWord = () => {
     if (value === null) return
+    isAtLinebreak = false
     const word: Word = { value, raw }
     value = null
     raw = ''
@@ -394,12 +402,14 @@ function parseScript(text: string, from: number, closer: ')' | null, scope: Scop
     quietSpans.push(span)
     pipedSpans.push(span)
     setTop({ elementStart: records.length, isPipedIn: true })
+    isAtLinebreak = true
   }
   const list = (operator: string) => {
     finishCommand()
     if (operator === '&') quietSpans.push({ from: top().pipelineStart, to: records.length })
     endPipeline()
     follows = operator
+    isAtLinebreak = true
     if (operator === ';;' || operator === ';;&' || operator === ';&') {
       if (top().kind === 'case' && top().mode === 'commands') setTop({ mode: 'pattern' })
       else isBroken = true
@@ -517,7 +527,8 @@ function parseScript(text: string, from: number, closer: ')' | null, scope: Scop
       continue
     }
     if (char === '\n') {
-      list('\n')
+      finishWord()
+      if (!isAtLinebreak) list('\n')
       if (pending.length > 0) {
         index = skipHeredocBodies(text, index, pending)
         pending = []
