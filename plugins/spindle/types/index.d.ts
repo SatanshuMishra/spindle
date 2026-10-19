@@ -67,6 +67,7 @@ export type Signals = {
   isPullRequestRunning: boolean
   pulls: PullRow[]
   costUsd: number
+  finishedRun?: { slug: string; home: string | null } | null
 }
 
 export type RunView = {

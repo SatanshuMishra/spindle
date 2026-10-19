@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
-import { L, NOW, R, SF, build, decisionAnchor, endedLane, fix, fixRound2, integrate, review, ship, spec, split, stateWith, threadOnly, withFile } from './fixtures/runs'
+import { L, NOW, R, SF, build, decisionAnchor, endedLane, fix, fixRound2, integrate, otherThread, review, secondRun, ship, spec, split, stateWith, threadOnly, withFile } from './fixtures/runs'
 import { harness } from './harness'
 
 const BAND_PROPS = { hasSurvey: false, isWorking: false, maxRows: 4, bodyColumns: 100, scroll: { offset: 0, bodyRows: 4 }, view: {} } as const
@@ -51,6 +51,20 @@ test('decision anchor falls back to the last run home', async ($, on) => {
 
 test('thread id alone shows no run', async ($, on) => {
   const world = harness(on, threadOnly, { now: NOW })
+  await world.start($)
+
+  expect(await status($)).toEqual(['No pipeline run in this session.'])
+})
+
+test("a decision anchor names the thread's newest run home", async ($, on) => {
+  const world = harness(on, secondRun, { now: NOW })
+  await world.start($)
+
+  expect(await status($)).toContain('run quota-api repo api')
+})
+
+test('a run home of another thread is not shown', async ($, on) => {
+  const world = harness(on, otherThread, { now: NOW })
   await world.start($)
 
   expect(await status($)).toEqual(['No pipeline run in this session.'])

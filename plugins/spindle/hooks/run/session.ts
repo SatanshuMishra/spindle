@@ -30,14 +30,15 @@ export function locate(text: string | null, mitosis: string): RunLocation | null
   if (text === null) return null
   const session = parseJson(text)
   if (!isObject(session)) return null
+  const thread = typeof session.thread_id === 'string' && session.thread_id !== '' ? session.thread_id : null
   const homes = Array.isArray(session.run_homes) ? session.run_homes.filter(isRunHome) : []
-  const anchored = homes.find(entry => entry.anchor === session.latest_anchor)
-  const chosen = anchored ?? homes[homes.length - 1]
+  const candidates =
+    thread === null
+      ? homes
+      : homes.filter(entry => typeof entry.anchor === 'string' && entry.anchor.includes(`, thread ${thread}: `))
+  const chosen = candidates.find(entry => entry.anchor === session.latest_anchor) ?? candidates[0]
   if (chosen === undefined) {
-    const thread = session.thread_id
-    return typeof thread === 'string' && thread !== ''
-      ? { slug: thread, repo: null, home: null, runDir: null, ledger: null }
-      : null
+    return thread === null ? null : { slug: thread, repo: null, home: null, runDir: null, ledger: null }
   }
   const parts = segments(chosen.path)
   const slug = parts[parts.length - 1]

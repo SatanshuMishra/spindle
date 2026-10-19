@@ -19,10 +19,14 @@ const file = (value: unknown, mtimeMs: number): FixtureFile =>
 
 const fixture = (files: Record<string, FixtureFile>): Fixture => Object.freeze({ files: Object.freeze({ ...files }) })
 
-const sessionFile = (runHomes: readonly { path: string; anchor: string }[], latestAnchor: string | null) => ({
+const sessionFile = (
+  runHomes: readonly { path: string; anchor: string }[],
+  latestAnchor: string | null,
+  thread = 'rate-limit-api',
+) => ({
   version: 1,
   session_id: 'sess-fixture',
-  thread_id: 'rate-limit-api',
+  thread_id: thread,
   run_homes: runHomes,
   latest_anchor: latestAnchor,
 })
@@ -234,8 +238,8 @@ export const split = fixture({
   [SF]: file(
     sessionFile(
       [
-        { path: SPLIT_OLD, anchor: `Pipeline anchor: old-run at ${SPLIT_OLD}, thread old-run: ${SPLIT_OLD}/run.zsh --plan-only` },
         { path: SPLIT_HOME, anchor: SPLIT_ANCHOR },
+        { path: SPLIT_OLD, anchor: `Pipeline anchor: old-run at ${SPLIT_OLD}, thread old-run: ${SPLIT_OLD}/run.zsh --plan-only` },
       ],
       SPLIT_ANCHOR,
     ),
@@ -254,6 +258,30 @@ export const decisionAnchor = fixture({
 
 export const threadOnly = fixture({
   [SF]: file(sessionFile([], null), NOW - 48 * MIN),
+})
+
+const QUOTA_HOME = '/home/owner/.mitosis/api/quota-api'
+const QUOTA_ANCHOR = `Pipeline anchor: quota-api at ${QUOTA_HOME}, thread quota-api: ${QUOTA_HOME}/run.zsh --plan-only`
+
+export const secondRun = fixture({
+  ...integrate.files,
+  [SF]: file(
+    sessionFile(
+      [
+        { path: QUOTA_HOME, anchor: QUOTA_ANCHOR },
+        { path: H, anchor: ANCHOR },
+      ],
+      'Pipeline anchor: thread quota-api: recorded decision Amendment hand-off',
+      'quota-api',
+    ),
+    NOW - 1 * MIN,
+  ),
+  [`${QUOTA_HOME}/CHARTER.md`]: file('# Charter: quota-api\n', NOW - 1 * MIN),
+  [`${QUOTA_HOME}/run.zsh`]: file('#!/usr/bin/env zsh\n', NOW - 1 * MIN),
+})
+
+export const otherThread = fixture({
+  [SF]: file(sessionFile([{ path: H, anchor: ANCHOR }], ANCHOR, 'quota-api'), NOW - 48 * MIN),
 })
 
 export const withFile = (base: Fixture, path: string, value: unknown, mtimeMs: number): Fixture =>

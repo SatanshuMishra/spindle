@@ -288,6 +288,7 @@ export const isRunStarted = (files: FileFacts | null, signals: Signals) =>
 
 export function buildView(files: FileFacts | null, signals: Signals, previous: RunView | null): RunView | null {
   if (files === null || !isRunStarted(files, signals)) return null
+  if (signals.finishedRun != null && isSameRun(signals.finishedRun, files)) return null
   const stage = stageOf(files, signals, previous)
   return {
     slug: files.slug,

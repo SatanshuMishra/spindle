@@ -19,9 +19,10 @@ type CallSignal = {
   lane: Lane | null
   isPullRequest: boolean
   isClean: boolean
+  isRunEntry: boolean
 }
 
-const NO_CALL: CallSignal = { stage: null, lane: null, isPullRequest: false, isClean: false }
+const NO_CALL: CallSignal = { stage: null, lane: null, isPullRequest: false, isClean: false, isRunEntry: false }
 
 const ROLES: readonly (readonly [RegExp, Role])[] = [
   [/^interphase:(scout|spec-reviewer)$/, 'scribe'],
@@ -51,8 +52,10 @@ function bashSignal(text: string): CallSignal {
 function callSignal(tool: string, input: Readonly<Record<string, unknown>>): CallSignal {
   if (tool === 'Skill') {
     const skill = textOf(input.skill)
-    if (skill.startsWith('interphase:')) return { ...NO_CALL, stage: 'spec', lane: laneOf(textOf(input.args)) }
-    if (skill === 'pipeline:run') return { ...NO_CALL, stage: 'spec' }
+    if (skill.startsWith('interphase:')) {
+      return { ...NO_CALL, stage: 'spec', lane: laneOf(textOf(input.args)), isRunEntry: true }
+    }
+    if (skill === 'pipeline:run') return { ...NO_CALL, stage: 'spec', isRunEntry: true }
     if (skill === 'lighthouse:test') return { ...NO_CALL, stage: 'integrate' }
     return NO_CALL
   }
@@ -89,13 +92,21 @@ export const toolCallSignals: Hook<'tool.call'> = async ($, e, next) => {
   const signal = callSignal(String(e.tool), input)
   if (signal.stage === null) return next(e)
   const at = await $.clock.now()
-  await change($, signals => ({
-    ...signals,
-    callStage: laterStage(signals.callStage, signal.stage),
-    lane: signals.lane ?? signal.lane,
-    firstCallAt: signals.firstCallAt ?? at,
-    isPullRequestRunning: signals.isPullRequestRunning || signal.isPullRequest,
-  }))
+  const files = signal.isRunEntry ? await read($, filesState) : null
+  const afterDone = (signals: Signals): Signals =>
+    signal.isRunEntry && signals.isCleanDone
+      ? { ...NO_SIGNALS, finishedRun: files === null ? null : { slug: files.slug, home: files.home } }
+      : signals
+  await change($, current => {
+    const signals = afterDone(current)
+    return {
+      ...signals,
+      callStage: laterStage(signals.callStage, signal.stage),
+      lane: signals.lane ?? signal.lane,
+      firstCallAt: signals.firstCallAt ?? at,
+      isPullRequestRunning: signals.isPullRequestRunning || signal.isPullRequest,
+    }
+  })
   const ran = await next(e).catch(async (error: unknown) => {
     if (signal.isPullRequest) await change($, signals => ({ ...signals, isPullRequestRunning: false }))
     throw error
