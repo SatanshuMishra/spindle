@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T08:32:07.064Z
+Updated: 2026-10-19T08:33:04.279Z
 Next ids: c5 D3 R3 S2
 
 ## Goal
@@ -20,7 +20,7 @@ Pipeline stage 2, first mitosis build running in the background (log ~/.mitosis/
 
 ## Next step
 
-Run ~/.mitosis/spindle/spindle-0-1/run.zsh (first build, plan 6 Steps in 2 sequential Lanes of MSP spindle) from the repository root, in the background; then stage 3 review of MSP spindle.
+When the build exits, read mitosis's last stdout line in build-1.log, then start stage 3 round 1 for MSP spindle: diff, obligations, suite, code-reviewer, conformance-auditor and security-reviewer (the mod parses untrusted files and draws their text into Svg).
 
 Needs: D2.
 
