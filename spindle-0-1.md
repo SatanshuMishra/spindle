@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T11:08:33.877Z
+Updated: 2026-10-19T11:23:08.265Z
 Next ids: c5 D5 R3 S2
 
 ## Goal
@@ -16,11 +16,11 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Stage 3 of MSP spindle on branch mitosis/spindle at 0f76302 (base feat/spindle-0-1), 89 tests passing. Round 4 verdict is loop: its blocker C1 (narrow command match) was diagnosed requirement-wrong, so amendment 2 (D4) is being built by mitosis from amend-2.zsh (plan 6a2685d863d8, log amend-2-build.log). The Threats section of the obligations file is saved at review/spindle.threats.md for re-appending after obligations are regenerated with criteria 5.1 to 5.19. C9 keeps one atom per module because the engine refuses an atom imported from another file.
+Stage 3, round 5 of MSP spindle on branch mitosis/spindle at 1ae96ff (amendment 2 fast-forwarded in; base feat/spindle-0-1, previous head 2cf784e), 94 tests passing and tsc clean (review/round-5/spindle.suite.txt). Obligations cover criteria 5.1 to 5.19 with the Threats re-appended. The round 4 shell-oracle check now shows only the 7 expected misses plus the captured-output row the corpus marks as a run. Code and security reviewers are running on round 5. C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
-When the amendment 2 build finishes, read its JSON result, merge its branch into mitosis/spindle, re-run pipeline obligations with criteria plus 5.11 and 5.19, append the Threats again, and start review round 5 with previous head 2cf784e.
+When both round 5 reviewers return, save their arrays as review/round-5/spindle.findings.json, run pipeline candidates, the validator if any, record, verdict and the rounds.md line.
 
 Needs: D2, D3, D4.
 
