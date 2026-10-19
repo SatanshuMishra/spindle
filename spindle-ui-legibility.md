@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: active
-Updated: 2026-10-19T22:28:15.891Z
+Updated: 2026-10-19T22:28:17.691Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -17,7 +17,7 @@ Grounding facts: the pipeline run skill defines the round files spindle reads (.
 
 ## Next step
 
-When the first build finishes, read mitosis's last JSON line in build-1.out and start review round 1 for each committed MSP.
+Once every round-1 reviewer has replied, collect each MSP's findings.json (reviewer arrays plus the suite findings), then run pipeline candidates, the validator, record and verdict per MSP.
 
 Needs: D1.
 
