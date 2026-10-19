@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T11:40:16.527Z
+Updated: 2026-10-19T11:40:50.079Z
 Next ids: c5 D5 R3 S2
 
 ## Goal
@@ -16,11 +16,11 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Stage 3 fix pass after round 5 of MSP spindle on branch mitosis/spindle (base feat/spindle-0-1; round 5 head 1ae96ff). Round 5 verdict is loop (review/round-5/spindle.verdict.json): blocker S1, kind clean status misread, diagnosed fixable (review/round-5/spindle.clean-status-misread.diagnosis.json; selecting check review/round-5/clean-status-misread/select.ts): a newline where bash allows a line break, after &&, ||, |, an opener or then/do, must not end the list; fix is an isAtLinebreak flag in parseScript. Its two receipt tests are committed failing (290abcb). Advisories C2 (in-place push in parseScript) and C3 (duplicated escape loops and quote branches) are confirmed. Obligations cover criteria 5.1 to 5.19 with the Threats. C9 keeps one atom per module because the engine refuses an atom imported from another file.
+Stage 3 fix pass after round 5 of MSP spindle on branch mitosis/spindle (base feat/spindle-0-1; round 5 head 1ae96ff). Round 5 verdict is loop (review/round-5/spindle.verdict.json): blocker S1, kind clean status misread, diagnosed fixable (review/round-5/spindle.clean-status-misread.diagnosis.json; selecting check review/round-5/clean-status-misread/select.ts): a newline where bash allows a line break, after &&, ||, |, an opener or then/do, must not end the list; fix is an isAtLinebreak flag in parseScript. S1 is fixed at 5dee094 (receipts from 290abcb pass, 96 pass, select.ts prints nothing). Advisories C2 (in-place push in parseScript) and C3 (duplicated escape loops and quote branches) are confirmed. Obligations cover criteria 5.1 to 5.19 with the Threats. C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
-Make the S1 fix in command.ts, show both receipts passing and select.ts printing nothing, commit naming S1; fix advisories C2 and C3 and commit naming them; then start review round 6 with previous head 1ae96ff.
+Fix advisories C2 (one named linear appender instead of scattered push in parseScript) and C3 (escapedEnd shared by the quote loops, parseScript taking quote ends from quotedAt), run the suite, and commit naming them; then start review round 6 with previous head 1ae96ff.
 
 Needs: D2, D3, D4.
 
