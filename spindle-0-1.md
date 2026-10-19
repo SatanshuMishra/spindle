@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T06:33:15.309Z
+Updated: 2026-10-19T06:37:12.450Z
 Next ids: c5 D1 R1 S1
 
 ## Goal
@@ -16,11 +16,11 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Not started.
+Interphase interview under way on the project pathway, slug spindle-0-1: the intent round is asked and awaits the owner's answer. Lighthouse readiness reports no profile; receipts is not configured.
 
 ## Next step
 
-Run the interphase:project interview with the owner (full lane). Receipts answers are drafted in /var/folders/tz/b798spt96sjfyy924nf0cw4c0000gn/T/tmp.PlNLOGEUst; save them as <home>/receipts-answers.json once interphase names the slug.
+Record the owner's intent answers in docs/specs/spindle-0-1.decisions.md, then ask the frontier round: stage-inference mapping, cost scope, resumed-session behaviour, fixtures, licence, CI, and creating the GitHub remote. Receipts answers are drafted in /var/folders/tz/b798spt96sjfyy924nf0cw4c0000gn/T/tmp.PlNLOGEUst; save them as <home>/receipts-answers.json once the run home exists.
 
 ## Decisions in force
 
