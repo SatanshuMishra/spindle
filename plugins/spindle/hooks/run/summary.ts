@@ -22,7 +22,7 @@ export function elapsed(startedAt: number | null, now: number): string {
 export const plural = (count: number, word: string) =>
   `${count} ${count === 1 ? word : word.endsWith('y') ? `${word.slice(0, -1)}ies` : `${word}s`}`
 
-export const currentActivity = (msp: MspRow): Activity | undefined => msp.activities[msp.current]
+export const currentActivity = (msp: MspRow): Activity | undefined => (msp.current === null ? undefined : msp.activities[msp.current])
 
 export const activityNow = (activity: Activity, now: number): string =>
   activity.isRunning ? `${activity.words} · ${elapsed(activity.startedAt, now)}` : activity.words
