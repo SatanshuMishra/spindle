@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: active
-Updated: 2026-10-19T21:35:29.893Z
+Updated: 2026-10-19T21:35:34.478Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -34,7 +34,7 @@ Needs: D1.
 - Band: plugins/spindle/hooks/draw/band.tsx
 - Pane: plugins/spindle/hooks/draw/pane.tsx
 - Inference: plugins/spindle/hooks/run/infer.ts
-- Stage rule under question: docs/adr/0004-stage-moves-forward.md
-- Spec files: docs/specs/spindle-ui-legibility.md (spec), .decisions.md, .record.json, .items.json, .guard.json; glossary terms Activity and Round state in GLOSSARY.md
-- Design preview 2 for the owner's approval: session scratchpad preview2.template.html (source, with a /*CRABS*/ slot), crabs.mts (generates crabs.js from crew.ts) and spindle-preview-2.html (the assembled page)
-- Superseded first preview: https://claude.ai/artifact/J2j71FhQp8gbNYbjk8VjKZ
+- Stage rule: docs/adr/0005-stage-follows-the-slowest-msp.md (supersedes 0004)
+- Spec files: docs/specs/spindle-ui-legibility.md (spec), .decisions.md, .record.json, .items.json; glossary terms Activity, Round state and Worker in GLOSSARY.md
+- Run home: ~/.mitosis/spindle/spindle-ui-legibility (CHARTER.md, run.zsh, rounds.md, review/)
+- Approved design preview: session scratchpad spindle-preview-2.html, built from preview2.template.html and crabs.js
