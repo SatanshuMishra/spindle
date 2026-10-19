@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T10:05:45.292Z
+Updated: 2026-10-19T10:06:03.054Z
 Next ids: c5 D4 R3 S2
 
 ## Goal
@@ -48,3 +48,4 @@ Needs: D2, D3.
 - Run home: ~/.mitosis/spindle/spindle-0-1 (CHARTER.md, run.zsh, amend-1.zsh, rounds.md, review/ with each round's findings, verdicts and diagnoses, build logs)
 - Mitosis run dirs: ~/.mitosis/runs/spindle/spindle-0-1 and ~/.mitosis/runs/spindle/spindle-0-1-amend-1
 - Remote: SatanshuMishra/spindle (main holds the seed commit, feat/spindle-0-1 the receipts config)
+- Acceptance script: ~/.mitosis/spindle/accept.zsh (maps one plugin test to mitosis's exit codes; a missing import or export from reverted work is a failure)
