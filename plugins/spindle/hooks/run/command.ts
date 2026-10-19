@@ -46,28 +46,52 @@ function skipHeredocBodies(text: string, newline: number, pending: readonly Here
   return lineStart - 1
 }
 
-function arithmeticEnd(text: string, open: number): number {
+const CLOSERS: Readonly<Record<string, string>> = { '(': ')', '[': ']', '{': '}' }
+
+function groupEnd(text: string, open: number): number {
+  const opener = text[open]!
+  const closer = CLOSERS[opener]!
   let depth = 0
   for (let index = open; index < text.length; index += 1) {
-    if (text[index] === '(') depth += 1
-    else if (text[index] === ')') depth -= 1
+    if (text[index] === opener) depth += 1
+    else if (text[index] === closer) depth -= 1
     if (depth === 0) return index
   }
   return -1
 }
 
-function shellWords(text: string): readonly (readonly string[])[] | null {
-  const groups: string[][] = [[]]
+type ShellGroup = { readonly words: string[]; readonly scope: number; isPiped: boolean }
+
+type ShellScript = { readonly groups: readonly ShellGroup[]; readonly parents: readonly number[] }
+
+function shellWords(text: string): ShellScript | null {
+  const parents: number[] = [-1]
+  let scope = 0
+  let isPipedNext = false
+  const groups: ShellGroup[] = [{ words: [], scope, isPiped: false }]
   let word: string | null = null
-  let quote: '"' | "'" | null = null
+  let quote: '"' | "'" | "$'" | null = null
   let pending: Heredoc[] = []
   const finishWord = () => {
-    if (word !== null) groups[groups.length - 1]!.push(word)
+    if (word !== null) groups[groups.length - 1]!.words.push(word)
     word = null
+  }
+  const startGroup = () => {
+    finishWord()
+    groups.push({ words: [], scope, isPiped: isPipedNext })
+    isPipedNext = false
   }
   for (let index = 0; index < text.length; index += 1) {
     const char = text[index]!
     const following = text[index + 1]
+    if (quote === "$'") {
+      if (char === "'") quote = null
+      else if (char === '\\' && following !== undefined) {
+        word = (word ?? '') + following
+        index += 1
+      } else word = (word ?? '') + char
+      continue
+    }
     if (quote === "'") {
       if (char === "'") quote = null
       else word = (word ?? '') + char
@@ -86,6 +110,19 @@ function shellWords(text: string): readonly (readonly string[])[] | null {
       index += 1
       continue
     }
+    if (char === '$' && following === "'") {
+      quote = "$'"
+      word = word ?? ''
+      index += 1
+      continue
+    }
+    if (char === '$' && (following === '[' || following === '{')) {
+      const end = groupEnd(text, index + 1)
+      if (end === -1) return null
+      word = (word ?? '') + text.slice(index, end + 1)
+      index = end
+      continue
+    }
     if (char === "'" || char === '"') {
       quote = char
       word = word ?? ''
@@ -97,13 +134,18 @@ function shellWords(text: string): readonly (readonly string[])[] | null {
       continue
     }
     if (char === '(' && following === '(') {
-      const end = arithmeticEnd(text, index)
+      const end = groupEnd(text, index)
       if (end === -1) return null
       word = (word ?? '') + text.slice(index, end + 1)
       index = end
       continue
     }
-    if (char === '<' && following === '<' && text[index + 2] !== '<') {
+    if (text.startsWith('<<<', index)) {
+      finishWord()
+      index += 2
+      continue
+    }
+    if (char === '<' && following === '<') {
       finishWord()
       const { heredoc, end } = heredocDelimiter(text, index + 2)
       pending = [...pending, heredoc]
@@ -111,15 +153,30 @@ function shellWords(text: string): readonly (readonly string[])[] | null {
       continue
     }
     if (char === '\n' && pending.length > 0) {
-      finishWord()
-      groups.push([])
+      startGroup()
       index = skipHeredocBodies(text, index, pending)
       pending = []
       continue
     }
+    if (char === '(') {
+      parents.push(scope)
+      scope = parents.length - 1
+      startGroup()
+      continue
+    }
+    if (char === ')') {
+      scope = Math.max(parents[scope]!, 0)
+      startGroup()
+      continue
+    }
+    if (char === '|' && following !== '|' && text[index - 1] !== '|') {
+      groups[groups.length - 1]!.isPiped = true
+      isPipedNext = true
+      startGroup()
+      continue
+    }
     if (SEPARATORS.has(char)) {
-      finishWord()
-      groups.push([])
+      startGroup()
       continue
     }
     if (BLANK.test(char)) {
@@ -130,7 +187,7 @@ function shellWords(text: string): readonly (readonly string[])[] | null {
   }
   if (quote !== null) return null
   finishWord()
-  return groups.filter(group => group.length > 0)
+  return { groups: groups.filter(group => group.words.length > 0), parents }
 }
 
 type ShellContext = { readonly exported: Readonly<Record<string, string>>; readonly directory: string | null }
@@ -154,15 +211,28 @@ function asCommand(words: readonly string[]): SimpleCommand {
   return { assignments: { ...assignments, ...launched.assignments }, words: launched.words }
 }
 
+function normalized(path: string): string {
+  const segments = path.split('/').reduce<readonly string[]>((kept, segment) => {
+    if (segment === '' || segment === '.') return kept
+    if (segment === '..') return kept.slice(0, -1)
+    return [...kept, segment]
+  }, [])
+  return `${path.startsWith('/') ? '/' : ''}${segments.join('/')}`
+}
+
 function directoryAfter(directory: string | null, target: string | undefined): string | null {
   if (target === undefined) return null
-  if (target.startsWith('/') || target.startsWith('~')) return target
-  return directory === null ? null : `${directory}/${target}`
+  if (target.startsWith('/') || target.startsWith('~')) return normalized(target)
+  return directory === null ? null : normalized(`${directory}/${target}`)
 }
+
+const withoutNames = (exported: Readonly<Record<string, string>>, names: readonly string[]) =>
+  Object.fromEntries(Object.entries(exported).filter(([name]) => !names.includes(name)))
 
 function contextAfter(command: SimpleCommand, context: ShellContext): ShellContext {
   const [program, ...rest] = command.words
   if (program === 'export') return { ...context, exported: { ...context.exported, ...assignmentsOf(rest) } }
+  if (program === 'unset') return { ...context, exported: withoutNames(context.exported, rest) }
   if (program === 'cd') return { ...context, directory: directoryAfter(context.directory, rest[0]) }
   return context
 }
@@ -172,19 +242,29 @@ function inContext(command: SimpleCommand, context: ShellContext): SimpleCommand
   const isRelative = program !== undefined && program.startsWith('./') && context.directory !== null
   return {
     assignments: { ...context.exported, ...command.assignments },
-    words: isRelative ? [`${context.directory}${program.slice(1)}`, ...rest] : command.words,
+    words: isRelative ? [`${context.directory}/${program.slice(2)}`, ...rest] : command.words,
   }
 }
 
+type ScopeContexts = Readonly<Record<number, ShellContext>>
+
+function contextIn(contexts: ScopeContexts, parents: readonly number[], scope: number): ShellContext {
+  return contexts[scope] ?? (scope <= 0 ? FRESH_SHELL : contextIn(contexts, parents, parents[scope]!))
+}
+
 export function simpleCommands(text: string): readonly SimpleCommand[] | null {
-  const groups = shellWords(text)
-  if (groups === null) return null
-  return groups.map(asCommand).reduce(
-    (shell, command) => ({
-      context: contextAfter(command, shell.context),
-      commands: [...shell.commands, inContext(command, shell.context)],
-    }),
-    { context: FRESH_SHELL, commands: [] as readonly SimpleCommand[] },
+  const script = shellWords(text)
+  if (script === null) return null
+  return script.groups.reduce(
+    (shell, group) => {
+      const command = asCommand(group.words)
+      const context = contextIn(shell.contexts, script.parents, group.scope)
+      return {
+        contexts: group.isPiped ? shell.contexts : { ...shell.contexts, [group.scope]: contextAfter(command, context) },
+        commands: [...shell.commands, inContext(command, context)],
+      }
+    },
+    { contexts: {} as ScopeContexts, commands: [] as readonly SimpleCommand[] },
   ).commands
 }
 
