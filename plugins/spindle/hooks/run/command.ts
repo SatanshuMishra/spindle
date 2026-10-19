@@ -133,21 +133,59 @@ function shellWords(text: string): readonly (readonly string[])[] | null {
   return groups.filter(group => group.length > 0)
 }
 
+type ShellContext = { readonly exported: Readonly<Record<string, string>>; readonly directory: string | null }
+
+const FRESH_SHELL: ShellContext = { exported: {}, directory: null }
+
+const assignmentsOf = (words: readonly string[]): Record<string, string> =>
+  Object.fromEntries(
+    words.flatMap(word => {
+      const [, name, value] = ASSIGNMENT.exec(word) ?? []
+      return name === undefined ? [] : [[name, value!]]
+    }),
+  )
+
 function asCommand(words: readonly string[]): SimpleCommand {
   const firstWord = words.findIndex(word => !ASSIGNMENT.test(word))
   const split = firstWord === -1 ? words.length : firstWord
-  const assignments = Object.fromEntries(
-    words.slice(0, split).map(word => {
-      const [, name, value] = ASSIGNMENT.exec(word)!
-      return [name!, value!]
-    }),
-  )
-  return { assignments, words: words.slice(split) }
+  const assignments = assignmentsOf(words.slice(0, split))
+  if (words[split] !== 'env') return { assignments, words: words.slice(split) }
+  const launched = asCommand(words.slice(split + 1))
+  return { assignments: { ...assignments, ...launched.assignments }, words: launched.words }
+}
+
+function directoryAfter(directory: string | null, target: string | undefined): string | null {
+  if (target === undefined) return null
+  if (target.startsWith('/') || target.startsWith('~')) return target
+  return directory === null ? null : `${directory}/${target}`
+}
+
+function contextAfter(command: SimpleCommand, context: ShellContext): ShellContext {
+  const [program, ...rest] = command.words
+  if (program === 'export') return { ...context, exported: { ...context.exported, ...assignmentsOf(rest) } }
+  if (program === 'cd') return { ...context, directory: directoryAfter(context.directory, rest[0]) }
+  return context
+}
+
+function inContext(command: SimpleCommand, context: ShellContext): SimpleCommand {
+  const [program, ...rest] = command.words
+  const isRelative = program !== undefined && program.startsWith('./') && context.directory !== null
+  return {
+    assignments: { ...context.exported, ...command.assignments },
+    words: isRelative ? [`${context.directory}${program.slice(1)}`, ...rest] : command.words,
+  }
 }
 
 export function simpleCommands(text: string): readonly SimpleCommand[] | null {
   const groups = shellWords(text)
-  return groups === null ? null : groups.map(asCommand)
+  if (groups === null) return null
+  return groups.map(asCommand).reduce(
+    (shell, command) => ({
+      context: contextAfter(command, shell.context),
+      commands: [...shell.commands, inContext(command, shell.context)],
+    }),
+    { context: FRESH_SHELL, commands: [] as readonly SimpleCommand[] },
+  ).commands
 }
 
 const baseName = (path: string) => path.slice(path.lastIndexOf('/') + 1)
