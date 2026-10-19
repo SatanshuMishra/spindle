@@ -145,3 +145,31 @@ test('every corpus command reads as the shell runs it', () => {
 
   expect(failing).toEqual([])
 })
+
+const CLEAN = 'pipeline clean --repo /r --slug s'
+
+const LINE_BREAKS: readonly (readonly [string, string])[] = [
+  [`${CLEAN} &&\n echo a`, `${CLEAN} && echo a`],
+  [`${CLEAN} &&\n\n echo a`, `${CLEAN} && echo a`],
+  [`${CLEAN} && # note\n echo a`, `${CLEAN} && echo a`],
+  [`${CLEAN} <<EOF &&\nbody\nEOF\necho a`, `${CLEAN} <<EOF && echo a\nbody\nEOF`],
+  [`${CLEAN} && echo a |\n cat`, `${CLEAN} && echo a | cat`],
+  [`${CLEAN} && echo a |&\n cat`, `${CLEAN} && echo a |& cat`],
+  [`${CLEAN} && false ||\n echo a`, `${CLEAN} && false || echo a`],
+  [`${CLEAN} && {\n echo a\n}`, `${CLEAN} && { echo a; }`],
+  [`${CLEAN} && (\n echo a\n)`, `${CLEAN} && ( echo a )`],
+  [`(${CLEAN} &&\n echo a)`, `(${CLEAN} && echo a)`],
+  [`echo $(${CLEAN} &&\n echo a)`, `echo $(${CLEAN} && echo a)`],
+  [`echo \`${CLEAN} &&\n echo a\``, `echo \`${CLEAN} && echo a\``],
+  [`{ ${CLEAN} &&\n echo a; }`, `{ ${CLEAN} && echo a; }`],
+]
+
+const decisions = (text: string) => (simpleCommands(text) ?? []).filter(isPipelineClean).map(command => command.decidesStatus)
+
+test('a command continued on the next line decides as it does on one line', () => {
+  const differing = LINE_BREAKS.flatMap(([continued, inline]) =>
+    JSON.stringify(decisions(continued)) === JSON.stringify(decisions(inline)) ? [] : [continued],
+  )
+
+  expect(differing).toEqual([])
+})

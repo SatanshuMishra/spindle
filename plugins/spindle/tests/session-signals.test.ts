@@ -566,3 +566,13 @@ test('pipeline clean followed by another command after a semicolon is Clean-up w
 
   expect(await status($)).toContain('stage clean round 0 finished no')
 })
+
+test('pipeline clean with the command after its && on the next line is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'pipeline clean --repo /home/owner/work/api --slug rate-limit-api &&\n  echo cleaned')
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})
