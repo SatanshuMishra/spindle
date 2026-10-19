@@ -1,7 +1,7 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: active
-Updated: 2026-10-19T23:25:09.604Z
-Next ids: c1 D2 R1 S1
+Updated: 2026-10-19T23:25:33.427Z
+Next ids: c1 D3 R1 S1
 
 ## Goal
 
@@ -24,6 +24,7 @@ Needs: D1.
 ## Decisions in force
 
 - D1 Interphase hand-off: build the approved spec as three stacked MSPs: Recut the Steps so no file falls in two MSPs; plan-only now gives three Lanes in three stacked MSPs (activity-model, band, pane). Build from feat/spindle-ui-legibility.
+- D2 Ship spindle-ui-legibility: Ship with no --proven-head: SHIP=1 run.zsh --resume gates all three MSPs again at their current heads, reconciles them and pushes, then the three pull requests open in stack order.
 
 ## Open risks
 
