@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T10:15:29.700Z
+Updated: 2026-10-19T10:16:38.028Z
 Next ids: c5 D4 R3 S2
 
 ## Goal
@@ -16,7 +16,7 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Stage 3, round 2 fix pass of MSP spindle on branch mitosis/spindle (base feat/spindle-0-1); round 2 verdict is loop, round 3's previous head is d6fe881. M1 (mitosis gate) is fixed in accept.zsh with accept-unloaded.awk, proven by review/round-2/mitosis-gate/gate_receipt.py. C1 (heredoc bodies and comments read as commands) has its receipt tests committed (f96d348); the fix to shellWords is in progress. Advisories C2 (SHIP via export or env, cd then ./run.zsh) and C4 (run identity declared twice) remain. C9 keeps one atom per module because the engine refuses an atom imported from another file.
+Stage 3, round 2 fix pass of MSP spindle on branch mitosis/spindle (base feat/spindle-0-1); round 2 verdict is loop, round 3's previous head is d6fe881. Both round 2 blockers are fixed: M1 in accept.zsh with accept-unloaded.awk (proof review/round-2/mitosis-gate/gate_receipt.py) and C1 in shellWords (8944d4a, 76 tests pass, both selecting checks empty). Advisories C2 (SHIP via export or env, cd then ./run.zsh) and C4 (run identity declared twice) are being fixed. C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
