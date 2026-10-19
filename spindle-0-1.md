@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T09:47:27.380Z
+Updated: 2026-10-19T09:49:31.369Z
 Next ids: c5 D4 R3 S2
 
 ## Goal
@@ -20,7 +20,7 @@ Stage 3, review round 2 for MSP spindle on branch mitosis/spindle at d6fe881 (ba
 
 ## Next step
 
-Start review round 2 for MSP spindle: diff, obligations with all 18 criteria, suite, then code-reviewer and security-reviewer with previous head 1e8876c; add the amendment's inconclusive gate as a mitosis finding with the manual re-run as its evidence.
+When the round 2 code-reviewer and security-reviewer return, collect their arrays plus the amendment's inconclusive gate as M1 (evidence review/amend-1.gate-rerun.txt) into review/round-2/spindle.findings.json, then candidates, validator, record and verdict.
 
 Needs: D2, D3.
 
