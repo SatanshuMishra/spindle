@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T11:45:40.112Z
+Updated: 2026-10-19T11:47:19.175Z
 Next ids: c5 D5 R3 S2
 
 ## Goal
@@ -16,11 +16,11 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Stage 3, round 6 of MSP spindle on branch mitosis/spindle at 2f186d3 (base feat/spindle-0-1, previous head 1ae96ff), 96 tests passing and tsc clean. Every round 5 blocker and advisory is fixed: S1 (kind clean status misread, diagnosis review/round-5/spindle.clean-status-misread.diagnosis.json, selecting check review/round-5/clean-status-misread/select.ts prints nothing), C2 and C3. Round 6 diff, suite (96 pass, tsc clean) and briefs are in review/round-6; the code reviewer returned two LOW advisories, no blocker (review/round-6/code.json: C1 case subject, in and pattern ) newlines still end the list; C2 quoteAt and quotedValue switch on the same opener); the security reviewer is running. Obligations cover criteria 5.1 to 5.19 with the Threats. C9 keeps one atom per module because the engine refuses an atom imported from another file.
+Stage 3, round 6 of MSP spindle on branch mitosis/spindle at 2f186d3 (base feat/spindle-0-1, previous head 1ae96ff), 96 tests passing and tsc clean. Every round 5 blocker and advisory is fixed: S1 (kind clean status misread, diagnosis review/round-5/spindle.clean-status-misread.diagnosis.json, selecting check review/round-5/clean-status-misread/select.ts prints nothing), C2 and C3. Round 6 findings (review/round-6/spindle.findings.json) are four LOW advisories and no blocker: C1 case subject, in and pattern ) newlines, C2 quoteAt and quotedValue switch twice, S1 a heredoc-only command after && keeps the line break, S2 spread accumulation is quadratic in one command's words; the validator is judging them with P1 (S1 of round 5) carried. Obligations cover criteria 5.1 to 5.19 with the Threats. C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
-When both round 6 reviewers return, save their arrays as review/round-6/spindle.findings.json, then run candidates, the validator if any, record, verdict and the rounds.md line.
+When the round 6 validator returns, save its array as review/round-6/spindle.verdicts.json, run pipeline record and verdict, add the rounds.md line, then fix every confirmed advisory or go to Green.
 
 Needs: D2, D3, D4.
 
