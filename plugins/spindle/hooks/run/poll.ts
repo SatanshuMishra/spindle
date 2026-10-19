@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface } from 'claude-code'
 
 import type { FileFacts } from '../../types'
-import { cacheOf, fetchChanged, readRunFiles } from './home'
+import { cacheOf, fetchChanged, isGone, readRunFiles } from './home'
 import type { FileCache } from './home'
 import { inferFacts } from './infer'
 import { locate, sessionFile } from './session'
@@ -40,6 +40,7 @@ async function readFacts($: EngineInterface, cache: FileCache): Promise<{ facts:
   const session = await readSession($, where, known?.home != null, cache)
   const location = locate(session.text, where.mitosis)
   if (location === null) return { facts: null, cache: session.cache }
+  if (location.home !== null && (await isGone($, location.home))) return { facts: null, cache: session.cache }
   const run = await readRunFiles($, location, cache)
   return { facts: inferFacts(run.files), cache: { ...session.cache, ...run.cache } }
 }

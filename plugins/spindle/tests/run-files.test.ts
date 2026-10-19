@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
-import { L, NOW, R, SF, build, decisionAnchor, endedLane, fix, fixRound2, integrate, otherThread, review, secondRun, ship, spec, split, stateWith, threadOnly, withFile } from './fixtures/runs'
+import { L, NOW, R, SF, build, cleaned, decisionAnchor, endedLane, fix, fixRound2, integrate, otherThread, review, secondRun, ship, spec, split, stateWith, threadOnly, withFile } from './fixtures/runs'
 import { harness } from './harness'
 
 const BAND_PROPS = { hasSurvey: false, isWorking: false, maxRows: 4, bodyColumns: 100, scroll: { offset: 0, bodyRows: 4 }, view: {} } as const
@@ -66,6 +66,31 @@ test("a decision anchor names the thread's newest run home", async ($, on) => {
 test('a run home of another thread is not shown', async ($, on) => {
   const world = harness(on, otherThread, { now: NOW })
   await world.start($)
+
+  expect(await status($)).toEqual(['No pipeline run in this session.'])
+})
+
+test('a run home pipeline clean deleted shows no run', async ($, on) => {
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return Text({ children: 'another band' })
+  })
+  const world = harness(on, cleaned, { now: NOW })
+  await world.start($)
+
+  expect(await status($)).toEqual(['No pipeline run in this session.'])
+  const band = await $.ui.mount({ plugin: 'spindle', surface: 'terminal', component: 'AbovePrompt', props: BAND_PROPS })
+  expect(await band.drawn()).toMatchObject({ type: 'Text', children: ['another band'] })
+  await band.unmount()
+})
+
+test('a run shown until pipeline clean deletes its home is hidden on the next poll', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  await world.start($)
+  expect(await status($)).toContain('stage integrate round 0 finished no')
+
+  world.use(cleaned)
+  await world.clock.advance(2000)
 
   expect(await status($)).toEqual(['No pipeline run in this session.'])
 })
