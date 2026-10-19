@@ -1,0 +1,13 @@
+{
+  "name": "spindle",
+  "version": "0.1.0",
+  "description": "A band above the prompt, a run pane and toasts showing what a request-pipeline run is doing: its lane, stage, MSPs, agents and verdicts.",
+  "author": {
+    "name": "SatanshuMishra",
+    "url": "https://github.com/SatanshuMishra"
+  },
+  "types": "./types/index.d.ts",
+  "homepage": "https://github.com/SatanshuMishra/spindle/tree/main/plugins/spindle",
+  "repository": "https://github.com/SatanshuMishra/spindle",
+  "license": "MIT"
+}
