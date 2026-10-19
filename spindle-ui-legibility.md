@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: active
-Updated: 2026-10-19T20:35:36.356Z
+Updated: 2026-10-19T20:35:38.073Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -17,7 +17,7 @@ Grounding facts: the run stage sticks on Ship because a SHIP=1 call or any pushe
 
 ## Next step
 
-Record the user's frontier round 1 answers in docs/specs/spindle-ui-legibility.decisions.md, write the agreed seam, criteria and Steps to the record, run check_record.py, then ask the next frontier round.
+Record the user's round 2 answers in the decisions file and glossary, write the band and pane criteria and Steps to the record, run check_record.py, then hold the read-back.
 
 ## Decisions in force
 
