@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T10:19:42.889Z
+Updated: 2026-10-19T10:22:32.227Z
 Next ids: c5 D4 R3 S2
 
 ## Goal
@@ -16,7 +16,7 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Stage 3, round 3 of MSP spindle on branch mitosis/spindle at 6a29a67 (base feat/spindle-0-1, previous head d6fe881); every round 2 blocker and advisory is fixed (M1 in accept.zsh with accept-unloaded.awk, proof review/round-2/mitosis-gate/gate_receipt.py). The code reviewer and security reviewer are running on the briefs in review/round-3/; the suite there shows 80 pass, check.sh and tsc exit 0. C9 keeps one atom per module because the engine refuses an atom imported from another file.
+Stage 3, round 3 of MSP spindle on branch mitosis/spindle at 6a29a67 (base feat/spindle-0-1, previous head d6fe881); every round 2 blocker and advisory is fixed (M1 in accept.zsh with accept-unloaded.awk, proof review/round-2/mitosis-gate/gate_receipt.py). The code reviewer returned two findings, saved in review/round-3/code.json: C1 MEDIUM (a here-string <<< is read as a heredoc and hides later lines) and C2 LOW (cd and export context leaks out of subshells and ignores unset). The security reviewer is still running; the suite in review/round-3/ shows 80 pass, check.sh and tsc exit 0. C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
