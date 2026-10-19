@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T10:44:46.886Z
+Updated: 2026-10-19T10:47:03.957Z
 Next ids: c5 D4 R3 S2
 
 ## Goal
@@ -16,11 +16,11 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Stage 3, round 4 of MSP spindle on branch mitosis/spindle at 2cf784e (base feat/spindle-0-1, previous head 6a29a67). Every round 2 and round 3 blocker and advisory is fixed (M1 in accept.zsh with accept-unloaded.awk, proof review/round-2/mitosis-gate/gate_receipt.py; selecting check review/round-3/narrow-command-match/narrow-command-match.sh prints nothing). The round 4 suite shows 89 pass, check.sh and tsc exit 0; round 4 findings are in review/round-4/spindle.findings.json and spindle.md: C1 MEDIUM and S1 LOW (quotes and brackets inside ${...} and $[...] break groupEnd), C2 LOW (ShellGroup.isPiped mutated in place), C3 and S3 LOW (a case pattern's ) and |& leak scope), C4 and S2 LOW (.. in a program path not normalised), S4 LOW (unbounded scope recursion). The validator is judging the 9 candidates. A candidate lexer fix for all of them sits in the session scratchpad (r4/command.ts, with probe r4/probe.ts passing its 22 cases and the suite at 89 pass), not yet in the worktree. C9 keeps one atom per module because the engine refuses an atom imported from another file.
+Stage 3, round 4 of MSP spindle on branch mitosis/spindle at 2cf784e (base feat/spindle-0-1, previous head 6a29a67). Every round 2 and round 3 blocker and advisory is fixed (M1 in accept.zsh with accept-unloaded.awk, proof review/round-2/mitosis-gate/gate_receipt.py; selecting check review/round-3/narrow-command-match/narrow-command-match.sh prints nothing). Round 4 verdict is diagnose (review/round-4/spindle.verdict.json): blocker C1 (groupEnd ignores quotes and brackets inside ${...} and $[...], kind narrow command match) and advisory C2 (ShellGroup.isPiped mutated in place); the other seven candidates are rejected. The second narrow command match diagnosis is running with the round 3 one as the earlier attempt. A candidate lexer fix sits in the session scratchpad (r4/command.ts, probe r4/probe.ts), not yet in the worktree. C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
-When both round 4 reviewers return, collect review/round-4/spindle.findings.json and spindle.md, run pipeline candidates, the validator when the count is above zero, record and verdict, and add the round 4 line to rounds.md.
+When the diagnosis returns, save it as review/round-4/spindle.narrow-command-match.diagnosis.json, record it with pipeline diagnosis, re-run pipeline verdict, then fix C1 with receipt tests plus advisory C2 and start round 5 with previous head 2cf784e.
 
 Needs: D2, D3.
 
