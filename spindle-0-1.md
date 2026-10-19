@@ -1,7 +1,7 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T08:33:19.209Z
-Next ids: c5 D3 R3 S2
+Updated: 2026-10-19T09:41:14.222Z
+Next ids: c5 D4 R3 S2
 
 ## Goal
 
@@ -27,6 +27,7 @@ Needs: D2.
 ## Decisions in force
 
 - D2 Amendment hand-off: one MSP, spindle, instead of two stacked: One MSP, spindle, one pull request; recorded in the spec as an assumption overriding the two-PR decision and reported as a top risk.
+- D3 Amendment 1 hand-off: run found by the session's thread, newest first: Amendment 1: Step second-run in MSP spindle-amend-1, built by amend-1.zsh on branch mitosis/spindle with --no-push, then merged into mitosis/spindle before round 2.
 
 ## Open risks
 
