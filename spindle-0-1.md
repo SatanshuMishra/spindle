@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: parked
-Updated: 2026-10-19T17:35:52.570Z
+Updated: 2026-10-19T17:41:55.200Z
 Next ids: c5 D6 R3 S2
 
 ## Goal
@@ -16,13 +16,13 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Integration: the MSP pull request https://github.com/SatanshuMishra/spindle/pull/1 is merged into feat/spindle-0-1 and pipeline integration-ready reports ready. Lighthouse run 1 tests feat/spindle-0-1 against core main, results in run home lighthouse/run-1. The pull request body repeats one What changed bullet six times as mitosis wrote it. C9 keeps one atom per module because the engine refuses an atom imported from another file.
+Integration done: lighthouse run 1 is green with 0 failures; the /spindle status and pane toggle paths passed 3 of 3 live trials, and the band, pane paint, toasts, live run reading and the live read-only check are unproven because a headless session draws nothing and a live run needs the off-limits run folder. The FEATURE pull request https://github.com/SatanshuMishra/spindle/pull/2 (feat/spindle-0-1 into main) is open, assigned to SatanshuMishra. Lighthouse published its profile to feat/spindle-0-1 at 91af07e. C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
-Read lighthouse run 1's last stdout JSON line; on green report the FEATURE pull request it opened, on failures or blocked record them as integration findings and fix, on unproven rerun with --final.
+The user starts Clean-up by saying the FEATURE pull request merged.
 
-Needs: D2, D5.
+Needs: D2.
 
 ## Decisions in force
 
