@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: parked
-Updated: 2026-10-19T11:53:02.150Z
+Updated: 2026-10-19T17:35:52.570Z
 Next ids: c5 D6 R3 S2
 
 ## Goal
@@ -16,11 +16,11 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Shipped: MSP spindle is pushed on mitosis/spindle at 2f60264 (review round 6 green, every advisory fixed, slow check proven in review/spindle.proofs.jsonl) and open as https://github.com/SatanshuMishra/spindle/pull/1 against feat/spindle-0-1, assigned to the owner with review/spindle.comment.md posted. Ship reconcile listed 8 undeclared writes (glossary, ADRs 0001 to 0004, command.ts, state.ts, command-corpus.test.ts), expected from the docs commit and the amendments. The pull request body repeats one What changed bullet six times as mitosis wrote it. C9 keeps one atom per module because the engine refuses an atom imported from another file.
+Integration: the MSP pull request https://github.com/SatanshuMishra/spindle/pull/1 is merged into feat/spindle-0-1 and pipeline integration-ready reports ready. Lighthouse run 1 tests feat/spindle-0-1 against core main, results in run home lighthouse/run-1. The pull request body repeats one What changed bullet six times as mitosis wrote it. C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
-The owner reviews and merges https://github.com/SatanshuMishra/spindle/pull/1 into feat/spindle-0-1, then starts Integration by saying the MSP pull requests merged.
+Read lighthouse run 1's last stdout JSON line; on green report the FEATURE pull request it opened, on failures or blocked record them as integration findings and fix, on unproven rerun with --final.
 
 Needs: D2, D5.
 
@@ -51,4 +51,5 @@ Needs: D2, D5.
 - Mitosis run dirs: ~/.mitosis/runs/spindle/spindle-0-1 and ~/.mitosis/runs/spindle/spindle-0-1-amend-1 and -amend-2
 - Remote: SatanshuMishra/spindle (main holds the seed commit, feat/spindle-0-1 the receipts config)
 - Acceptance script: ~/.mitosis/spindle/accept.zsh (maps one plugin test to mitosis's exit codes; a missing import or export from reverted work is a failure)
-- Pull request: https://github.com/SatanshuMishra/spindle/pull/1 (MSP spindle into feat/spindle-0-1)
+- Pull request: https://github.com/SatanshuMishra/spindle/pull/1 (MSP spindle into feat/spindle-0-1, merged)
+- Feature record: ~/.mitosis/spindle/spindle-0-1/feature.json (core main, FEATURE feat/spindle-0-1, remote origin)
