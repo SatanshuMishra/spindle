@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: active
-Updated: 2026-10-19T23:12:03.308Z
+Updated: 2026-10-19T23:12:06.237Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -17,7 +17,7 @@ Grounding facts: the pipeline run skill defines the round files spindle reads (.
 
 ## Next step
 
-Run review round 2 on all three MSPs, previous heads bdc7720, 8c31e18 and 80cbc42.
+Collect the three round-2 code-reviewer replies, then run candidates, validator, record and verdict for each MSP.
 
 Needs: D1.
 
