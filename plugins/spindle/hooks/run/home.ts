@@ -2,27 +2,32 @@ import type { EngineInterface, FsEntry } from 'claude-code'
 
 import type { RunLocation } from './session'
 
-export type CachedText = { mtimeMs: number; text: string | null }
+export type FileText = { kind: 'absent' } | { kind: 'unreadable' } | { kind: 'text'; text: string }
+
+const ABSENT: FileText = { kind: 'absent' }
+const UNREADABLE: FileText = { kind: 'unreadable' }
+
+export type CachedText = { mtimeMs: number; text: FileText }
 export type FileCache = Readonly<Record<string, CachedText>>
 
 export type ReviewRound = {
   n: number
   names: readonly string[]
-  verdicts: Readonly<Record<string, string | null>>
+  verdicts: Readonly<Record<string, FileText>>
 }
 
 export type RunFiles = {
   location: RunLocation
   homeEntries: readonly FsEntry[] | null
   rounds: readonly ReviewRound[]
-  plan: string | null
-  state: string | null
+  plan: FileText
+  state: FileText
   laneNames: readonly string[]
-  ledger: string | null
+  ledger: FileText
 }
 
 type Wanted = { path: string; mtimeMs: number }
-type Fetched = Wanted & { text: string | null }
+type Fetched = Wanted & { text: FileText }
 
 const ROUND_FOLDER = /^round-(\d+)$/
 const VERDICT = /^(.+)\.verdict\.json$/
@@ -35,12 +40,12 @@ export async function listing($: EngineInterface, path: string): Promise<readonl
   }
 }
 
-async function readText($: EngineInterface, path: string): Promise<string | null> {
+async function readText($: EngineInterface, path: string): Promise<FileText> {
   try {
     const text = await $.fs.read(path)
-    return typeof text === 'string' ? text : null
+    return typeof text === 'string' ? { kind: 'text', text } : UNREADABLE
   } catch {
-    return null
+    return UNREADABLE
   }
 }
 
@@ -48,14 +53,16 @@ export async function fetchChanged($: EngineInterface, wanted: readonly Wanted[]
   return Promise.all(
     wanted.map(async ({ path, mtimeMs }) => {
       const known = cache[path]
-      if (known !== undefined && known.mtimeMs === mtimeMs) return { path, mtimeMs, text: known.text }
+      if (known !== undefined && known.mtimeMs === mtimeMs && known.text.kind !== 'unreadable') return { path, mtimeMs, text: known.text }
       return { path, mtimeMs, text: await readText($, path) }
     }),
   )
 }
 
 export const cacheOf = (fetched: readonly Fetched[]): FileCache =>
-  Object.fromEntries(fetched.map(({ path, mtimeMs, text }) => [path, { mtimeMs, text }]))
+  Object.fromEntries(
+    fetched.filter(({ text }) => text.kind !== 'unreadable').map(({ path, mtimeMs, text }) => [path, { mtimeMs, text }]),
+  )
 
 const fileIn = (entries: readonly FsEntry[] | null, folder: string, name: string): Wanted | null => {
   const entry = entries?.find(one => one.name === name && one.kind === 'file')
@@ -81,7 +88,7 @@ export async function readRunFiles(
   const { home, runDir, ledger } = location
   if (home === null || runDir === null || ledger === null) {
     return {
-      files: { location, homeEntries: null, rounds: [], plan: null, state: null, laneNames: [], ledger: null },
+      files: { location, homeEntries: null, rounds: [], plan: ABSENT, state: ABSENT, laneNames: [], ledger: ABSENT },
       cache: {},
     }
   }
@@ -104,7 +111,8 @@ export async function readRunFiles(
   const ledgerFile = fileIn(ledgerEntries, parentOf(ledger), nameOf(ledger))
   const wanted = [planFile, stateFile, ledgerFile, ...verdictFiles].filter((one): one is Wanted => one !== null)
   const fetched = await fetchChanged($, wanted, cache)
-  const textOf = (file: Wanted | null) => (file === null ? null : (fetched.find(one => one.path === file.path)?.text ?? null))
+  const textOf = (file: Wanted | null): FileText =>
+    file === null ? ABSENT : (fetched.find(one => one.path === file.path)?.text ?? ABSENT)
   const rounds = numbers.map((n, i) => {
     const entries = (roundEntries[i] ?? []).filter(entry => entry.kind === 'file')
     const verdicts = Object.fromEntries(

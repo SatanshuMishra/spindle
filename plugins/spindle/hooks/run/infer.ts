@@ -1,5 +1,5 @@
 import type { FileFacts, MspRow, MspStatus, Outcome, RoundRow, RunView, Signals, Stage } from '../../types'
-import type { ReviewRound, RunFiles } from './home'
+import type { FileText, ReviewRound, RunFiles } from './home'
 
 export const STAGES: readonly Stage[] = ['spec', 'build', 'review', 'fix', 'ship', 'integrate', 'clean']
 
@@ -36,9 +36,10 @@ function parseJson(text: string): unknown {
   }
 }
 
-function parsed<T>(text: string | null, shape: (value: unknown) => T | null): Parsed<T> {
-  if (text === null) return { kind: 'absent' }
-  const value = shape(parseJson(text))
+function parsed<T>(file: FileText, shape: (value: unknown) => T | null): Parsed<T> {
+  if (file.kind === 'absent') return { kind: 'absent' }
+  if (file.kind === 'unreadable') return { kind: 'bad' }
+  const value = shape(parseJson(file.text))
   return value === null ? { kind: 'bad' } : { kind: 'ok', value }
 }
 
@@ -94,8 +95,8 @@ function verdictShape(value: unknown): Verdict | null {
   return { outcome, blockers: value.blockers.length, advisories: value.advisories.length }
 }
 
-function candidatesOf(ledger: string | null, slug: string): ReadonlyMap<string, number> {
-  const lines = (ledger ?? '').split('\n').map(line => parseJson(line))
+function candidatesOf(ledger: FileText, slug: string): ReadonlyMap<string, number> {
+  const lines = (ledger.kind === 'text' ? ledger.text : '').split('\n').map(line => parseJson(line))
   return new Map(
     lines
       .filter(isObject)
@@ -176,7 +177,7 @@ export function inferFacts(files: RunFiles): FileFacts {
   const plan = parsed(files.plan, planShape)
   const state = parsed(files.state, stateShape)
   const verdictOf = (round: ReviewRound, label: string): Parsed<Verdict> =>
-    parsed(round.verdicts[label] ?? null, verdictShape)
+    parsed(round.verdicts[label] ?? { kind: 'absent' }, verdictShape)
   const lastRound = files.rounds[files.rounds.length - 1]
   const latestVerdicts = lastRound ? Object.keys(lastRound.verdicts).map(label => verdictOf(lastRound, label)) : []
   const fileStage = fileStageOf(files, plan, state, latestVerdicts)

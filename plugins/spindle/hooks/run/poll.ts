@@ -26,7 +26,8 @@ async function readSession($: EngineInterface, where: SessionFile, hasHome: bool
   try {
     const stat = await $.fs.stat(where.path)
     const fetched = await fetchChanged($, [{ path: where.path, mtimeMs: stat.mtimeMs }], cache)
-    return { text: fetched[0]?.text ?? null, cache: cacheOf(fetched) }
+    const file = fetched[0]?.text
+    return { text: file?.kind === 'text' ? file.text : null, cache: cacheOf(fetched) }
   } catch {
     return { text: null, cache: {} }
   }
