@@ -266,3 +266,15 @@ test('pipeline clean after cd in a compound command is Done', async ($, on) => {
 
   expect(await status($)).toContain('stage clean round 0 finished yes')
 })
+
+test('model steps before any run add no cost', async ($, on) => {
+  answerTurns(on)
+  const world = harness(on, threadOnly, { now: NOW })
+  await world.start($)
+  expect(await status($)).toEqual(['No pipeline run in this session.'])
+
+  await step($)
+  await skill($, 'interphase:feature', 'Add rate limits. Interview me first.')
+
+  expect(await status($)).toContain('cost 0.0000')
+})
