@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: active
-Updated: 2026-10-19T23:24:58.010Z
+Updated: 2026-10-19T23:24:59.818Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -17,7 +17,7 @@ Grounding facts: the pipeline run skill defines the round files spindle reads (.
 
 ## Next step
 
-Save each round-2 validator's verdicts, then record and verdict for each MSP; fix confirmed advisories on each branch before ship.
+Ship: commit GLOSSARY.md and ADRs 0004 and 0005 into activity-model and merge up, write the three comments, promote, record the ship boundary, run SHIP=1 run.zsh --resume, open the three pull requests in stack order.
 
 Needs: D1.
 
