@@ -2,7 +2,7 @@ import type { On } from 'claude-code'
 import { expect, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
-import { NOW, build, fix, review, spec } from './fixtures/runs'
+import { NOW, build, fix, fixRound2, review, spec } from './fixtures/runs'
 import { harness } from './harness'
 
 const BAND_PROPS = { hasSurvey: false, isWorking: false, maxRows: 4, bodyColumns: 100, scroll: { offset: 0, bodyRows: 4 }, view: {} } as const
@@ -98,6 +98,29 @@ test('dismiss hides the band until the stage changes', async ($, on) => {
   const again = await mountBand($, 'desktop')
   expect(await again.find({ key: 'spindle-crew' })).toBeDefined()
   expect((await again.find({ type: 'Svg' }))?.props.alt).toBe('rate-limit-api: Fix · R1')
+})
+
+test('a dismiss at Review R1 does not hide Review R2 after Fix', async ($, on) => {
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Text } = $.ui.resolve(e)
+    return Text({ children: 'another band' })
+  })
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  const band = await mountBand($, 'desktop')
+  await band.press({ key: 'spindle-dismiss' })
+
+  world.use(fix)
+  await world.clock.advance(2000)
+  const atFix = await mountBand($, 'desktop')
+  expect((await atFix.find({ type: 'Svg' }))?.props.alt).toBe('rate-limit-api: Fix · R1')
+
+  world.use(fixRound2)
+  await world.clock.advance(2000)
+  const atReview = await mountBand($, 'desktop')
+  expect(await atReview.find({ key: 'spindle-crew' })).toBeDefined()
+  expect((await atReview.find({ type: 'Svg' }))?.props.alt).toBe('rate-limit-api: Review · R2')
 })
 
 test('every costume draws with clay and reduced motion', async ($, on) => {
