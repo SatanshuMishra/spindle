@@ -405,3 +405,39 @@ test('pipeline clean on the line after an arithmetic shift is Done', async ($, o
 
   expect(await status($)).toContain('stage clean round 0 finished yes')
 })
+
+test('an exported SHIP before the run script moves to Ship', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  await bash($, 'export SHIP=1; /home/owner/.mitosis/api/rate-limit-api/run.zsh --resume')
+
+  expect(await status($)).toContain('stage ship round 0 finished no')
+})
+
+test('SHIP set through env moves to Ship', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  await bash($, 'env SHIP=1 /home/owner/.mitosis/api/rate-limit-api/run.zsh --resume')
+
+  expect(await status($)).toContain('stage ship round 0 finished no')
+})
+
+test('the run script started from its run home moves to Ship', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  await bash($, 'cd /home/owner/.mitosis/api/rate-limit-api && SHIP=1 ./run.zsh --resume')
+
+  expect(await status($)).toContain('stage ship round 0 finished no')
+})
+
+test('a run script outside a run home is not Build', async ($, on) => {
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+
+  await bash($, 'cd /home/owner/work/api && ./run.zsh --plan-only')
+
+  expect(await status($)).toContain('stage spec round 0 finished no')
+})
