@@ -71,18 +71,10 @@ const nested = (records: readonly Parsed[]): readonly Parsed[] =>
 
 const closedAt = (end: number): Scan | null => (end === -1 ? null : { end, records: [] })
 
-function ansiQuoteEnd(text: string, from: number): number {
+function escapedEnd(text: string, from: number, closer: string): number {
   for (let index = from; index < text.length; index += 1) {
     if (text[index] === '\\') index += 1
-    else if (text[index] === "'") return index
-  }
-  return -1
-}
-
-function backquoteEnd(text: string, from: number): number {
-  for (let index = from; index < text.length; index += 1) {
-    if (text[index] === '\\') index += 1
-    else if (text[index] === '`') return index
+    else if (text[index] === closer) return index
   }
   return -1
 }
@@ -130,12 +122,17 @@ function doubleQuoted(text: string, open: number, scope: Scope): Scan | null {
   return null
 }
 
-function quotedAt(text: string, index: number, scope: Scope): Scan | null | undefined {
+function quoteAt(text: string, index: number, scope: Scope): Scan | null | undefined {
   const char = text[index]
   if (char === "'") return closedAt(text.indexOf("'", index + 1))
   if (char === '"') return doubleQuoted(text, index, scope)
-  if (char === '$' && text[index + 1] === "'") return closedAt(ansiQuoteEnd(text, index + 2))
-  return expansionAt(text, index, scope)
+  if (char === '$' && text[index + 1] === "'") return closedAt(escapedEnd(text, index + 2, "'"))
+  return undefined
+}
+
+function quotedAt(text: string, index: number, scope: Scope): Scan | null | undefined {
+  const quote = quoteAt(text, index, scope)
+  return quote === undefined ? expansionAt(text, index, scope) : quote
 }
 
 function expansionAt(text: string, index: number, scope: Scope): Scan | null | undefined {
@@ -161,7 +158,7 @@ function substituted(text: string, from: number, scope: Scope): Scan | null {
 }
 
 function backquoted(text: string, open: number, scope: Scope): Scan | null {
-  const end = backquoteEnd(text, open + 1)
+  const end = escapedEnd(text, open + 1, '`')
   if (end === -1) return null
   const inner = text.slice(open + 1, end).replace(/\\([\\`$])/g, '$1')
   const script = parseScript(inner, 0, null, [...scope, `\`${open}`])
@@ -169,6 +166,12 @@ function backquoted(text: string, open: number, scope: Scope): Scan | null {
 }
 
 const unquotedDouble = (inner: string) => inner.replace(/\\\n/g, '').replace(/\\([$`"\\])/g, '$1')
+
+function quotedValue(text: string, open: number, end: number): string {
+  if (text[open] === "'") return text.slice(open + 1, end)
+  if (text[open] === '"') return unquotedDouble(text.slice(open + 1, end))
+  return text.slice(open + 2, end).replace(/\\([\s\S])/g, '$1')
+}
 
 function nextNonBlank(text: string, from: number): number {
   let index = from
@@ -197,9 +200,9 @@ type Frame = {
 type Script = { readonly records: readonly Parsed[]; readonly end: number }
 
 function parseScript(text: string, from: number, closer: ')' | null, scope: Scope): Script | null {
-  const records: Parsed[] = []
-  const quietSpans: Span[] = []
-  const pipedSpans: Span[] = []
+  let records: readonly Parsed[] = []
+  let quietSpans: readonly Span[] = []
+  let pipedSpans: readonly Span[] = []
   let frames: readonly Frame[] = [
     {
       kind: 'base',
@@ -213,7 +216,7 @@ function parseScript(text: string, from: number, closer: ')' | null, scope: Scop
       conditionFrom: null,
     },
   ]
-  let words: Word[] = []
+  let words: readonly Word[] = []
   let value: string | null = null
   let raw = ''
   let pending: readonly Heredoc[] = []
@@ -234,7 +237,7 @@ function parseScript(text: string, from: number, closer: ')' | null, scope: Scop
     value = (value ?? '') + valuePart
   }
   const appendScan = (scan: Scan) => {
-    if (!top().isDefinition) records.push(...scan.records)
+    if (!top().isDefinition) records = [...records, ...scan.records]
     const scanned = text.slice(index, scan.end + 1)
     append(scanned, scanned)
     index = scan.end
@@ -260,14 +263,14 @@ function parseScript(text: string, from: number, closer: ')' | null, scope: Scop
   }
   const endCondition = () => {
     const { conditionFrom } = top()
-    if (conditionFrom !== null) quietSpans.push({ from: conditionFrom, to: records.length })
+    if (conditionFrom !== null) quietSpans = [...quietSpans, { from: conditionFrom, to: records.length }]
     setTop({ conditionFrom: null })
   }
   const endPipeline = () => {
     const frame = top()
     const to = records.length
-    if (frame.isPipedIn) pipedSpans.push({ from: frame.elementStart, to })
-    if (frame.negatedFrom !== null) quietSpans.push({ from: frame.negatedFrom, to })
+    if (frame.isPipedIn) pipedSpans = [...pipedSpans, { from: frame.elementStart, to }]
+    if (frame.negatedFrom !== null) quietSpans = [...quietSpans, { from: frame.negatedFrom, to }]
     setTop({ pipelineStart: to, elementStart: to, isPipedIn: false, negatedFrom: null })
   }
   const close = (kind: FrameKind) => {
@@ -378,14 +381,14 @@ function parseScript(text: string, from: number, closer: ')' | null, scope: Scop
       if (isReserved(word.raw)) return
     }
     definition = 'none'
-    words.push(word)
+    words = [...words, word]
   }
   const finishCommand = () => {
     finishWord()
     isRedirecting = false
     isAfterTime = false
     if (words.length > 0 && !top().isDefinition) {
-      records.push({ words, scope: top().scope, follows, isQuiet: false, isPiped: false, isNested: false })
+      records = [...records, { words, scope: top().scope, follows, isQuiet: false, isPiped: false, isNested: false }]
     }
     words = []
   }
@@ -399,14 +402,14 @@ function parseScript(text: string, from: number, closer: ')' | null, scope: Scop
     finishCommand()
     if (top().mode === 'pattern') return
     const span = { from: top().elementStart, to: records.length }
-    quietSpans.push(span)
-    pipedSpans.push(span)
+    quietSpans = [...quietSpans, span]
+    pipedSpans = [...pipedSpans, span]
     setTop({ elementStart: records.length, isPipedIn: true })
     isAtLinebreak = true
   }
   const list = (operator: string) => {
     finishCommand()
-    if (operator === '&') quietSpans.push({ from: top().pipelineStart, to: records.length })
+    if (operator === '&') quietSpans = [...quietSpans, { from: top().pipelineStart, to: records.length }]
     endPipeline()
     follows = operator
     isAtLinebreak = true
@@ -437,26 +440,12 @@ function parseScript(text: string, from: number, closer: ')' | null, scope: Scop
       index += 1
       continue
     }
-    if (char === "'") {
-      const end = text.indexOf("'", index + 1)
-      if (end === -1) return null
-      append(text.slice(index, end + 1), text.slice(index + 1, end))
-      index = end
-      continue
-    }
-    if (char === '"') {
-      const scan = doubleQuoted(text, index, top().scope)
-      if (scan === null) return null
-      if (!top().isDefinition) records.push(...scan.records)
-      append(text.slice(index, scan.end + 1), unquotedDouble(text.slice(index + 1, scan.end)))
-      index = scan.end
-      continue
-    }
-    if (char === '$' && next === "'") {
-      const end = ansiQuoteEnd(text, index + 2)
-      if (end === -1) return null
-      append(text.slice(index, end + 1), text.slice(index + 2, end).replace(/\\([\s\S])/g, '$1'))
-      index = end
+    const quote = quoteAt(text, index, top().scope)
+    if (quote === null) return null
+    if (quote !== undefined) {
+      if (!top().isDefinition) records = [...records, ...quote.records]
+      append(text.slice(index, quote.end + 1), quotedValue(text, index, quote.end))
+      index = quote.end
       continue
     }
     const expansion = expansionAt(text, index, top().scope)
