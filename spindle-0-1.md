@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T10:30:32.468Z
+Updated: 2026-10-19T10:35:41.105Z
 Next ids: c5 D4 R3 S2
 
 ## Goal
@@ -16,7 +16,7 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Stage 3, round 3 of MSP spindle on branch mitosis/spindle at 6a29a67 (base feat/spindle-0-1, previous head d6fe881); every round 2 blocker and advisory is fixed (M1 in accept.zsh with accept-unloaded.awk, proof review/round-2/mitosis-gate/gate_receipt.py). Round 3 verdict is diagnose (review/round-3/spindle.verdict.json): blocker C1 (a here-string <<< is read as a heredoc and hides later lines, kind narrow command match) and advisories C2 (cd and export context leaks out of subshells, unset ignored), S3 ($'...' quoting unknown) and S4 (cd ignores .. and crosses subshells). The narrow command match diagnosis is running. C9 keeps one atom per module because the engine refuses an atom imported from another file.
+Stage 3, round 3 of MSP spindle on branch mitosis/spindle at 6a29a67 (base feat/spindle-0-1, previous head d6fe881); every round 2 blocker and advisory is fixed (M1 in accept.zsh with accept-unloaded.awk, proof review/round-2/mitosis-gate/gate_receipt.py). Round 3 verdict is diagnose (review/round-3/spindle.verdict.json): blocker C1 (a here-string <<< is read as a heredoc and hides later lines, kind narrow command match) and advisories C2 (cd and export context leaks out of subshells, unset ignored), S3 ($'...' quoting unknown) and S4 (cd ignores .. and crosses subshells). Narrow command match is diagnosed fixable and recorded, so round 3 is loop (selecting check review/round-3/narrow-command-match/narrow-command-match.sh); the receipts for C1, C2, S3 and S4 are committed (6f0bce7) and the lexer fix is in progress. C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
