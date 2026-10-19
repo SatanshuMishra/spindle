@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: parked
-Updated: 2026-10-19T17:42:07.961Z
+Updated: 2026-10-19T17:42:11.438Z
 Next ids: c5 D6 R3 S2
 
 ## Goal
@@ -20,7 +20,7 @@ Integration done: lighthouse run 1 is green with 0 failures; the /spindle status
 
 ## Next step
 
-The user starts Clean-up by saying the FEATURE pull request merged.
+The user starts Clean-up by saying the FEATURE pull request https://github.com/SatanshuMishra/spindle/pull/2 merged.
 
 Needs: D2.
 
