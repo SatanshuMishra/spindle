@@ -1,0 +1,19 @@
+{
+  "name": "spindle",
+  "owner": {
+    "name": "SatanshuMishra",
+    "url": "https://github.com/SatanshuMishra"
+  },
+  "metadata": {
+    "description": "Spindle: a Claude Code mod that shows what a request-pipeline run is doing."
+  },
+  "plugins": [
+    {
+      "name": "spindle",
+      "source": "./plugins/spindle",
+      "description": "Mod: a band above the prompt, a run pane and toasts for the request pipeline's lane, stage, MSPs, agents and verdicts.",
+      "version": "0.1.0",
+      "category": "mod"
+    }
+  ]
+}
