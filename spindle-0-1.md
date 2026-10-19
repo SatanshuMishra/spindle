@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T06:37:12.450Z
+Updated: 2026-10-19T06:37:15.338Z
 Next ids: c5 D1 R1 S1
 
 ## Goal
@@ -33,3 +33,4 @@ Record the owner's intent answers in docs/specs/spindle-0-1.decisions.md, then a
 - Design: https://claude.ai/artifact/NunJteCXFLtDCAEJmGnZnS and ~/Documents/DevLabs/spindle-design/
 - Reference mod: ~/Documents/DevLabs/spindle-design/claude-kit-reference/plugins/savvy-progress/hooks/register.tsx
 - Shared notes: ~/Library/Application Support/Claude/side-session-notes/local_60a3e134-d8d3-492f-a0c2-70f85dbf580e
+- Spec working files: docs/specs/spindle-0-1.decisions.md (binding answers) and docs/specs/spindle-0-1.record.json (seams, criteria, Steps)
