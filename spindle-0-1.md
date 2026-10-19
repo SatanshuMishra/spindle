@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T09:42:08.613Z
+Updated: 2026-10-19T09:47:27.380Z
 Next ids: c5 D4 R3 S2
 
 ## Goal
@@ -16,11 +16,11 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Stage 3, round 1 fix pass for MSP spindle on branch mitosis/spindle (base feat/spindle-0-1, round 1 head 1e8876c). Every round 1 blocker and advisory except C3 is fixed with a receipt test; C9 keeps one atom per module because the engine refuses an atom imported from another file. C3 is requirement-wrong; its amendment 1 build (Step second-run, MSP spindle-amend-1) is running in the background.
+Stage 3, review round 2 for MSP spindle on branch mitosis/spindle at d6fe881 (base feat/spindle-0-1, round 1 head 1e8876c). Every round 1 blocker and advisory is fixed with a receipt test, C3 through amendment 1, fast-forwarded in; C9 keeps one atom per module because the engine refuses an atom imported from another file. Amendment 1's mitosis gate read inconclusive because accept.zsh mapped a missing export as exit 2; the script now maps it to 1, and a manual re-run of its five properties is red with the work reverted and green with it.
 
 ## Next step
 
-When the amendment 1 build exits, read its last stdout line, merge its branch into mitosis/spindle in the worktree, re-run pipeline obligations with the criteria plus 5.4 and 5.9, then start review round 2 for MSP spindle with previous head 1e8876c.
+Start review round 2 for MSP spindle: diff, obligations with all 18 criteria, suite, then code-reviewer and security-reviewer with previous head 1e8876c; add the amendment's inconclusive gate as a mitosis finding with the manual re-run as its evidence.
 
 Needs: D2, D3.
 
