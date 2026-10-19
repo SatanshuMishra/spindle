@@ -1,7 +1,7 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T08:30:24.693Z
-Next ids: c5 D2 R3 S2
+Updated: 2026-10-19T08:31:30.327Z
+Next ids: c5 D3 R3 S2
 
 ## Goal
 
@@ -26,7 +26,7 @@ Needs: D1.
 
 ## Decisions in force
 
-- D1 Interphase hand-off: build spindle-0-1 as two stacked MSPs: Build now: run --plan-only, then the first build on feat/spindle-0-1 with the run home ~/.mitosis/spindle/spindle-0-1.
+- D2 Amendment hand-off: one MSP, spindle, instead of two stacked: One MSP, spindle, one pull request; recorded in the spec as an assumption overriding the two-PR decision and reported as a top risk.
 
 ## Open risks
 
