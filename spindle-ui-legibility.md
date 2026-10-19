@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: active
-Updated: 2026-10-19T23:02:13.325Z
+Updated: 2026-10-19T23:06:03.365Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -14,7 +14,7 @@ Redesign spindle's band and Pipeline pane so they fit any width, explain every c
 Full lane, slug spindle-ui-legibility. The owner approved the read-back of preview 2; interphase handed off (record handed-off, ADR 0005 supersedes ADR 0004, glossary terms Activity, Round state and Worker in the checkout, uncommitted until Ship). Stage 2: FEATURE branch feat/spindle-ui-legibility cut at 3fd829b and pushed; run home ~/.mitosis/spindle/spindle-ui-legibility holds CHARTER.md, run.zsh, dispatch.zsh, worker-rules.txt, items.json and graph.json; plan-only gives three stacked MSPs (activity-model, band, pane), one Lane each. The first build committed all three MSPs (gate 46 pass). Review round 1 (findings, candidates, verdicts and diagnoses under review/round-1/):
 - activity-model: loop. Blockers C1, C4 (unreadable file read as absent), C3 (worktree path prefix match), U1-U6 (failing test), all diagnosed fixable; advisories C5 duplicated code, C6 primitive obsession. Fixed on mitosis/activity-model at faa0394 (receipts 5100c87 red at bdc7720; suite 127 pass; the three selecting checks print nothing); not yet merged into band and pane.
 - pane: loop. Blockers C1 color only meaning (verdictPicture in hint() with alt worker.words), C2 overlapping svg marks (chip placed first, pips wrapped in the room left, height from rows), both fixable; advisory C4 alt text without meaning. Fixed on mitosis/pane at 30baf1f (receipts 9752d1c red at 80cbc42; pane's own tests pass, 7 suite failures inherited from activity-model and band; the colour probe and a 2-D version of the overlap check print nothing, the 2-D check finding 66 at 80cbc42 because the diagnosis's 1-D check misreads the wrapped rows its own fix prescribes).
-- band: loop. Blockers C1, C2 criterion test timeout ({ timeoutMs: 60_000 } on the two width sweeps and the dismiss test) and U1-U3 failing test (the Courier test reads the spindle-crew label '×0'), both fixable; advisories C4 glyph accessible name, C5 empty hover card.
+- band: loop. Blockers C1, C2 criterion test timeout and U1-U3 failing test, both fixable; advisories C4 glyph accessible name, C5 empty hover card. Receipts at 1bd657a (C4 and C5 red at 8c31e18); the source fix (word labels with glyph children, hint() skips an empty card) is in the worktree, not yet committed.
 
 Grounding facts: the pipeline run skill defines the round files spindle reads (.diff, .suite.txt, .findings.json, .verdicts.json, .verdict.json, .diagnosis.json), while .suite.run is ad hoc; every finding in all 112 verdict files on this machine has a short `kind` label; the mod API has no Button tooltip prop but offers keyed-Box hover cards and `<title>` tooltips in an interactive Svg, and tests can mount at any width and press Buttons.
 
