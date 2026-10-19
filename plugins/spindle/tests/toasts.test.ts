@@ -1,7 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
-import { NOW, build, fix, fixRound2, green, integrate, review, ship, spec } from './fixtures/runs'
+import { NOW, SF, build, fix, fixRound2, green, integrate, review, ship, spec, split, threadOnly, withFile } from './fixtures/runs'
 import type { Fixture } from './harness'
 import { harness } from './harness'
 
@@ -109,4 +109,29 @@ test('a whole run writes nothing', async ($, on) => {
   const finished = await $.command.run({ command: 'spindle', args: 'status' } as never)
   expect(String(finished.text ?? '')).toContain('finished yes')
   expect(world.writes()).toEqual([])
+})
+
+test('a thread-only run gaining its home raises no toast', async ($, on) => {
+  const world = harness(on, threadOnly, { now: NOW })
+  await world.start($)
+  await skill($, 'pipeline:run', '')
+  await world.clock.advance(2000)
+
+  world.use(fix)
+  await world.clock.advance(2000)
+  await world.clock.advance(2000)
+
+  expect(world.toasts()).toEqual([])
+})
+
+test('a different run home with the same slug raises no toast', async ($, on) => {
+  const world = harness(on, split, { now: NOW })
+  await world.start($)
+  await world.clock.advance(2000)
+
+  world.use(withFile(fix, SF, fix.files[SF]!.text, NOW - 60_000))
+  await world.clock.advance(2000)
+  await world.clock.advance(2000)
+
+  expect(world.toasts()).toEqual([])
 })
