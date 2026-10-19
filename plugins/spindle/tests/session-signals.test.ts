@@ -1,0 +1,578 @@
+import type { On } from 'claude-code'
+import { expect, test } from 'claude-code/testing'
+import type { Engine } from 'claude-code/testing'
+
+import { NOW, green, integrate, otherThread, review, secondRun, spec, threadOnly } from './fixtures/runs'
+import { harness } from './harness'
+
+async function status($: Engine): Promise<string[]> {
+  const answered = await $.command.run({ command: 'spindle', args: 'status' } as never)
+  return String(answered.text ?? '').split('\n')
+}
+
+const mspLine = (lines: readonly string[], label: string) => lines.find(line => line.startsWith(`msp ${label} `)) ?? ''
+
+const skill = ($: Engine, name: string, args: string) => $.tool.call({ tool: 'Skill', skill: name, args } as never)
+
+const bash = ($: Engine, command: string) => $.tool.call({ tool: 'Bash', command } as never)
+
+const spawn = ($: Engine, subagentType: string, description: string) =>
+  $.agent.spawn({
+    tool_use_id: `tool-${description}`,
+    prompt: description,
+    description,
+    subagentType,
+    provider: 'engine',
+    parentModel: 'claude-opus-5-5',
+    background: false,
+    fork: false,
+  } as never)
+
+function answerTurns(on: On) {
+  on('turn.complete', () => ({ text: '' }) as never)
+  on('turn.step', async function* () {
+    return {
+      turnId: 'turn-main',
+      index: 0,
+      answer: '',
+      toolUses: [],
+      stopReason: 'end_turn',
+      usage: { model: 'claude-opus-5-5', input_tokens: 1000, output_tokens: 500, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+    } as never
+  })
+}
+
+async function step($: Engine) {
+  const stream = ($.turn.step as (e: unknown) => AsyncIterable<unknown>)({ turnId: 'turn-main', index: 0, model: 'claude-opus-5-5', messageCount: 1 })
+  for await (const chunk of stream) void chunk
+}
+
+test('thread id names a run once interphase is called', async ($, on) => {
+  const world = harness(on, threadOnly, { now: NOW })
+  await world.start($)
+  expect(await status($)).toEqual(['No pipeline run in this session.'])
+
+  await skill($, 'interphase:feature', 'Add rate limits. Interview me first.')
+
+  const lines = await status($)
+  expect(lines).toContain('run rate-limit-api repo ?')
+  expect(lines).toContain('stage spec round 0 finished no')
+})
+
+test('create_pull_request call marks its MSP PR open', async ($, on) => {
+  const world = harness(on, green, { now: NOW })
+  world.answerTool('mcp__github__create_pull_request', { html_url: 'https://github.com/SatanshuMishra/api/pull/41', state: 'open' })
+  await world.start($)
+  expect(mspLine(await status($), 'limiter-core').startsWith('msp limiter-core green')).toBe(true)
+
+  await $.tool.call({ tool: 'mcp__github__create_pull_request', owner: 'SatanshuMishra', repo: 'api', head: 'mitosis/limiter-core', base: 'main', title: 'feat: add the sliding-window limiter', body: '' } as never)
+
+  const line = mspLine(await status($), 'limiter-core')
+  expect(line.startsWith('msp limiter-core pr')).toBe(true)
+  expect(line).toContain('pr #41')
+})
+
+test('a done run stops reading', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'pipeline clean --repo /home/owner/work/api --slug rate-limit-api')
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+  const readsAtDone = world.reads().length
+
+  await world.clock.advance(10000)
+
+  expect(world.reads().length).toBe(readsAtDone)
+})
+
+test('a second thread with no run home yet is named by its thread', async ($, on) => {
+  const world = harness(on, otherThread, { now: NOW })
+  await world.start($)
+  expect(await status($)).toEqual(['No pipeline run in this session.'])
+
+  await skill($, 'interphase:bug', 'Fix the quota header. Work autonomously.')
+
+  const lines = await status($)
+  expect(lines).toContain('run quota-api repo ?')
+  expect(lines).toContain('stage spec round 0 finished no')
+})
+
+test('a new pipeline call after Done shows the next run', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'pipeline clean --repo /home/owner/work/api --slug rate-limit-api')
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+  const toastsAtDone = world.toasts().length
+  await world.clock.advance(2000)
+
+  world.use(secondRun)
+  await skill($, 'interphase:bug', 'Fix the quota header. Work autonomously.')
+  await world.clock.advance(2000)
+
+  const lines = await status($)
+  expect(lines).toContain('run quota-api repo api')
+  expect(lines).toContain('stage spec round 0 finished no')
+  expect(world.toasts().slice(toastsAtDone).filter(text => text.includes('rate-limit-api'))).toEqual([])
+})
+
+test('a new pipeline call after Done hides the finished run', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'pipeline clean --repo /home/owner/work/api --slug rate-limit-api')
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+  const toastsAtDone = world.toasts().length
+  await world.clock.advance(2000)
+
+  await skill($, 'interphase:bug', 'Fix the quota header. Work autonomously.')
+  await world.clock.advance(2000)
+
+  expect(await status($)).toEqual(['No pipeline run in this session.'])
+  expect(world.toasts().slice(toastsAtDone)).toEqual([])
+})
+
+test('interview suffix sets the full lane', async ($, on) => {
+  const world = harness(on, threadOnly, { now: NOW })
+  await world.start($)
+
+  await skill($, 'interphase:feature', 'Add rate limits. Interview me first.')
+
+  expect(await status($)).toContain('lane full')
+})
+
+test('autonomous suffix sets the standard lane', async ($, on) => {
+  const world = harness(on, threadOnly, { now: NOW })
+  await world.start($)
+
+  await skill($, 'interphase:bug', 'Fix the crash. Work autonomously.')
+
+  expect(await status($)).toContain('lane standard')
+})
+
+test('resumed session leaves the lane unknown', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  expect(await status($)).toContain('lane unknown')
+})
+
+test('a later autonomous call keeps the full lane', async ($, on) => {
+  const world = harness(on, threadOnly, { now: NOW })
+  await world.start($)
+
+  await skill($, 'interphase:feature', 'Add rate limits. Interview me first.')
+  await skill($, 'interphase:feature', 'Amend the limiter spec. Work autonomously.')
+
+  expect(await status($)).toContain('lane full')
+})
+
+test('run.zsh call moves Spec to Build', async ($, on) => {
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+  expect(await status($)).toContain('stage spec round 0 finished no')
+
+  await bash($, '/home/owner/.mitosis/api/rate-limit-api/run.zsh --plan-only')
+
+  expect(await status($)).toContain('stage build round 0 finished no')
+})
+
+test('ship call moves to Ship', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  await bash($, 'SHIP=1 /home/owner/.mitosis/api/rate-limit-api/run.zsh --resume')
+
+  expect(await status($)).toContain('stage ship round 0 finished no')
+})
+
+test('pipeline clean exit 0 is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'pipeline clean --repo /home/owner/work/api --slug rate-limit-api')
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})
+
+test('a later file stage wins over an earlier call', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  await bash($, '/home/owner/.mitosis/api/rate-limit-api/run.zsh --plan-only')
+
+  expect(await status($)).toContain('stage review round 1 finished no')
+})
+
+test('code-reviewer spawn is a Detective', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  world.queueSpawn({ agentId: 'a1', model: 'claude-opus-5-5' })
+  await world.start($)
+
+  await spawn($, 'code-reviewer', 'review limiter-core')
+
+  expect(await status($)).toContain('agent a1 detective code-reviewer Opus 5.5 running')
+})
+
+test('validator spawn is a Judge', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  world.queueSpawn({ agentId: 'a2', model: 'claude-opus-5-5' })
+  await world.start($)
+
+  await spawn($, 'validator', 'validate round 1')
+
+  expect((await status($)).some(line => line.startsWith('agent a2 judge validator'))).toBe(true)
+})
+
+test('unknown agent type is a plain crab', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  world.queueSpawn({ agentId: 'a3', model: 'claude-opus-5-5' })
+  await world.start($)
+
+  await spawn($, 'general-purpose', 'diagnosis')
+
+  expect((await status($)).some(line => line.startsWith('agent a3 plain general-purpose'))).toBe(true)
+})
+
+test('completed agent leaves working now', async ($, on) => {
+  answerTurns(on)
+  const world = harness(on, review, { now: NOW })
+  world.queueSpawn({ agentId: 'a1', model: 'claude-opus-5-5' })
+  await world.start($)
+  await spawn($, 'code-reviewer', 'review limiter-core')
+
+  await ($.turn.complete as (e: unknown) => Promise<unknown>)({ agentId: 'a1', reason: 'answer', answer: 'ok', turnId: 'turn-a1', durationMs: 1000, isAborted: false })
+
+  const lines = await status($)
+  expect(lines).toContain('agent a1 detective code-reviewer Opus 5.5 done')
+  expect(lines).toContain('agents 0 live 1 total')
+})
+
+test('model steps add to the session cost', async ($, on) => {
+  answerTurns(on)
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+
+  await step($)
+  await step($)
+
+  expect(await status($)).toContain('cost 0.0280')
+})
+
+test('elapsed counts from the oldest run-home file', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  expect(await status($)).toContain('elapsed 48m')
+})
+
+test('a grep naming pipeline clean during Review is not Done', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  await bash($, 'grep -rn "pipeline clean" docs/')
+
+  expect(await status($)).toContain('stage review round 1 finished no')
+})
+
+test('reading run.zsh during Spec is not Build', async ($, on) => {
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+
+  await bash($, 'cat /home/owner/.mitosis/api/rate-limit-api/run.zsh')
+
+  expect(await status($)).toContain('stage spec round 0 finished no')
+})
+
+test('a grep for SHIP=1 in run.zsh during Review is not Ship', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  await bash($, 'grep -n SHIP=1 /home/owner/.mitosis/api/rate-limit-api/run.zsh')
+
+  expect(await status($)).toContain('stage review round 1 finished no')
+})
+
+test('a quoted note naming run.zsh during Spec is not Build', async ($, on) => {
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+
+  await bash($, `lb.zsh update_thread '{"next_step":"Run /home/owner/.mitosis/api/rate-limit-api/run.zsh after the review"}'`)
+
+  expect(await status($)).toContain('stage spec round 0 finished no')
+})
+
+test('pipeline clean after cd in a compound command is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'cd /home/owner/work/api && pipeline clean --repo /home/owner/work/api --slug rate-limit-api')
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})
+
+test('model steps before any run add no cost', async ($, on) => {
+  answerTurns(on)
+  const world = harness(on, threadOnly, { now: NOW })
+  await world.start($)
+  expect(await status($)).toEqual(['No pipeline run in this session.'])
+
+  await step($)
+  await skill($, 'interphase:feature', 'Add rate limits. Interview me first.')
+
+  expect(await status($)).toContain('cost 0.0000')
+})
+
+test('a create_pull_request call that rejects leaves no Courier working', async ($, on) => {
+  on('tool.call', { tool: 'mcp__github__create_pull_request' }, () => {
+    throw new Error('github said 422')
+  })
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+  await $.tool
+    .call({ tool: 'mcp__github__create_pull_request', head: 'mitosis/limiter-core', base: 'main', title: 't', body: '' } as never)
+    .catch(() => null)
+
+  const band = await $.ui.mount({
+    plugin: 'spindle',
+    surface: 'terminal',
+    component: 'AbovePrompt',
+    props: { hasSurvey: false, isWorking: false, maxRows: 4, bodyColumns: 100, scroll: { offset: 0, bodyRows: 4 }, view: {} },
+  })
+  expect((await band.find({ type: 'Text', text: /rate-limit-api/ }))?.text).toContain('0 agents')
+})
+
+test('a heredoc line naming pipeline clean during Review is not Done', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, "cat > notes.md <<'EOF'\npipeline clean ran after the merge\nEOF")
+
+  expect(await status($)).toContain('stage review round 1 finished no')
+})
+
+test('a heredoc line naming run.zsh during Spec is not Build', async ($, on) => {
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+
+  await bash($, "cat > notes.md <<'EOF'\n/home/owner/.mitosis/api/rate-limit-api/run.zsh --plan-only\nEOF")
+
+  expect(await status($)).toContain('stage spec round 0 finished no')
+})
+
+test('a comment naming pipeline clean during Review is not Done', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'true # later; pipeline clean')
+
+  expect(await status($)).toContain('stage review round 1 finished no')
+})
+
+test('pipeline clean after a heredoc holding an apostrophe is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, "cat > notes.md <<EOF\nthe owner's merge\nEOF\npipeline clean --repo /home/owner/work/api --slug rate-limit-api")
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})
+
+test('pipeline clean after an arithmetic shift is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'x=$((1<<2)); pipeline clean --repo /home/owner/work/api --slug rate-limit-api')
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})
+
+test('pipeline clean on the line after an arithmetic shift is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'x=$((1<<2))\npipeline clean --repo /home/owner/work/api --slug rate-limit-api')
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})
+
+test('an exported SHIP before the run script moves to Ship', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  await bash($, 'export SHIP=1; /home/owner/.mitosis/api/rate-limit-api/run.zsh --resume')
+
+  expect(await status($)).toContain('stage ship round 0 finished no')
+})
+
+test('SHIP set through env moves to Ship', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  await bash($, 'env SHIP=1 /home/owner/.mitosis/api/rate-limit-api/run.zsh --resume')
+
+  expect(await status($)).toContain('stage ship round 0 finished no')
+})
+
+test('the run script started from its run home moves to Ship', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  await bash($, 'cd /home/owner/.mitosis/api/rate-limit-api && SHIP=1 ./run.zsh --resume')
+
+  expect(await status($)).toContain('stage ship round 0 finished no')
+})
+
+test('a run script outside a run home is not Build', async ($, on) => {
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+
+  await bash($, 'cd /home/owner/work/api && ./run.zsh --plan-only')
+
+  expect(await status($)).toContain('stage spec round 0 finished no')
+})
+
+test('pipeline clean on the line after a here-string is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'grep -c limiter <<< "$out"\npipeline clean --repo /home/owner/work/api --slug rate-limit-api')
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})
+
+test('the run script on the line after a here-string moves Spec to Build', async ($, on) => {
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+
+  await bash($, 'tr a b <<< x\n/home/owner/.mitosis/api/rate-limit-api/run.zsh --plan-only')
+
+  expect(await status($)).toContain('stage build round 0 finished no')
+})
+
+test('pipeline clean on the line after a dollar-bracket shift is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'echo $[1<<2]\npipeline clean --repo /home/owner/work/api --slug rate-limit-api')
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})
+
+test('pipeline clean after an ANSI-C quote holding an escaped quote is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, "echo $'the owner\\'s merge'\npipeline clean --repo /home/owner/work/api --slug rate-limit-api")
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})
+
+test('an ANSI-C quote holding a comment and pipeline clean is not Done', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, "echo $'\\' ; pipeline clean #'")
+
+  expect(await status($)).toContain('stage review round 1 finished no')
+})
+
+test('a cd inside a subshell does not make ./run.zsh a run script', async ($, on) => {
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+
+  await bash($, '(cd /home/owner/.mitosis/api/rate-limit-api); ./run.zsh --plan-only')
+
+  expect(await status($)).toContain('stage spec round 0 finished no')
+})
+
+test('an export inside a subshell does not ship the run script after it', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  await bash($, '(export SHIP=1); /home/owner/.mitosis/api/rate-limit-api/run.zsh --resume')
+
+  expect(await status($)).toContain('stage review round 1 finished no')
+})
+
+test('an unset SHIP before the run script is not Ship', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  await bash($, 'export SHIP=1; unset SHIP; /home/owner/.mitosis/api/rate-limit-api/run.zsh --resume')
+
+  expect(await status($)).toContain('stage review round 1 finished no')
+})
+
+test('a cd out of the run home through .. makes ./run.zsh not a run script', async ($, on) => {
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+
+  await bash($, 'cd /home/owner/.mitosis/api/rate-limit-api && cd ../../../work && ./run.zsh --plan-only')
+
+  expect(await status($)).toContain('stage spec round 0 finished no')
+})
+
+test('pipeline clean on the line after a parameter default holding a quoted brace is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, "echo ${x:-'}'}\npipeline clean --repo /home/owner/work/api --slug rate-limit-api")
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})
+
+test('a quoted note after a parameter default holding a quoted brace is not Done', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, "echo ${x:-'}'} '; pipeline clean #'")
+
+  expect(await status($)).toContain('stage review round 1 finished no')
+})
+
+test('pipeline clean as the condition of an if is Clean-up without Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'if pipeline clean --repo /home/owner/work/api --slug rate-limit-api; then echo ok; fi')
+
+  expect(await status($)).toContain('stage clean round 0 finished no')
+})
+
+test('pipeline clean followed by another command after a semicolon is Clean-up without Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'pipeline clean --repo /home/owner/work/api --slug rate-limit-api; echo cleaned')
+
+  expect(await status($)).toContain('stage clean round 0 finished no')
+})
+
+test('pipeline clean with the command after its && on the next line is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'pipeline clean --repo /home/owner/work/api --slug rate-limit-api &&\n  echo cleaned')
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})
