@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
 import { drawBand } from './draw/band'
-import { PANE, drawEmptyPane, togglePane } from './draw/pane'
+import { PANE, drawPane, togglePane } from './draw/pane'
 import { startPolling } from './run/poll'
 import { agentSpawnSignals, toolCallSignals, turnCompleteSignals, turnStepSignals } from './run/signals'
 import { summary } from './run/summary'
@@ -34,7 +34,7 @@ export const register: Register = on => {
     return { text: await togglePane($) }
   })
 
-  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => drawEmptyPane($, e))
+  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => drawPane($, e))
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => drawBand($, e, () => next(e)))
 }

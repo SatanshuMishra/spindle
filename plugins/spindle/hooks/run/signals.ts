@@ -1,10 +1,11 @@
 import { atom, read, update } from 'claude-code'
-import type { Hook, StateDollar } from 'claude-code'
+import type { Hook } from 'claude-code'
 
 import type { AgentRow, Lane, Role, Signals, Stage } from '../../types'
 import { contextMax, contextTokens, stepCost } from './cost'
 import { STAGES } from './infer'
 import { NO_SIGNALS, refresh } from './view'
+import type { ViewDollar } from './view'
 
 const MAX_AGENTS = 200
 
@@ -75,7 +76,7 @@ function exitedClean(ran: { deny?: string; isError?: boolean; result?: unknown }
   return exitCode === undefined || exitCode === 0
 }
 
-async function change($: StateDollar, apply: (signals: Signals) => Signals): Promise<void> {
+async function change($: ViewDollar, apply: (signals: Signals) => Signals): Promise<void> {
   await update($, signalsState, apply)
   await refresh($)
 }
