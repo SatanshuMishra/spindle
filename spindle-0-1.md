@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T09:56:24.401Z
+Updated: 2026-10-19T10:05:45.292Z
 Next ids: c5 D4 R3 S2
 
 ## Goal
@@ -16,11 +16,11 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Stage 3, review round 2 for MSP spindle on branch mitosis/spindle at d6fe881 (base feat/spindle-0-1, round 1 head 1e8876c). Every round 1 blocker and advisory is fixed with a receipt test, C3 through amendment 1, fast-forwarded in; C9 keeps one atom per module because the engine refuses an atom imported from another file. Amendment 1's mitosis gate read inconclusive because accept.zsh mapped a missing export as exit 2; the script now maps it to 1, and a manual re-run of its five properties is red with the work reverted and green with it.
+Stage 3, round 2 of MSP spindle on branch mitosis/spindle at d6fe881 (base feat/spindle-0-1). Round 2 verdict is diagnose: every round 1 blocker is fixed; blockers C1 (heredoc body lines read as commands, kind loose command match) and M1 (amendment 1 gate inconclusive, kind mitosis gate, evidence review/amend-1.gate-rerun.txt); advisories C2 (SHIP via export or env and cd then ./run.zsh missed) and C4 (run identity declared twice). Both diagnoses are running. C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
-When the round 2 validator returns, save its array as review/round-2/spindle.verdicts.json, then pipeline record and verdict for round 2. Round 2 findings (review/round-2/spindle.findings.json): C1 and S1 MEDIUM heredoc and comment lines read as commands, M1 HIGH amendment gate inconclusive (evidence review/amend-1.gate-rerun.txt), advisories C2, C3, C4, S2.
+When both round 2 diagnoses return, save each as review/round-2/spindle.<kind slug>.diagnosis.json, record it with pipeline diagnosis, re-run pipeline verdict, then fix each fixable kind with a receipt test plus the advisories C2 and C4, and start round 3 with previous head d6fe881.
 
 Needs: D2, D3.
 
