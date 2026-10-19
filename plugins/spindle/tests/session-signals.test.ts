@@ -526,3 +526,43 @@ test('a cd out of the run home through .. makes ./run.zsh not a run script', asy
 
   expect(await status($)).toContain('stage spec round 0 finished no')
 })
+
+test('pipeline clean on the line after a parameter default holding a quoted brace is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, "echo ${x:-'}'}\npipeline clean --repo /home/owner/work/api --slug rate-limit-api")
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})
+
+test('a quoted note after a parameter default holding a quoted brace is not Done', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, "echo ${x:-'}'} '; pipeline clean #'")
+
+  expect(await status($)).toContain('stage review round 1 finished no')
+})
+
+test('pipeline clean as the condition of an if is Clean-up without Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'if pipeline clean --repo /home/owner/work/api --slug rate-limit-api; then echo ok; fi')
+
+  expect(await status($)).toContain('stage clean round 0 finished no')
+})
+
+test('pipeline clean followed by another command after a semicolon is Clean-up without Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'pipeline clean --repo /home/owner/work/api --slug rate-limit-api; echo cleaned')
+
+  expect(await status($)).toContain('stage clean round 0 finished no')
+})

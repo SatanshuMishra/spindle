@@ -43,7 +43,8 @@ function laneOf(args: string): Lane | null {
 
 function bashSignal(text: string): CallSignal {
   const commands = simpleCommands(text) ?? []
-  if (commands.some(isPipelineClean)) return { ...NO_CALL, stage: 'clean', isClean: true }
+  const cleans = commands.filter(isPipelineClean)
+  if (cleans.length > 0) return { ...NO_CALL, stage: 'clean', isClean: cleans.some(command => command.decidesStatus) }
   const runs = commands.filter(isRunScript)
   if (runs.length === 0) return NO_CALL
   return { ...NO_CALL, stage: runs.some(isShipping) ? 'ship' : 'build' }

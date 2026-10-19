@@ -1,12 +1,15 @@
 export type SimpleCommand = {
   readonly assignments: Readonly<Record<string, string>>
   readonly words: readonly string[]
+  readonly decidesStatus: boolean
 }
 
 const SEPARATORS = new Set([';', '&', '|', '\n', '(', ')'])
 const BLANK = /\s/
 const ASSIGNMENT = /^([A-Za-z_][A-Za-z0-9_]*)=([\s\S]*)$/
+const PREFIX_ASSIGNMENT = /^([A-Za-z_][A-Za-z0-9_]*)\+?=/
 const SHELLS = new Set(['zsh', 'bash', 'sh'])
+const MODIFIERS = new Set(['command', 'builtin', 'exec', 'noglob', 'nocorrect'])
 
 type Heredoc = { readonly delimiter: string; readonly stripsTabs: boolean }
 
@@ -46,155 +49,545 @@ function skipHeredocBodies(text: string, newline: number, pending: readonly Here
   return lineStart - 1
 }
 
-const CLOSERS: Readonly<Record<string, string>> = { '(': ')', '[': ']', '{': '}' }
+type Word = { readonly value: string; readonly raw: string }
 
-function groupEnd(text: string, open: number): number {
-  const opener = text[open]!
-  const closer = CLOSERS[opener]!
-  let depth = 0
-  for (let index = open; index < text.length; index += 1) {
-    if (text[index] === opener) depth += 1
-    else if (text[index] === closer) depth -= 1
-    if (depth === 0) return index
+type Scope = readonly string[]
+
+type Parsed = {
+  readonly words: readonly Word[]
+  readonly scope: Scope
+  readonly follows: string | null
+  readonly isQuiet: boolean
+  readonly isPiped: boolean
+  readonly isNested: boolean
+}
+
+type Scan = { readonly end: number; readonly records: readonly Parsed[] }
+
+type Span = { readonly from: number; readonly to: number }
+
+const nested = (records: readonly Parsed[]): readonly Parsed[] =>
+  records.map(record => ({ ...record, isQuiet: true, isNested: true }))
+
+const closedAt = (end: number): Scan | null => (end === -1 ? null : { end, records: [] })
+
+function ansiQuoteEnd(text: string, from: number): number {
+  for (let index = from; index < text.length; index += 1) {
+    if (text[index] === '\\') index += 1
+    else if (text[index] === "'") return index
   }
   return -1
 }
 
-type ShellGroup = { readonly words: readonly string[]; readonly scope: number; readonly isPiped: boolean }
-
-type ShellScript = { readonly groups: readonly ShellGroup[]; readonly parents: readonly number[] }
-
-function shellWords(text: string): ShellScript | null {
-  const parents: number[] = [-1]
-  const groups: ShellGroup[] = []
-  let scope = 0
-  let words: string[] = []
-  let groupScope = scope
-  let isPipedIn = false
-  let word: string | null = null
-  let quote: '"' | "'" | "$'" | null = null
-  let pending: Heredoc[] = []
-  const finishWord = () => {
-    if (word !== null) words.push(word)
-    word = null
+function backquoteEnd(text: string, from: number): number {
+  for (let index = from; index < text.length; index += 1) {
+    if (text[index] === '\\') index += 1
+    else if (text[index] === '`') return index
   }
-  const startGroup = (endsInPipe: boolean) => {
-    finishWord()
-    if (words.length > 0) groups.push({ words, scope: groupScope, isPiped: isPipedIn || endsInPipe })
-    words = []
-    groupScope = scope
-    isPipedIn = endsInPipe
-  }
-  for (let index = 0; index < text.length; index += 1) {
+  return -1
+}
+
+function scanUntil(text: string, from: number, closer: string, nestsParens: boolean, scope: Scope): Scan | null {
+  let depth = 0
+  let records: readonly Parsed[] = []
+  for (let index = from; index < text.length; index += 1) {
     const char = text[index]!
-    const following = text[index + 1]
-    if (quote === "$'") {
-      if (char === "'") quote = null
-      else if (char === '\\' && following !== undefined) {
-        word = (word ?? '') + following
-        index += 1
-      } else word = (word ?? '') + char
-      continue
-    }
-    if (quote === "'") {
-      if (char === "'") quote = null
-      else word = (word ?? '') + char
-      continue
-    }
-    if (quote === '"') {
-      if (char === '"') quote = null
-      else if (char === '\\' && following !== undefined) {
-        word = (word ?? '') + following
-        index += 1
-      } else word = (word ?? '') + char
-      continue
-    }
-    if (char === '\\' && following !== undefined) {
-      word = (word ?? '') + following
+    if (char === '\\') {
       index += 1
       continue
     }
-    if (char === '$' && following === "'") {
-      quote = "$'"
-      word = word ?? ''
+    if (char === closer && depth === 0) return { end: index, records }
+    if (nestsParens && (char === '(' || char === ')')) {
+      depth += char === '(' ? 1 : -1
+      continue
+    }
+    const quoted = quotedAt(text, index, scope)
+    if (quoted === null) return null
+    if (quoted !== undefined) {
+      records = [...records, ...quoted.records]
+      index = quoted.end
+    }
+  }
+  return null
+}
+
+function doubleQuoted(text: string, open: number, scope: Scope): Scan | null {
+  let records: readonly Parsed[] = []
+  for (let index = open + 1; index < text.length; index += 1) {
+    const char = text[index]!
+    if (char === '\\') {
       index += 1
       continue
     }
-    if (char === '$' && (following === '[' || following === '{')) {
-      const end = groupEnd(text, index + 1)
+    if (char === '"') return { end: index, records }
+    const expansion = expansionAt(text, index, scope)
+    if (expansion === null) return null
+    if (expansion !== undefined) {
+      records = [...records, ...expansion.records]
+      index = expansion.end
+    }
+  }
+  return null
+}
+
+function quotedAt(text: string, index: number, scope: Scope): Scan | null | undefined {
+  const char = text[index]
+  if (char === "'") return closedAt(text.indexOf("'", index + 1))
+  if (char === '"') return doubleQuoted(text, index, scope)
+  if (char === '$' && text[index + 1] === "'") return closedAt(ansiQuoteEnd(text, index + 2))
+  return expansionAt(text, index, scope)
+}
+
+function expansionAt(text: string, index: number, scope: Scope): Scan | null | undefined {
+  const char = text[index]
+  const next = text[index + 1]
+  if (char === '`') return backquoted(text, index, scope)
+  if (char !== '$') return undefined
+  if (next === '{') return scanUntil(text, index + 2, '}', false, scope)
+  if (next === '[') return scanUntil(text, index + 2, ']', false, scope)
+  if (next !== '(') return undefined
+  if (text[index + 2] === '(') return arithmetic(text, index + 1, scope) ?? substituted(text, index + 2, scope)
+  return substituted(text, index + 2, scope)
+}
+
+function arithmetic(text: string, open: number, scope: Scope): Scan | null {
+  const inner = scanUntil(text, open + 2, ')', true, scope)
+  return inner !== null && text[inner.end + 1] === ')' ? { end: inner.end + 1, records: inner.records } : null
+}
+
+function substituted(text: string, from: number, scope: Scope): Scan | null {
+  const script = parseScript(text, from, ')', [...scope, `$${from}`])
+  return script === null ? null : { end: script.end, records: nested(script.records) }
+}
+
+function backquoted(text: string, open: number, scope: Scope): Scan | null {
+  const end = backquoteEnd(text, open + 1)
+  if (end === -1) return null
+  const inner = text.slice(open + 1, end).replace(/\\([\\`$])/g, '$1')
+  const script = parseScript(inner, 0, null, [...scope, `\`${open}`])
+  return script === null ? null : { end, records: nested(script.records) }
+}
+
+const unquotedDouble = (inner: string) => inner.replace(/\\\n/g, '').replace(/\\([$`"\\])/g, '$1')
+
+function nextNonBlank(text: string, from: number): number {
+  let index = from
+  while (text[index] === ' ' || text[index] === '\t') index += 1
+  return index
+}
+
+const within = (spans: readonly Span[], at: number) => spans.some(span => at >= span.from && at < span.to)
+
+type FrameKind = 'base' | 'subshell' | 'brace' | 'if' | 'loop' | 'case'
+
+type FrameMode = 'commands' | 'header' | 'subject' | 'pattern'
+
+type Frame = {
+  readonly kind: FrameKind
+  readonly scope: Scope
+  readonly isDefinition: boolean
+  readonly mode: FrameMode
+  readonly pipelineStart: number
+  readonly elementStart: number
+  readonly isPipedIn: boolean
+  readonly negatedFrom: number | null
+  readonly conditionFrom: number | null
+}
+
+type Script = { readonly records: readonly Parsed[]; readonly end: number }
+
+function parseScript(text: string, from: number, closer: ')' | null, scope: Scope): Script | null {
+  const records: Parsed[] = []
+  const quietSpans: Span[] = []
+  const pipedSpans: Span[] = []
+  let frames: readonly Frame[] = [
+    {
+      kind: 'base',
+      scope,
+      isDefinition: false,
+      mode: 'commands',
+      pipelineStart: 0,
+      elementStart: 0,
+      isPipedIn: false,
+      negatedFrom: null,
+      conditionFrom: null,
+    },
+  ]
+  let words: Word[] = []
+  let value: string | null = null
+  let raw = ''
+  let pending: readonly Heredoc[] = []
+  let follows: string | null = null
+  let isRedirecting = false
+  let isAfterTime = false
+  let definition: 'none' | 'name' | 'body' = 'none'
+  let isBroken = false
+  let index = from
+
+  const top = () => frames[frames.length - 1]!
+  const setTop = (change: Partial<Frame>) => {
+    frames = [...frames.slice(0, -1), { ...top(), ...change }]
+  }
+  const append = (rawPart: string, valuePart: string) => {
+    raw += rawPart
+    value = (value ?? '') + valuePart
+  }
+  const appendScan = (scan: Scan) => {
+    if (!top().isDefinition) records.push(...scan.records)
+    const scanned = text.slice(index, scan.end + 1)
+    append(scanned, scanned)
+    index = scan.end
+  }
+  const open = (kind: FrameKind, mode: FrameMode, conditionFrom: number | null) => {
+    const outer = top()
+    frames = [
+      ...frames,
+      {
+        kind,
+        scope: kind === 'subshell' ? [...outer.scope, `(${index}`] : outer.scope,
+        isDefinition: outer.isDefinition || definition === 'body',
+        mode,
+        pipelineStart: records.length,
+        elementStart: records.length,
+        isPipedIn: false,
+        negatedFrom: null,
+        conditionFrom,
+      },
+    ]
+    definition = 'none'
+  }
+  const endCondition = () => {
+    const { conditionFrom } = top()
+    if (conditionFrom !== null) quietSpans.push({ from: conditionFrom, to: records.length })
+    setTop({ conditionFrom: null })
+  }
+  const endPipeline = () => {
+    const frame = top()
+    const to = records.length
+    if (frame.isPipedIn) pipedSpans.push({ from: frame.elementStart, to })
+    if (frame.negatedFrom !== null) quietSpans.push({ from: frame.negatedFrom, to })
+    setTop({ pipelineStart: to, elementStart: to, isPipedIn: false, negatedFrom: null })
+  }
+  const close = (kind: FrameKind) => {
+    if (top().kind !== kind) {
+      isBroken = true
+      return
+    }
+    endPipeline()
+    endCondition()
+    frames = frames.slice(0, -1)
+  }
+  const expectFrame = (kind: FrameKind, then: () => void) => {
+    if (top().kind === kind) then()
+    else isBroken = true
+  }
+  const isReserved = (word: string): boolean => {
+    switch (word) {
+      case '!':
+        if (top().negatedFrom === null) setTop({ negatedFrom: records.length })
+        return true
+      case 'time':
+        isAfterTime = true
+        return true
+      case '{':
+        open('brace', 'commands', null)
+        return true
+      case '}':
+        close('brace')
+        return true
+      case 'if':
+        open('if', 'commands', records.length)
+        return true
+      case 'while':
+      case 'until':
+        open('loop', 'commands', records.length)
+        return true
+      case 'for':
+      case 'select':
+        open('loop', 'header', null)
+        return true
+      case 'case':
+        open('case', 'subject', null)
+        return true
+      case 'elif':
+        expectFrame('if', () => setTop({ conditionFrom: records.length }))
+        return true
+      case 'then':
+        expectFrame('if', endCondition)
+        return true
+      case 'else':
+        expectFrame('if', () => undefined)
+        return true
+      case 'do':
+        expectFrame('loop', endCondition)
+        return true
+      case 'fi':
+        close('if')
+        return true
+      case 'done':
+        close('loop')
+        return true
+      case 'esac':
+        close('case')
+        return true
+      case 'function':
+        definition = 'name'
+        return true
+      default:
+        return false
+    }
+  }
+  const finishWord = () => {
+    if (value === null) return
+    const word: Word = { value, raw }
+    value = null
+    raw = ''
+    if (isRedirecting) {
+      isRedirecting = false
+      return
+    }
+    const { mode } = top()
+    if (mode === 'subject') {
+      if (word.raw === 'in') setTop({ mode: 'pattern' })
+      return
+    }
+    if (mode === 'pattern') {
+      if (word.raw === 'esac') close('case')
+      return
+    }
+    if (mode === 'header') {
+      if (word.raw === 'do') setTop({ mode: 'commands' })
+      return
+    }
+    if (definition === 'name') {
+      definition = 'body'
+      return
+    }
+    if (words.length === 0) {
+      const followsTime = isAfterTime
+      isAfterTime = false
+      if (followsTime && word.raw === '-p') return
+      if (isReserved(word.raw)) return
+    }
+    definition = 'none'
+    words.push(word)
+  }
+  const finishCommand = () => {
+    finishWord()
+    isRedirecting = false
+    isAfterTime = false
+    if (words.length > 0 && !top().isDefinition) {
+      records.push({ words, scope: top().scope, follows, isQuiet: false, isPiped: false, isNested: false })
+    }
+    words = []
+  }
+  const finishBeforeRedirect = () => {
+    if (value !== null && /^\d+$/.test(raw)) {
+      value = null
+      raw = ''
+    } else finishWord()
+  }
+  const pipe = () => {
+    finishCommand()
+    if (top().mode === 'pattern') return
+    const span = { from: top().elementStart, to: records.length }
+    quietSpans.push(span)
+    pipedSpans.push(span)
+    setTop({ elementStart: records.length, isPipedIn: true })
+  }
+  const list = (operator: string) => {
+    finishCommand()
+    if (operator === '&') quietSpans.push({ from: top().pipelineStart, to: records.length })
+    endPipeline()
+    follows = operator
+    if (operator === ';;' || operator === ';;&' || operator === ';&') {
+      if (top().kind === 'case' && top().mode === 'commands') setTop({ mode: 'pattern' })
+      else isBroken = true
+    }
+  }
+  const script = (end: number): Script | null => {
+    if (isBroken || frames.length > 1) return null
+    endPipeline()
+    return {
+      end,
+      records: records.map((record, at) => ({
+        ...record,
+        isQuiet: record.isQuiet || within(quietSpans, at),
+        isPiped: record.isPiped || within(pipedSpans, at),
+      })),
+    }
+  }
+
+  for (; index < text.length; index += 1) {
+    const char = text[index]!
+    const next = text[index + 1]
+    if (char === '\\') {
+      if (next === undefined) append(char, char)
+      else if (next !== '\n') append(char + next, next)
+      index += 1
+      continue
+    }
+    if (char === "'") {
+      const end = text.indexOf("'", index + 1)
       if (end === -1) return null
-      word = (word ?? '') + text.slice(index, end + 1)
+      append(text.slice(index, end + 1), text.slice(index + 1, end))
       index = end
       continue
     }
-    if (char === "'" || char === '"') {
-      quote = char
-      word = word ?? ''
+    if (char === '"') {
+      const scan = doubleQuoted(text, index, top().scope)
+      if (scan === null) return null
+      if (!top().isDefinition) records.push(...scan.records)
+      append(text.slice(index, scan.end + 1), unquotedDouble(text.slice(index + 1, scan.end)))
+      index = scan.end
       continue
     }
-    if (char === '#' && word === null) {
+    if (char === '$' && next === "'") {
+      const end = ansiQuoteEnd(text, index + 2)
+      if (end === -1) return null
+      append(text.slice(index, end + 1), text.slice(index + 2, end).replace(/\\([\s\S])/g, '$1'))
+      index = end
+      continue
+    }
+    const expansion = expansionAt(text, index, top().scope)
+    if (expansion === null) return null
+    if (expansion !== undefined) {
+      appendScan(expansion)
+      continue
+    }
+    if (char === '#' && value === null) {
       const found = text.indexOf('\n', index)
       index = (found === -1 ? text.length : found) - 1
       continue
     }
-    if (char === '(' && following === '(') {
-      const end = groupEnd(text, index)
-      if (end === -1) return null
-      word = (word ?? '') + text.slice(index, end + 1)
-      index = end
-      continue
-    }
     if (text.startsWith('<<<', index)) {
-      finishWord()
+      finishBeforeRedirect()
+      isRedirecting = true
       index += 2
       continue
     }
-    if (char === '<' && following === '<') {
-      finishWord()
+    if (char === '<' && next === '<') {
+      finishBeforeRedirect()
       const { heredoc, end } = heredocDelimiter(text, index + 2)
       pending = [...pending, heredoc]
       index = end
       continue
     }
-    if (char === '\n' && pending.length > 0) {
-      startGroup(false)
-      index = skipHeredocBodies(text, index, pending)
-      pending = []
+    if ((char === '<' || char === '>') && next === '(') {
+      const scan = substituted(text, index + 2, top().scope)
+      if (scan === null) return null
+      appendScan(scan)
+      continue
+    }
+    if (char === '<' || char === '>') {
+      finishBeforeRedirect()
+      isRedirecting = true
+      if (next === '>' || next === '&' || next === '|') index += 1
+      continue
+    }
+    if (char === '&' && next === '>') {
+      finishBeforeRedirect()
+      isRedirecting = true
+      index += text[index + 2] === '>' ? 2 : 1
+      continue
+    }
+    if (char === '&' && next === '&') {
+      list('&&')
+      index += 1
+      continue
+    }
+    if (char === '|' && next === '|') {
+      list('||')
+      index += 1
+      continue
+    }
+    if (char === '|') {
+      pipe()
+      if (next === '&') index += 1
+      continue
+    }
+    if (char === '&') {
+      list('&')
+      continue
+    }
+    if (char === ';') {
+      const operator = next === ';' ? (text[index + 2] === '&' ? ';;&' : ';;') : next === '&' ? ';&' : ';'
+      list(operator)
+      index += operator.length - 1
+      continue
+    }
+    if (char === '\n') {
+      list('\n')
+      if (pending.length > 0) {
+        index = skipHeredocBodies(text, index, pending)
+        pending = []
+      }
       continue
     }
     if (char === '(') {
-      parents.push(scope)
-      scope = parents.length - 1
-      startGroup(false)
+      if (top().mode === 'pattern') {
+        finishWord()
+        continue
+      }
+      if (value === null && next === '(') {
+        const scan = arithmetic(text, index, top().scope)
+        if (scan !== null) {
+          appendScan(scan)
+          continue
+        }
+      }
+      if (value !== null || words.length > 0 || definition === 'body') {
+        const closing = nextNonBlank(text, index + 1)
+        if (text[closing] === ')') {
+          value = null
+          raw = ''
+          words = []
+          definition = 'body'
+          index = closing
+          continue
+        }
+        if (definition !== 'body') {
+          const scan = scanUntil(text, index + 1, ')', true, top().scope)
+          if (scan === null) return null
+          appendScan(scan)
+          continue
+        }
+      }
+      open('subshell', 'commands', null)
       continue
     }
     if (char === ')') {
-      scope = Math.max(parents[scope]!, 0)
-      startGroup(false)
-      continue
-    }
-    if (char === '|' && following !== '|' && text[index - 1] !== '|') {
-      startGroup(true)
-      continue
-    }
-    if (SEPARATORS.has(char)) {
-      startGroup(false)
-      continue
+      if (top().mode === 'pattern') {
+        finishWord()
+        if (top().mode === 'pattern') {
+          setTop({ mode: 'commands' })
+          continue
+        }
+      }
+      finishCommand()
+      if (top().kind === 'subshell') {
+        close('subshell')
+        continue
+      }
+      if (closer === ')' && frames.length === 1) return script(index)
+      return null
     }
     if (BLANK.test(char)) {
       finishWord()
       continue
     }
-    word = (word ?? '') + char
+    append(char, char)
   }
-  if (quote !== null) return null
-  startGroup(false)
-  return { groups, parents }
+  if (closer !== null) return null
+  finishCommand()
+  return script(text.length)
 }
 
 type ShellContext = { readonly exported: Readonly<Record<string, string>>; readonly directory: string | null }
 
 const FRESH_SHELL: ShellContext = { exported: {}, directory: null }
+
+type Launch = { readonly assignments: Readonly<Record<string, string>>; readonly words: readonly string[] }
 
 const assignmentsOf = (words: readonly string[]): Record<string, string> =>
   Object.fromEntries(
@@ -204,12 +597,20 @@ const assignmentsOf = (words: readonly string[]): Record<string, string> =>
     }),
   )
 
-function asCommand(words: readonly string[]): SimpleCommand {
-  const firstWord = words.findIndex(word => !ASSIGNMENT.test(word))
+function asCommand(words: readonly Word[], takesAssignments: boolean): Launch {
+  const firstWord = takesAssignments ? words.findIndex(word => !PREFIX_ASSIGNMENT.test(word.raw)) : 0
   const split = firstWord === -1 ? words.length : firstWord
-  const assignments = assignmentsOf(words.slice(0, split))
-  if (words[split] !== 'env') return { assignments, words: words.slice(split) }
-  const launched = asCommand(words.slice(split + 1))
+  const assignments = Object.fromEntries(
+    words.slice(0, split).map(word => {
+      const [prefix, name] = PREFIX_ASSIGNMENT.exec(word.raw)!
+      return [name!, word.value.slice(prefix.length)]
+    }),
+  )
+  const program = words[split]?.value
+  if (program !== 'env' && (program === undefined || !MODIFIERS.has(program))) {
+    return { assignments, words: words.slice(split).map(word => word.value) }
+  }
+  const launched = asCommand(words.slice(split + 1), program === 'env')
   return { assignments: { ...assignments, ...launched.assignments }, words: launched.words }
 }
 
@@ -231,7 +632,7 @@ function directoryAfter(directory: string | null, target: string | undefined): s
 const withoutNames = (exported: Readonly<Record<string, string>>, names: readonly string[]) =>
   Object.fromEntries(Object.entries(exported).filter(([name]) => !names.includes(name)))
 
-function contextAfter(command: SimpleCommand, context: ShellContext): ShellContext {
+function contextAfter(command: Launch, context: ShellContext): ShellContext {
   const [program, ...rest] = command.words
   if (program === 'export') return { ...context, exported: { ...context.exported, ...assignmentsOf(rest) } }
   if (program === 'unset') return { ...context, exported: withoutNames(context.exported, rest) }
@@ -239,7 +640,7 @@ function contextAfter(command: SimpleCommand, context: ShellContext): ShellConte
   return context
 }
 
-function inContext(command: SimpleCommand, context: ShellContext): SimpleCommand {
+function inContext(command: Launch, context: ShellContext): Launch {
   const [program, ...rest] = command.words
   const isRelative = program !== undefined && program.startsWith('./') && context.directory !== null
   return {
@@ -248,22 +649,29 @@ function inContext(command: SimpleCommand, context: ShellContext): SimpleCommand
   }
 }
 
-type ScopeContexts = Readonly<Record<number, ShellContext>>
+type ScopeContexts = Readonly<Record<string, ShellContext>>
 
-function contextIn(contexts: ScopeContexts, parents: readonly number[], scope: number): ShellContext {
-  return contexts[scope] ?? (scope <= 0 ? FRESH_SHELL : contextIn(contexts, parents, parents[scope]!))
+const scopeKey = (scope: Scope) => scope.join(' ')
+
+function contextIn(contexts: ScopeContexts, scope: Scope): ShellContext {
+  return contexts[scopeKey(scope)] ?? (scope.length === 0 ? FRESH_SHELL : contextIn(contexts, scope.slice(0, -1)))
 }
 
 export function simpleCommands(text: string): readonly SimpleCommand[] | null {
-  const script = shellWords(text)
+  const script = parseScript(text, 0, null, [])
   if (script === null) return null
-  return script.groups.reduce(
-    (shell, group) => {
-      const command = asCommand(group.words)
-      const context = contextIn(shell.contexts, script.parents, group.scope)
+  const { records } = script
+  return records.reduce(
+    (shell, record, at) => {
+      const command = asCommand(record.words, true)
+      const context = contextIn(shell.contexts, record.scope)
+      const decidesStatus =
+        !record.isQuiet && records.slice(at + 1).every(later => later.isNested || later.follows === '&&')
       return {
-        contexts: group.isPiped ? shell.contexts : { ...shell.contexts, [group.scope]: contextAfter(command, context) },
-        commands: [...shell.commands, inContext(command, context)],
+        contexts: record.isPiped
+          ? shell.contexts
+          : { ...shell.contexts, [scopeKey(record.scope)]: contextAfter(command, context) },
+        commands: [...shell.commands, { ...inContext(command, context), decidesStatus }],
       }
     },
     { contexts: {} as ScopeContexts, commands: [] as readonly SimpleCommand[] },
@@ -285,7 +693,7 @@ export const isPipelineClean = (command: SimpleCommand) => {
 
 export const isRunScript = (command: SimpleCommand) => {
   const [program] = programOf(command)
-  return program !== undefined && program.includes('/.mitosis/') && baseName(program) === 'run.zsh'
+  return program !== undefined && normalized(program).includes('/.mitosis/') && baseName(program) === 'run.zsh'
 }
 
 export const isShipping = (command: SimpleCommand) => (command.assignments.SHIP ?? '') !== ''
