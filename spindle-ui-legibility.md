@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: active
-Updated: 2026-10-19T21:34:55.651Z
+Updated: 2026-10-19T21:34:56.647Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -17,7 +17,9 @@ Grounding facts: the run stage sticks on Ship because a SHIP=1 call or any pushe
 
 ## Next step
 
-Get the owner's requested change to preview 2, update the spec and the preview to match, reopen the preview with `open` in the default browser, then read back for approval.
+Run the first build with ~/.mitosis/spindle/spindle-ui-legibility/run.zsh in the background, then read mitosis's last JSON line and start review round 1 for each committed MSP.
+
+Needs: D1.
 
 ## Decisions in force
 
