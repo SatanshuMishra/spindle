@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
-Status: parked
-Updated: 2026-10-19T17:43:27.045Z
+Status: done
+Updated: 2026-10-19T17:43:29.564Z
 Next ids: c5 D6 R3 S2
 
 ## Goal
