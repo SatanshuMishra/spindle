@@ -26,7 +26,7 @@ _Avoid_: model, snapshot
 How much interview, spec, build and review the pipeline gives a request: full or standard.
 
 **Stage**:
-Where a run is in the order Spec, Build, Review, Fix, Ship, Integrate, Clean-up, with Done after Clean-up.
+Where a run is in the order Spec, Build, Review, Fix, Ship, Integrate, Clean-up, with Done after Clean-up: the earliest stage any MSP without a pull request is at, and Ship once every MSP is green, blocked or has a pull request.
 _Avoid_: phase (interphase's word for its own steps)
 
 **Round**:
@@ -41,6 +41,17 @@ The acceptance gate's evidence for an MSP: a test that failed with the work reve
 
 **Verdict**:
 A round's outcome for one MSP: green, loop, diagnose, blocked or hard failure, with its blocker and advisory counts.
+
+**Activity**:
+One piece of an MSP's work, in order: Build, a Round, a Fix after a round, or Ship. The last unfinished one is the MSP's current activity.
+_Avoid_: step (interphase's unit of build work), phase
+
+**Round state**:
+Where an open round is: suite running, reviewing, validating or diagnosing, read from the round's files; a round with a verdict has an outcome instead.
+
+**Worker**:
+An agent or a mitosis lane doing work for a run, drawn as one row in Working now with its crew crab; it belongs to the MSP whose label or worktree its prompt names.
+_Avoid_: job, task
 
 ## Drawing
 
