@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T10:18:13.846Z
+Updated: 2026-10-19T10:19:42.889Z
 Next ids: c5 D4 R3 S2
 
 ## Goal
@@ -16,11 +16,11 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Stage 3, round 2 fix pass of MSP spindle on branch mitosis/spindle (base feat/spindle-0-1); round 2 verdict is loop, round 3's previous head is d6fe881. Both round 2 blockers are fixed: M1 in accept.zsh with accept-unloaded.awk (proof review/round-2/mitosis-gate/gate_receipt.py) and C1 in shellWords (8944d4a, 76 tests pass, both selecting checks empty). Both round 2 advisories are fixed: C4 (78c8f82) and C2 (6a29a67, 80 tests pass). Round 3 review of head 6a29a67 is starting. C9 keeps one atom per module because the engine refuses an atom imported from another file.
+Stage 3, round 3 of MSP spindle on branch mitosis/spindle at 6a29a67 (base feat/spindle-0-1, previous head d6fe881); every round 2 blocker and advisory is fixed (M1 in accept.zsh with accept-unloaded.awk, proof review/round-2/mitosis-gate/gate_receipt.py). The code reviewer and security reviewer are running on the briefs in review/round-3/; the suite there shows 80 pass, check.sh and tsc exit 0. C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
-Fix C1 in command.ts shellWords (heredoc bodies, # comments, << inside ((...)) left alone) until the receipts pass and loose-command-match.select.ts prints nothing, then fix C2 and C4, and start round 3.
+When both round 3 reviewers return, collect review/round-3/spindle.findings.json and spindle.md, run pipeline candidates, the validator when the count is above zero, record and verdict, and add the round 3 line to rounds.md.
 
 Needs: D2, D3.
 
