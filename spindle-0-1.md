@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T08:31:30.327Z
+Updated: 2026-10-19T08:31:31.609Z
 Next ids: c5 D3 R3 S2
 
 ## Goal
@@ -20,9 +20,9 @@ The owner approved the read-back on 2026-10-19; the run is autonomous from here.
 
 ## Next step
 
-Run ~/.mitosis/spindle/spindle-0-1/run.zsh --plan-only, then the first build, from the repository root on feat/spindle-0-1; then stage 3 review per MSP (run-data, run-ui).
+Run ~/.mitosis/spindle/spindle-0-1/run.zsh (first build, plan 6 Steps in 2 sequential Lanes of MSP spindle) from the repository root, in the background; then stage 3 review of MSP spindle.
 
-Needs: D1.
+Needs: D2.
 
 ## Decisions in force
 
