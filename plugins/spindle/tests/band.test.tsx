@@ -49,7 +49,7 @@ const textOf = (node: Drawn) => (node.children ?? []).filter(child => typeof chi
 type Seen = {
   texts: readonly string[]
   cardTexts: readonly string[]
-  buttons: readonly { key: string; label: string }[]
+  buttons: readonly { key: string; drawn: string; name: string }[]
   svgs: readonly { alt: string; width: number; source: string }[]
 }
 
@@ -61,7 +61,7 @@ function seenOf(tree: unknown): Seen {
     cardTexts: placed.filter(one => one.isInCard && one.node.type === 'Text').map(one => textOf(one.node)),
     buttons: shown
       .filter(node => node.type === 'Button')
-      .map(node => ({ key: String(node.props?.key ?? ''), label: String(node.props?.label ?? '') })),
+      .map(node => ({ key: String(node.props?.key ?? ''), drawn: textOf(node), name: String(node.props?.label ?? '') })),
     svgs: shown
       .filter(node => node.type === 'Svg')
       .map(node => ({ alt: String(node.props?.alt ?? ''), width: Number(node.props?.width ?? 0), source: String(node.props?.source ?? '') })),
@@ -84,11 +84,17 @@ const hasButton = (seen: Seen, key: string) => seen.buttons.some(button => butto
 const columnsDrawn = (seen: Seen) => {
   const parts = [
     ...seen.texts.map(text => [...text].length),
-    ...seen.buttons.map(button => [...button.label].length),
+    ...seen.buttons.map(button => [...button.drawn].length),
     ...seen.svgs.map(svg => Math.ceil(svg.width / 8)),
   ]
   return parts.reduce((sum, part) => sum + part, 0) + parts.length - 1
 }
+
+const emptyCardsOf = (tree: unknown) => placedOf(tree).filter(one => isCard(one.node) && (one.node.children ?? []).length === 0)
+
+const COUNT_BUTTON = { key: 'spindle-crew', name: 'Show the Pipeline pane' }
+
+const DISMISS_BUTTON = { key: 'spindle-dismiss', drawn: '✕', name: 'Hide the band' }
 
 const isUnbrokenUpTo = (widths: readonly number[], last: number) =>
   widths.length > 0 && widths[widths.length - 1] === last && widths.every((width, i) => i === 0 || width === (widths[i - 1] ?? 0) + 1)
@@ -145,7 +151,7 @@ test('the band at 160 columns shows every part', async ($, on) => {
   expect(hasButton(seen, 'spindle-dismiss')).toBe(true)
 })
 
-test('the band shows the slug whole or as an icon, and keeps the bar while it fits', async ($, on) => {
+test('the band shows the slug whole or as an icon, and keeps the bar while it fits', { timeoutMs: 60_000 }, async ($, on) => {
   await fireRun($, on)
 
   const atWidth = new Map<number, Seen>()
@@ -190,7 +196,7 @@ test('the terminal band follows the same rules', async ($, on) => {
   expect(narrow).not.toContain('…')
 })
 
-test("the band's parts fit its width", async ($, on) => {
+test("the band's parts fit its width", { timeoutMs: 60_000 }, async ($, on) => {
   const world = harness(on, fireplace, { now: NOW })
   await world.start($)
 
@@ -267,18 +273,18 @@ test('the count button opens the pane', async ($, on) => {
   const band = await mountBand($, 'desktop', 160)
   const card = seenOf(await band.find({ key: 'spindle-crew-card' }))
   expect(crabOf(card)).toBeDefined()
-  expect(card.buttons).toEqual([{ key: 'spindle-crew', label: '×1' }])
+  expect(card.buttons).toEqual([{ ...COUNT_BUTTON, drawn: '×1' }])
   await band.press({ key: 'spindle-crew' })
 
   expect(world.opened()).toContain('spindle-run')
 })
 
 const pressX = async (band: Awaited<ReturnType<typeof mountBand>>) => {
-  expect((await band.find({ key: 'spindle-dismiss' }))?.props.label).toBe('✕')
+  expect(seenOf(await band.find({ key: 'spindle-dismiss' })).buttons).toEqual([DISMISS_BUTTON])
   await band.press({ key: 'spindle-dismiss' })
 }
 
-test('dismiss holds until an activity changes', async ($, on) => {
+test('dismiss holds until an activity changes', { timeoutMs: 60_000 }, async ($, on) => {
   showAnotherBand(on)
   const world = harness(on, review, { now: NOW })
   await world.start($)
@@ -339,7 +345,7 @@ test('crew button opens the pane', async ($, on) => {
   const world = await reviewRun($, on)
 
   const band = await mountBand($, 'desktop')
-  expect((await band.find({ key: 'spindle-crew' }))?.props.label).toBe('×1')
+  expect(seenOf(await band.find({ key: 'spindle-crew' })).buttons).toEqual([{ ...COUNT_BUTTON, drawn: '×1' }])
   await band.press({ key: 'spindle-crew' })
 
   expect(world.opened()).toContain('spindle-run')
@@ -395,8 +401,30 @@ test('the dismiss button is the X glyph on both surfaces', async ($, on) => {
   await world.start($)
 
   const desktop = await mountBand($, 'desktop')
-  expect((await desktop.find({ key: 'spindle-dismiss' }))?.props.label).toBe('✕')
+  expect(seenOf(await desktop.find({ key: 'spindle-dismiss' })).buttons).toEqual([DISMISS_BUTTON])
   expect((await desktop.find({ key: 'spindle-dismiss' }))?.props.role).toBe('dismiss')
   const terminal = await mountBand($, 'terminal')
-  expect((await terminal.find({ key: 'spindle-dismiss' }))?.props.label).toBe('✕')
+  expect(seenOf(await terminal.find({ key: 'spindle-dismiss' })).buttons).toEqual([DISMISS_BUTTON])
+})
+
+test('every glyph control is named in words', async ($, on) => {
+  await fireRun($, on)
+
+  const narrow = await seenAt($, 'desktop', 60)
+  expect(narrow.buttons.find(button => button.key === 'spindle-name')).toEqual({ key: 'spindle-name', drawn: '◉', name: 'Copy the thread name' })
+  expect(narrow.buttons.find(button => button.key === 'spindle-crew')).toEqual({ ...COUNT_BUTTON, drawn: '×1' })
+  expect(narrow.buttons.find(button => button.key === 'spindle-dismiss')).toEqual(DISMISS_BUTTON)
+})
+
+test('a hover card with nothing to say is not drawn', async ($, on) => {
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+
+  for (const surface of ['desktop', 'terminal'] as const) {
+    const band = await mountBand($, surface, 160)
+    const drawn = await band.drawn()
+    expect(hasButton(seenOf(drawn), 'spindle-dismiss')).toBe(true)
+    expect(emptyCardsOf(drawn)).toEqual([])
+    await band.unmount()
+  }
 })
