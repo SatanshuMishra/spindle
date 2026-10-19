@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: active
-Updated: 2026-10-19T20:31:08.701Z
+Updated: 2026-10-19T20:35:36.356Z
 Next ids: c1 D1 R1 S1
 
 ## Goal
@@ -11,9 +11,9 @@ Redesign spindle's band and Pipeline pane so they fit any width, explain every c
 
 ## Where things stand
 
-Full lane, interphase feature pathway, slug spindle-ui-legibility. Interview open: intent approved (I1-I4 in the decisions file); frontier round 1 (13 questions: drawing approach, run stage replacing ADR 0004, MSP steps, round summary, default pane, selection, band contents, dismiss, low-value marks, shared wording, test seam, pre-mortem, out of scope) asked, awaiting answers. Lighthouse readiness answered and clear.
+Full lane, interphase feature pathway, slug spindle-ui-legibility. Interview open: intent and frontier round 1 settled (decisions file); record holds the plugin-tests seam and criteria 5.1-5.6 with Steps activity-model and activity-words, check_record passes. Frontier round 2 (activity term, activity time, band short state, per-MSP bar, drop thresholds, selection lifetime, non-round summaries, three stacked MSPs) asked, awaiting answers. Band and pane criteria are not yet written. Lighthouse readiness answered and clear.
 
-Grounding facts: the run stage sticks on Ship because a SHIP=1 call or any pushed MSP sets it and ADR 0004 holds it; round folders already carry per-step markers (.suite.run, .findings.json, .verdicts.json, .verdict.json, diagnoses) and every finding in all 112 verdict files on this machine has a short `kind` label; the pipeline event stream holds only round.verdict lines for the live fireplace run; the mod API has no Button tooltip prop but offers keyed-Box hover cards and `<title>` tooltips in an interactive Svg, and tests can mount at any width and press Buttons.
+Grounding facts: the run stage sticks on Ship because a SHIP=1 call or any pushed MSP sets it and ADR 0004 holds it; the pipeline run skill defines the round files spindle reads (.diff, .suite.txt, .findings.json, .verdicts.json, .verdict.json, .diagnosis.json), while .suite.run is ad hoc; every finding in all 112 verdict files on this machine has a short `kind` label; the pipeline event stream holds only round.verdict lines for the live fireplace run; the mod API has no Button tooltip prop but offers keyed-Box hover cards and `<title>` tooltips in an interactive Svg, and tests can mount at any width and press Buttons.
 
 ## Next step
 
