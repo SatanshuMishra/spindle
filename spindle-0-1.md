@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T06:32:51.933Z
+Updated: 2026-10-19T06:33:15.309Z
 Next ids: c5 D1 R1 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Not started.
 
 ## Next step
 
-Run the interphase:project interview with the owner (full lane), including whether to create the GitHub remote and the lighthouse and receipts readiness answers.
+Run the interphase:project interview with the owner (full lane). Receipts answers are drafted in /var/folders/tz/b798spt96sjfyy924nf0cw4c0000gn/T/tmp.PlNLOGEUst; save them as <home>/receipts-answers.json once interphase names the slug.
 
 ## Decisions in force
 
