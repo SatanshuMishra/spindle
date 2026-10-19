@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T11:29:32.135Z
+Updated: 2026-10-19T11:31:34.394Z
 Next ids: c5 D5 R3 S2
 
 ## Goal
@@ -16,7 +16,7 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Stage 3, round 5 of MSP spindle on branch mitosis/spindle at 1ae96ff (amendment 2 fast-forwarded in; base feat/spindle-0-1, previous head 2cf784e), 94 tests passing and tsc clean (review/round-5/spindle.suite.txt). Obligations cover criteria 5.1 to 5.19 with the Threats re-appended. The round 4 shell-oracle check now shows only the 7 expected misses plus the captured-output row the corpus marks as a run. The round 5 code reviewer returned three LOW advisories and no blocker (review/round-5/code.json: C1 a backgrounded and-or list keeps decidesStatus, C2 in-place push in parseScript, C3 duplicated quote loops); the security reviewer is still running. C9 keeps one atom per module because the engine refuses an atom imported from another file.
+Stage 3, round 5 of MSP spindle on branch mitosis/spindle at 1ae96ff (amendment 2 fast-forwarded in; base feat/spindle-0-1, previous head 2cf784e), 94 tests passing and tsc clean (review/round-5/spindle.suite.txt). Obligations cover criteria 5.1 to 5.19 with the Threats re-appended. The round 4 shell-oracle check now shows only the 7 expected misses plus the captured-output row the corpus marks as a run. Round 5 findings are in review/round-5/spindle.findings.json: S1 MEDIUM (a newline after && ends the list, so a multi-line && chain after pipeline clean never reaches Done) and LOW C1-C3, S2-S3; the validator is judging the 7 candidates (P1 carried, S1 new, five advisories). C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
