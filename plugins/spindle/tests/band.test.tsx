@@ -162,3 +162,13 @@ test('every costume draws with clay and reduced motion', async ($, on) => {
     expect(source).toContain('prefers-reduced-motion')
   }
 })
+
+test('the dismiss button names its action on desktop and keeps the glyph on the terminal', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  const desktop = await mountBand($, 'desktop')
+  expect((await desktop.find({ key: 'spindle-dismiss' }))?.props.label).toBe('Dismiss')
+  const terminal = await mountBand($, 'terminal')
+  expect((await terminal.find({ key: 'spindle-dismiss' }))?.props.label).toBe('✕')
+})
