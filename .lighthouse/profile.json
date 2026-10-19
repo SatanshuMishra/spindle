@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "sources": [
+    ".github/workflows/check.yml",
+    "scripts/check.sh",
+    ".claude-plugin/marketplace.json",
+    "plugins/spindle/.claude-plugin/plugin.json",
+    "plugins/spindle/hooks/hooks.json",
+    "plugins/spindle/hooks/register.tsx",
+    "plugins/spindle/hooks/run/session.ts",
+    "receipts.config.json",
+    "README.md"
+  ],
+  "suite": {
+    "command": "scripts/check.sh",
+    "junit": null,
+    "timeout_minutes": null
+  },
+  "surfaces": [
+    {
+      "name": "spindle slash command",
+      "kind": "slash command: /spindle toggles the run pane and /spindle status prints the run as text lines",
+      "paths": [
+        "plugins/spindle/hooks/register.tsx",
+        "plugins/spindle/hooks/run/summary.ts",
+        "plugins/spindle/hooks/run/view.ts",
+        "plugins/spindle/hooks/run/session.ts",
+        "plugins/spindle/hooks/draw/pane.tsx"
+      ],
+      "driver": "a live headless session, claude -p '/spindle status' --plugin-dir <build>/plugins/spindle --output-format stream-json --verbose, started from a working folder under the results, reading the command's text from the saved transcript; claude plugin test plugins/spindle (skeleton.test.ts) as an extra check",
+      "available": true,
+      "sign_in": {
+        "method": "none",
+        "command": null
+      },
+      "credentials": [],
+      "trials": 1
+    },
+    {
+      "name": "band above the prompt",
+      "kind": "drawn view: the AbovePrompt band with status dot, slug, lane chip, stage bar, round pill, elapsed time, crab and crew button",
+      "paths": [
+        "plugins/spindle/hooks/draw/band.tsx",
+        "plugins/spindle/hooks/draw/crew.ts",
+        "plugins/spindle/hooks/draw/text.ts",
+        "plugins/spindle/hooks/run/view.ts"
+      ],
+      "driver": "the project's own claude plugin test plugins/spindle (band.test.tsx mounts the band against fixture run homes with $.ui.mount); a live paint needs an interactive terminal or the desktop app",
+      "available": false,
+      "sign_in": {
+        "method": "none",
+        "command": null
+      },
+      "credentials": [],
+      "trials": 1
+    },
+    {
+      "name": "run pane",
+      "kind": "drawn view: the spindle-run pane with header tiles, stage rail, MSP rows, agent rows and round rows",
+      "paths": [
+        "plugins/spindle/hooks/draw/pane.tsx",
+        "plugins/spindle/hooks/draw/crew.ts",
+        "plugins/spindle/hooks/run/view.ts"
+      ],
+      "driver": "the project's own claude plugin test plugins/spindle (pane.test.tsx mounts the pane against fixture run homes); a live paint needs an interactive terminal or the desktop app",
+      "available": false,
+      "sign_in": {
+        "method": "none",
+        "command": null
+      },
+      "credentials": [],
+      "trials": 1
+    },
+    {
+      "name": "toasts",
+      "kind": "notifications: toasts on stage changes, round verdicts and pull requests",
+      "paths": [
+        "plugins/spindle/hooks/run/toasts.ts",
+        "plugins/spindle/hooks/run/poll.ts"
+      ],
+      "driver": "the project's own claude plugin test plugins/spindle (toasts.test.ts); a live toast needs an interactive session with a pipeline run whose files change",
+      "available": false,
+      "sign_in": {
+        "method": "none",
+        "command": null
+      },
+      "credentials": [],
+      "trials": 1
+    },
+    {
+      "name": "run reading from session events and run-home files",
+      "kind": "background hooks: tool.call, agent.spawn, turn.step and turn.complete signals plus a 2-second poll of the session file, plan.json, state.json, verdicts and the findings ledger",
+      "paths": [
+        "plugins/spindle/hooks/run/signals.ts",
+        "plugins/spindle/hooks/run/command.ts",
+        "plugins/spindle/hooks/run/infer.ts",
+        "plugins/spindle/hooks/run/home.ts",
+        "plugins/spindle/hooks/run/session.ts",
+        "plugins/spindle/hooks/run/state.ts",
+        "plugins/spindle/hooks/run/poll.ts",
+        "plugins/spindle/hooks/run/cost.ts"
+      ],
+      "driver": "the project's own claude plugin test plugins/spindle (session-signals, run-files and command-corpus tests serve fixture run homes through fs test hooks); a live run needs a session file at $HOME/.mitosis/sessions/<session id>.json naming a real run home",
+      "available": true,
+      "sign_in": {
+        "method": "none",
+        "command": null
+      },
+      "credentials": [],
+      "trials": 1
+    }
+  ],
+  "credentials": {
+    "file": null,
+    "names": {}
+  },
+  "facts": {
+    "claude_cli_version": {
+      "value": "2.1.300 locally; CI installs @anthropic-ai/claude-code@2.1.303",
+      "confirmed": false,
+      "recheck": "claude --version, and the npm install line in .github/workflows/check.yml"
+    },
+    "headless_session_loads_function_hooks_mods": {
+      "value": "claude -p with --plugin-dir loads the mod and answers /spindle status through its command.run hook",
+      "confirmed": false,
+      "recheck": "claude -p '/spindle status' --plugin-dir plugins/spindle --output-format stream-json --verbose and read the command's text"
+    },
+    "session_file_location": {
+      "value": "$HOME/.mitosis/sessions/<session id>.json, written by the pipeline, not by Spindle",
+      "confirmed": true,
+      "recheck": "plugins/spindle/hooks/run/session.ts sessionFile"
+    },
+    "ci_runner_login": {
+      "value": "claude plugin test runs on a GitHub runner without a Claude login",
+      "confirmed": false,
+      "recheck": "the check workflow's run on a push to the repository"
+    }
+  },
+  "off_limits": [
+    "writing, editing or deleting anything under ~/.mitosis, ~/.claude, ~/.lighthouse or ~/.config, including session files and run homes",
+    "running pipeline, mitosis or run.zsh commands against a real run",
+    "pushing branches, opening, merging or commenting on pull requests outside the lighthouse pull request step",
+    "installing the plugin into the user's Claude Code configuration"
+  ],
+  "test_data": "synthesized run homes at every stage in plugins/spindle/tests/fixtures/runs.ts, served through the plugin test kit's fs hooks"
+}
