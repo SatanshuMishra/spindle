@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: parked
-Updated: 2026-10-19T17:41:55.200Z
+Updated: 2026-10-19T17:42:07.961Z
 Next ids: c5 D6 R3 S2
 
 ## Goal
@@ -27,9 +27,6 @@ Needs: D2.
 ## Decisions in force
 
 - D2 Amendment hand-off: one MSP, spindle, instead of two stacked: One MSP, spindle, one pull request; recorded in the spec as an assumption overriding the two-PR decision and reported as a top risk.
-- D3 Amendment 1 hand-off: run found by the session's thread, newest first: Amendment 1: Step second-run in MSP spindle-amend-1, built by amend-1.zsh on branch mitosis/spindle with --no-push, then merged into mitosis/spindle before round 2.
-- D4 Amendment 2 hand-off: running a command bounded by bash's simple-command grammar: Amendment 2: Step command-bound in MSP spindle-amend-2, built by amend-2.zsh on branch mitosis/spindle with --no-push, merged into mitosis/spindle before review round 5 with previous head 2cf784e.
-- D5 Ship boundary: MSP spindle ships from proven head 2f60264: Ship MSP spindle from proven head 2f60264 with SHIP=1 run.zsh --resume, then open its pull request through the GitHub MCP with mitosis's title and body, assign the owner, and post the saved comment.
 
 ## Open risks
 
@@ -53,3 +50,5 @@ Needs: D2.
 - Acceptance script: ~/.mitosis/spindle/accept.zsh (maps one plugin test to mitosis's exit codes; a missing import or export from reverted work is a failure)
 - Pull request: https://github.com/SatanshuMishra/spindle/pull/1 (MSP spindle into feat/spindle-0-1, merged)
 - Feature record: ~/.mitosis/spindle/spindle-0-1/feature.json (core main, FEATURE feat/spindle-0-1, remote origin)
+- FEATURE pull request: https://github.com/SatanshuMishra/spindle/pull/2 (feat/spindle-0-1 into main)
+- Lighthouse results: ~/.mitosis/spindle/spindle-0-1/lighthouse/run-1 (findings.json, report.md, verdict.json, evidence/)
