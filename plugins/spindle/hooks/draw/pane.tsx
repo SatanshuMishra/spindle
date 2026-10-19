@@ -1,19 +1,20 @@
-import { atom, read } from 'claude-code'
-import type { EngineInterface, RenderInput } from 'claude-code'
+import { atom, read, update } from 'claude-code'
+import type { Elements, EngineInterface, RenderElement, RenderInput } from 'claude-code'
 
-import type { AgentRow, MspRow, MspStatus, Outcome, Role, RoundRow, RunView } from '../../types'
+import type { MspRow, MspStatus, Outcome, Role, RoundRow, RunView, WorkerRole, WorkerRow } from '../../types'
 import { LANE_NAME } from '../run/state'
-import { NO_RUN, elapsed, modelName } from '../run/summary'
+import { NO_RUN, activityNow, currentActivity, elapsed, modelName } from '../run/summary'
 import { ROLE_COLOR, colorOf, costumeOf, crab } from './crew'
-import type { Costume } from './crew'
+import { hint } from './hint'
 import {
   ACCENT,
+  CELL_PX,
   DONE,
   FAIL,
   FONT,
   LANE_COLORS,
   STAGE_TABLE,
-  fitText,
+  columnsOf,
   stageIndex,
   stageInfo,
   statusMark,
@@ -21,28 +22,60 @@ import {
   textWidth,
   xml,
 } from './text'
-import type { Mark } from './text'
+import type { Mark, StageInfo } from './text'
 
 export const PANE = 'spindle-run'
 export const PANE_TITLE = 'Pipeline'
 
 const viewState = atom({ plugin: 'spindle', key: 'view' } as const, null)
+const selectedState = atom({ plugin: 'spindle', key: 'selectedMsp' } as const, null)
 
-const HEADER_H = 72
+const TITLE = 'Pipeline Insights'
+const COST_HINT = "Cost of this session's model calls"
+const TIME_HINT = 'Time since the run started'
+const PROOF_HINT = 'Acceptance test failed without the work (red) and passed with it (green)'
 const RAIL_H = 44
-const MSP_H = 54
-const AGENT_H = 44
-const ROUND_H = 50
+const RAIL_LABEL_PX = 10.5
+const RAIL_NAMES_COLUMNS = 60
+const MARK_W = 48
+const MARK_H = 36
+const MARK_COLUMNS = MARK_W / CELL_PX
+const LANE_BAR_H = 6
+const PROOF_W = 24
+const PROOF_H = 10
+const PROOF_COLUMNS = columnsOf('proof') + 1 + PROOF_W / CELL_PX
+const CREW_CRAB_PX = 18
+const WORKER_CRAB_PX = 32
+const WORKER_CRAB_COLUMNS = WORKER_CRAB_PX / CELL_PX
 const CONTEXT_W = 48
-const MONO = "ui-monospace,'SF Mono',Menlo,monospace"
+const CONTEXT_H = 4
+const PIP = 8
+const PIP_STEP = 10
+const CHIP_H = 18
+const MAX_HOTKEYS = 9
 
-const ROLE_NAME: Readonly<Record<Exclude<Role, 'plain'>, string>> = {
+const ROLE_NAME: Readonly<Record<WorkerRole, string>> = {
   captain: 'Captain',
   scribe: 'Scribe',
   builder: 'Builder',
   detective: 'Detective',
   judge: 'Judge',
   courier: 'Courier',
+  plain: 'Agent',
+  diagnosis: 'Diagnosis',
+  smoke: 'Smoke',
+}
+
+const ROLE_LOOK: Readonly<Record<WorkerRole, Role>> = {
+  captain: 'captain',
+  scribe: 'scribe',
+  builder: 'builder',
+  detective: 'detective',
+  judge: 'judge',
+  courier: 'courier',
+  plain: 'plain',
+  diagnosis: 'detective',
+  smoke: 'courier',
 }
 
 const MSP_STATUS: Readonly<Record<MspStatus, { word: string; mark: Mark }>> = {
@@ -67,29 +100,46 @@ const VERDICT_COLOR: Readonly<Record<Outcome, string>> = {
   unknown: ROLE_COLOR.continuity,
 }
 
-type Working = {
-  key: string
-  name: string
-  task: string
-  alt: string
-  costume: Costume
-  color: string
-  meta: string
-  context: number
+type PaneElements = Pick<Elements['terminal'], 'Box' | 'Text' | 'Button'>
+
+function cut(text: string, columns: number): string {
+  if (columnsOf(text) <= columns) return text
+  const chars = [...text]
+  const kept = chars.findIndex((_, i) => columnsOf(chars.slice(0, i + 1).join('') + '…') > columns)
+  return chars.slice(0, kept === -1 ? chars.length : kept).join('') + '…'
 }
 
 const laneWordOf = (view: RunView) => (view.lane === null ? null : `${LANE_NAME[view.lane]} lane`)
 
-const headerAlt = (view: RunView) => {
-  const lane = laneWordOf(view)
-  return lane === null ? view.slug : `${view.slug}, ${lane}`
-}
-
 const stageName = (view: RunView) => (view.isFinished ? 'Done' : (stageInfo(view.stage)?.name ?? '?'))
 
-const costText = (view: RunView) => `≈$${view.costUsd.toFixed(2)} session`
+const costText = (view: RunView) => `~$${view.costUsd.toFixed(2)}`
 
-const agentsText = (view: RunView) => `${view.agents.filter(agent => agent.isRunning).length} live · ${view.agents.length}`
+const isCrew = (worker: WorkerRow) => worker.role !== 'captain'
+
+const liveCrewOf = (view: RunView) => view.workers.filter(worker => worker.isLive && isCrew(worker))
+
+const agentsHint = (view: RunView) =>
+  `Workers running now · ${view.workers.filter(isCrew).length} this run`
+
+const mspsAt = (view: RunView, stage: StageInfo) => view.msps.filter(msp => msp.stage === stage.id).length
+
+const railAlt = (view: RunView) => {
+  const counts = STAGE_TABLE.filter(stage => mspsAt(view, stage) > 0).map(stage => `${mspsAt(view, stage)} at ${stage.name}`)
+  return counts.length === 0 ? `Stage ${stageName(view)}` : `Stage ${stageName(view)} · ${counts.join(', ')}`
+}
+
+const currentIndexOf = (view: RunView) => (view.isFinished ? STAGE_TABLE.length : stageIndex(view.stage))
+
+function railLines(view: RunView): readonly string[] {
+  const current = currentIndexOf(view)
+  return STAGE_TABLE.map((stage, i) => {
+    const count = mspsAt(view, stage)
+    const state = current === -1 ? '' : i < current ? 'done' : i === current ? 'now' : ''
+    const msps = count === 0 ? '' : `${count} ${count === 1 ? 'MSP' : 'MSPs'}`
+    return [stage.name, state, msps].filter(part => part !== '').join(' · ')
+  })
+}
 
 const mspStatusText = (msp: MspRow) => {
   const word = MSP_STATUS[msp.status].word
@@ -97,82 +147,71 @@ const mspStatusText = (msp: MspRow) => {
   return msp.round > 0 ? `${word} · R${msp.round}` : word
 }
 
+const activityText = (msp: MspRow, now: number) => {
+  const activity = currentActivity(msp)
+  return activity === undefined ? 'status unknown' : activityNow(activity, now)
+}
+
+const mspLabel = (msp: MspRow, now: number) => `${msp.label} · ${activityText(msp, now)}`
+
+const laneColorOf = (i: number) => LANE_COLORS[i % LANE_COLORS.length] ?? ACCENT
+
+const lanesDoneShare = (msp: MspRow) => (msp.lanesTotal > 0 ? Math.min(1, msp.lanesDone / msp.lanesTotal) : 0)
+
 const proofMarks = (msp: MspRow) =>
   msp.proof === null ? '' : `proof ${msp.proof.isRedSeen ? '●' : '○'}${msp.proof.isGreenSeen ? '●' : '○'}`
 
-const roleName = (agent: AgentRow) => (agent.role === 'plain' ? agent.type : ROLE_NAME[agent.role])
+const selectedOf = (view: RunView, stored: string | null) =>
+  stored !== null && view.msps.some(msp => msp.label === stored) ? stored : null
 
-const contextOf = (agent: AgentRow) => (agent.contextMax > 0 ? Math.min(1, agent.contextTokens / agent.contextMax) : 0)
+const roundOrder = (worker: WorkerRow) => worker.round ?? Number.NEGATIVE_INFINITY
 
-function agentWorking(agent: AgentRow, now: number): Working {
-  const name = roleName(agent)
-  const task = agent.role === 'plain' ? agent.description : agent.type
-  return {
-    key: `agent-${agent.id}`,
-    name,
-    task,
-    alt: `${name}: ${task}`,
-    costume: costumeOf(agent.role),
-    color: colorOf(agent.role),
-    meta: `${modelName(agent.model)} · ${elapsed(agent.startedAt, now)}`,
-    context: contextOf(agent),
-  }
+function listedWorkers(view: RunView, selected: string | null): readonly WorkerRow[] {
+  if (selected === null) return view.workers.filter(worker => worker.isLive)
+  const own = view.workers.filter(worker => worker.msp === selected)
+  const finished = own.filter(worker => !worker.isLive)
+  const newestFirst = [...finished].sort((a, b) => roundOrder(b) - roundOrder(a))
+  return [...own.filter(worker => worker.isLive), ...newestFirst]
 }
 
-const synthetic = (role: Role, name: string, task: string, alt: string, meta: string): Working => ({
-  key: `role-${role}`,
-  name,
-  task,
-  alt,
-  costume: costumeOf(role),
-  color: colorOf(role),
-  meta,
-  context: 0,
-})
+const workingTitle = (selected: string | null) => (selected === null ? 'Working now' : `${selected} · workers`)
 
-export function workingRows(view: RunView, now: number): readonly Working[] {
-  const time = elapsed(view.startedAt, now)
-  const rows = [
-    ...view.agents.filter(agent => agent.isRunning).map(agent => agentWorking(agent, now)),
-    ...(view.buildingLanes > 0
-      ? [synthetic('builder', `Builder ×${view.buildingLanes}`, view.buildingTier, `Builder ×${view.buildingLanes}`, time)]
-      : []),
-    ...(view.isPullRequestRunning ? [synthetic('courier', 'Courier', 'pull request', 'Courier: pull request', time)] : []),
+const rightText = (worker: WorkerRow, now: number) =>
+  [
+    worker.model === null ? '' : modelName(worker.model),
+    worker.isLive && worker.startedAt !== null ? elapsed(worker.startedAt, now) : '',
   ]
-  return rows.length > 0 ? rows : [synthetic('captain', 'Captain', 'main thread', 'Captain: main thread', time)]
-}
+    .filter(part => part !== '')
+    .join(' · ')
 
-function headerSvg(W: number, view: RunView, time: string): string {
-  const gap = 6
-  const tileW = (W - gap * 2) / 3
-  const tile = (i: number, key: string, value: string) => `<rect class="sv-tile" x="${i * (tileW + gap)}" y="28" width="${tileW}" height="40" rx="8"/>
-<text class="sv-s" x="${i * (tileW + gap) + 9}" y="44" font-family="${FONT}" font-size="11">${xml(key)}</text>
-<text class="sv-t" x="${i * (tileW + gap) + 9}" y="61" font-family="${FONT}" font-size="15" font-weight="600" style="font-variant-numeric:tabular-nums">${xml(fitText(value, 15, tileW - 18))}</text>`
-  const lane = laneWordOf(view)
-  const title = fitText(view.slug, 14, Math.max(60, W - 120))
-  const titleW = textWidth(title, 14)
-  const laneW = lane === null ? 0 : textWidth(lane, 10.5) + 14
-  const chip =
-    lane === null
-      ? ''
-      : `<rect class="sv-k" x="${titleW + 8}" y="3" width="${laneW}" height="16" rx="4"/>
-<text class="sv-s" x="${titleW + 8 + laneW / 2}" y="14.8" text-anchor="middle" font-family="${FONT}" font-size="10.5" font-weight="600">${xml(lane)}</text>`
-  return svg(
-    W,
-    HEADER_H,
-    `<text class="sv-t" x="0" y="15" font-family="${FONT}" font-size="14" font-weight="600">${xml(title)}</text>
-${chip}
-${tile(0, 'Cost', costText(view))}${tile(1, 'Agents', agentsText(view))}${tile(2, 'Time', time)}`,
-    headerAlt(view),
-  )
-}
+const contextPercent = (worker: WorkerRow) => Math.round((worker.contextShare ?? 0) * 100)
 
-function railSvg(W: number, view: RunView): string {
+const contextHint = (worker: WorkerRow) => `Context ${contextPercent(worker)}%`
+
+const roundOf = (view: RunView, worker: WorkerRow): RoundRow | undefined =>
+  view.rounds.find(round => round.n === worker.round && round.msp === worker.msp)
+
+const firstKindOf = (view: RunView, worker: WorkerRow): string | undefined =>
+  view.msps
+    .find(msp => msp.label === worker.msp)
+    ?.activities.find(activity => activity.kind === 'round' && activity.round === worker.round)?.kinds[0]
+
+const isVerdictRow = (view: RunView, worker: WorkerRow) =>
+  worker.role === 'judge' && !worker.isLive && roundOf(view, worker) !== undefined
+
+const verdictWords = (worker: WorkerRow) => `Round ${worker.round ?? '?'}`
+
+const workerKey = (worker: WorkerRow, i: number) => `worker-${worker.msp ?? 'run'}-${i}`
+
+function railSvg(W: number, view: RunView, isEveryName: boolean): string {
   const count = STAGE_TABLE.length
-  const step = (W - 24) / (count - 1)
-  const current = view.isFinished ? count : stageIndex(view.stage)
+  const half = (i: number) => textWidth(STAGE_TABLE[i]?.name ?? '', RAIL_LABEL_PX) / 2 + 1
+  const left = Math.max(12, half(0))
+  const right = W - Math.max(12, half(count - 1))
+  const step = (right - left) / (count - 1)
+  const current = currentIndexOf(view)
   const nodes = STAGE_TABLE.map((stage, i) => {
-    const x = 12 + i * step
+    const x = left + i * step
     const status: Mark = current === -1 ? 'pending' : i < current ? 'done' : i === current ? 'running' : 'pending'
     const mark =
       status === 'done'
@@ -180,97 +219,92 @@ function railSvg(W: number, view: RunView): string {
         : status === 'running'
           ? `<circle class="sv-live" cx="${x}" cy="12" r="10" fill="${stage.color}" opacity=".25"/><circle cx="${x}" cy="12" r="6" fill="${stage.color}"/>`
           : `<circle cx="${x}" cy="12" r="5" class="sv-k sv-mstroke" stroke-width="1.2"/>`
-    return `${mark}<text class="${status === 'pending' ? 'sv-m' : 'sv-t'}" x="${x}" y="36" text-anchor="middle" font-family="${FONT}" font-size="10.5"${status === 'running' ? ' font-weight="600"' : ''}>${xml(stage.name)}</text>`
+    const labelX = Math.min(W - half(i), Math.max(half(i), x))
+    const label =
+      isEveryName || status === 'running'
+        ? `<text class="${status === 'pending' ? 'sv-m' : 'sv-t'}" x="${labelX}" y="36" text-anchor="middle" font-family="${FONT}" font-size="${RAIL_LABEL_PX}"${status === 'running' ? ' font-weight="600"' : ''}>${xml(stage.name)}</text>`
+        : ''
+    return `${mark}${label}`
   })
-  const doneX = 12 + Math.max(0, Math.min(current, count - 1)) * step
+  const doneX = left + Math.max(0, Math.min(current, count - 1)) * step
   return svg(
     W,
     RAIL_H,
-    `<rect class="sv-k" x="12" y="11" width="${W - 24}" height="2" rx="1"/><rect x="12" y="11" width="${Math.max(0, doneX - 12)}" height="2" rx="1" fill="${DONE}"/>${nodes.join('')}`,
-    `Stage ${stageName(view)}`,
+    `<rect class="sv-k" x="${left}" y="11" width="${right - left}" height="2" rx="1"/><rect x="${left}" y="11" width="${Math.max(0, doneX - left)}" height="2" rx="1" fill="${DONE}"/>${nodes.join('')}`,
   )
 }
 
-function proofSvg(W: number, msp: MspRow): string {
-  if (msp.proof === null) return ''
-  const red = msp.proof.isRedSeen ? `<circle cx="0" cy="0" r="3.5" fill="${FAIL}"/>` : `<circle cx="0" cy="0" r="3.5" fill="none" class="sv-mstroke" stroke-width="1.2"/>`
-  const green = msp.proof.isGreenSeen
-    ? `<circle cx="18" cy="0" r="3.5" fill="${DONE}"/>`
-    : `<circle cx="18" cy="0" r="3.5" fill="none" class="sv-mstroke" stroke-width="1.2"/>`
-  return `<g transform="translate(${W - 56},40)">${red}<path d="M6 0h6" class="sv-mstroke" stroke-width="1.2"/>${green}</g>`
+function mspMarkSvg(msp: MspRow, i: number): string {
+  const { mark } = MSP_STATUS[msp.status]
+  const isWorking = currentActivity(msp)?.isRunning ?? false
+  return svg(
+    MARK_W,
+    MARK_H,
+    `<rect x="0" y="2" width="3" height="${MARK_H - 4}" rx="1.5" fill="${laneColorOf(i)}"/>
+${crab(6, 1, 'builder', laneColorOf(i), mark === 'pending', isWorking, 1.1)}
+${statusMark(MARK_W - 6, 8, mark, laneColorOf(i))}`,
+  )
 }
 
-function mspSvg(W: number, msp: MspRow, i: number): string {
-  const { word, mark } = MSP_STATUS[msp.status]
-  const color = LANE_COLORS[i % LANE_COLORS.length] ?? ACCENT
-  const barX = 44
-  const barW = Math.max(20, W - barX - 64)
-  const done = msp.lanesTotal > 0 ? Math.min(1, msp.lanesDone / msp.lanesTotal) : 0
+function laneBarSvg(W: number, msp: MspRow, i: number): string {
+  const fill = MSP_STATUS[msp.status].mark === 'failed' ? FAIL : laneColorOf(i)
   return svg(
     W,
-    MSP_H,
-    `<rect x="0" y="4" width="3" height="46" rx="1.5" fill="${color}"/>
-${crab(8, 10, 'builder', color, mark === 'pending', msp.status === 'building', 1.1)}
-<text class="sv-t" x="${barX}" y="18" font-family="${FONT}" font-size="13" font-weight="600">${xml(fitText(msp.label, 13, barW - 90))}</text>
-<text class="sv-m" x="${barX}" y="32" font-family="${MONO}" font-size="10">${xml(fitText(msp.branch, 10, barW))}</text>
-<rect class="sv-k" x="${barX}" y="39" width="${barW}" height="4" rx="2"/>
-<rect x="${barX}" y="39" width="${Math.round(barW * done)}" height="4" rx="2" fill="${mark === 'failed' ? FAIL : color}"/>
-${statusMark(W - 8, 16, mark, color)}
-<text class="sv-s" x="${W - 20}" y="20" text-anchor="end" font-family="${FONT}" font-size="11">${xml(mspStatusText(msp))}</text>
-${proofSvg(W, msp)}`,
-    `${msp.label}: ${word}`,
+    LANE_BAR_H,
+    `<rect class="sv-k" x="0" y="1" width="${W}" height="4" rx="2"/>
+<rect x="0" y="1" width="${Math.round(W * lanesDoneShare(msp))}" height="4" rx="2" fill="${fill}"/>`,
   )
 }
 
-function agentSvg(W: number, row: Working): string {
+function proofSvg(msp: MspRow): string {
+  const red = msp.proof?.isRedSeen
+    ? `<circle cx="4" cy="5" r="3.5" fill="${FAIL}"/>`
+    : `<circle cx="4" cy="5" r="3.5" fill="none" class="sv-mstroke" stroke-width="1.2"/>`
+  const green = msp.proof?.isGreenSeen
+    ? `<circle cx="20" cy="5" r="3.5" fill="${DONE}"/>`
+    : `<circle cx="20" cy="5" r="3.5" fill="none" class="sv-mstroke" stroke-width="1.2"/>`
+  return svg(PROOF_W, PROOF_H, `${red}<path d="M9 5h6" class="sv-mstroke" stroke-width="1.2"/>${green}`)
+}
+
+function crabSvg(px: number, role: Role, isWalking: boolean, isDim: boolean): string {
+  return svg(px, px, crab(0, 0, costumeOf(role), colorOf(role), isDim, isWalking, px / 30))
+}
+
+function contextSvg(worker: WorkerRow): string {
   return svg(
-    W,
-    AGENT_H,
-    `${crab(4, 6, row.costume, row.color, false, true, 1.1)}
-<text class="sv-t" x="44" y="18" font-family="${FONT}" font-size="13" font-weight="600">${xml(fitText(row.name, 13, W - 200))}</text>
-<text class="sv-m" x="44" y="34" font-family="${FONT}" font-size="11">${xml(fitText(row.task, 11, W - 44 - CONTEXT_W - 12))}</text>
-<text class="sv-s" x="${W}" y="18" text-anchor="end" font-family="${FONT}" font-size="11" style="font-variant-numeric:tabular-nums">${xml(row.meta)}</text>
-<rect class="sv-k" x="${W - CONTEXT_W}" y="28" width="${CONTEXT_W}" height="4" rx="2"/>
-<rect x="${W - CONTEXT_W}" y="28" width="${Math.round(CONTEXT_W * row.context)}" height="4" rx="2" class="sv-mfill"/>`,
-    row.alt,
+    CONTEXT_W,
+    CONTEXT_H,
+    `<rect class="sv-k" x="0" y="0" width="${CONTEXT_W}" height="${CONTEXT_H}" rx="2"/>
+<rect x="0" y="0" width="${Math.round((CONTEXT_W * contextPercent(worker)) / 100)}" height="${CONTEXT_H}" rx="2" class="sv-mfill"/>`,
   )
 }
 
-function roundSvg(W: number, round: RoundRow): string {
+type VerdictLayout = { W: number; step: number; chipW: number; candidates: number }
+
+function verdictLayout(maxW: number, round: RoundRow): VerdictLayout {
   const chipW = textWidth(round.outcome, 11) + 18
-  const candidates = round.candidates ?? round.blockers + round.advisories
-  const seg = (W - 120) / Math.max(1, candidates)
+  const candidates = Math.max(round.candidates ?? 0, round.blockers + round.advisories)
+  const step = Math.min(PIP_STEP, Math.max(3, (maxW - chipW - 6) / Math.max(1, candidates)))
+  const W = Math.min(maxW, Math.ceil(candidates * step + (candidates > 0 ? 6 : 0) + chipW))
+  return { W, step, chipW, candidates }
+}
+
+function verdictSvg(layout: VerdictLayout, round: RoundRow): string {
+  const { W, step, chipW, candidates } = layout
   const pips = Array.from({ length: candidates }, (_, i) => {
-    const fill = i < round.blockers ? FAIL : i < round.blockers + round.advisories ? ROLE_COLOR.verdict : null
-    return `<rect x="${40 + i * seg}" y="30" width="${Math.max(3, seg - 3)}" height="8" rx="2" ${fill === null ? 'class="sv-k"' : `fill="${fill}"`}/>`
+    const kind = i < round.blockers ? 'blocker' : i < round.blockers + round.advisories ? 'advisory' : 'other'
+    const paint =
+      kind === 'blocker' ? `fill="${FAIL}"` : kind === 'advisory' ? `fill="${ROLE_COLOR.verdict}"` : 'class="sv-k"'
+    return `<rect data-pip="${kind}" x="${i * step}" y="${(CHIP_H - PIP) / 2}" width="${Math.min(PIP, step - 2)}" height="${PIP}" rx="2" ${paint}/>`
   }).join('')
-  const detail = `${round.msp} · ${round.candidates ?? '?'} candidates · ${round.blockers} blockers · ${round.advisories} advisory`
+  const chipX = W - chipW
   return svg(
     W,
-    ROUND_H,
-    `<text class="sv-t" x="0" y="20" font-family="${FONT}" font-size="13" font-weight="600">R${round.n}</text>
-<text class="sv-s" x="40" y="20" font-family="${FONT}" font-size="11">${xml(fitText(detail, 11, W - 40))}</text>
-${pips}
-<rect x="${W - chipW}" y="25" width="${chipW}" height="18" rx="9" fill="${VERDICT_COLOR[round.outcome]}"/>
-<text x="${W - chipW / 2}" y="37.5" text-anchor="middle" font-family="${FONT}" font-size="11" font-weight="600" fill="#fff">${xml(round.outcome)}</text>`,
-    `Round ${round.n} ${round.msp}: ${round.outcome}`,
+    CHIP_H,
+    `${pips}<rect x="${chipX}" y="0" width="${chipW}" height="${CHIP_H}" rx="9" fill="${VERDICT_COLOR[round.outcome]}"/>
+<text x="${chipX + chipW / 2}" y="12.5" text-anchor="middle" font-family="${FONT}" font-size="11" font-weight="600" fill="#fff">${xml(round.outcome)}</text>`,
   )
 }
-
-const headerLine = (view: RunView) => {
-  const lane = laneWordOf(view)
-  return lane === null ? view.slug : `${view.slug}  [${lane}]`
-}
-
-const mspLine = (msp: MspRow) =>
-  [msp.label, MSP_STATUS[msp.status].word, `${msp.lanesDone}/${msp.lanesTotal}`, proofMarks(msp), msp.pr]
-    .filter(part => part !== '')
-    .join('  ')
-
-const workingLine = (row: Working) => `${row.name}  ${row.task}  ${row.meta}  context ${Math.round(row.context * 100)}%`
-
-const roundLine = (round: RoundRow) =>
-  `R${round.n} ${round.msp} ${round.outcome} · ${round.blockers} blockers, ${round.advisories} advisories`
 
 export async function togglePane($: EngineInterface): Promise<string> {
   const panes = await $.ui.panes()
@@ -280,6 +314,247 @@ export async function togglePane($: EngineInterface): Promise<string> {
   }
   await $.ui.open({ id: PANE, title: PANE_TITLE })
   return 'Run pane opened.'
+}
+
+async function toggleSelection($: EngineInterface, label: string): Promise<void> {
+  await update($, selectedState, current => (current === label ? null : label))
+}
+
+function mspButton($: EngineInterface, ui: PaneElements, msp: MspRow, i: number, label: string) {
+  const { Button } = ui
+  return (
+    <Button
+      key={`msp-${msp.label}`}
+      label={label}
+      plain
+      {...(i < MAX_HOTKEYS ? { hotkey: String(i + 1) } : {})}
+      onPress={async () => {
+        await toggleSelection($, msp.label)
+      }}
+    />
+  )
+}
+
+function workingHeading(ui: PaneElements, selected: string | null, count: number) {
+  const { Box, Text } = ui
+  return (
+    <Box key="working-heading" flexDirection="row" gap={1}>
+      <Text dimColor>{workingTitle(selected)}</Text>
+      {selected === null ? <Text dimColor>{`· ${count}`}</Text> : null}
+    </Box>
+  )
+}
+
+type Room = { columns: number; now: number }
+
+type DesktopElements = PaneElements & Pick<Elements['desktop'], 'Svg'>
+
+function verdictPicture(ui: DesktopElements, key: string, layout: VerdictLayout, round: RoundRow) {
+  const { Svg } = ui
+  return (
+    <Svg
+      key={`${key}-verdict`}
+      source={verdictSvg(layout, round)}
+      alt={`Round ${round.n}: ${round.outcome}`}
+      width={layout.W}
+      height={CHIP_H}
+    />
+  )
+}
+
+function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, selected: string | null, room: Room) {
+  const { Box, Text, Svg } = ui
+  const { columns, now } = room
+  const time = elapsed(view.startedAt, now)
+  const lane = laneWordOf(view)
+  const slugColumns = Math.max(4, columns - (lane === null ? 0 : columnsOf(lane) + 1))
+  const slug = cut(view.slug, slugColumns)
+  const railW = Math.max(CELL_PX, Math.min(900, columns * CELL_PX - CELL_PX))
+  const live = liveCrewOf(view)
+  const crewRole = ROLE_LOOK[live[0]?.role ?? 'captain']
+  const tile = (key: string, name: string, value: RenderElement, lines: readonly string[]) =>
+    hint(
+      ui,
+      key,
+      <Box flexDirection="column" borderStyle="round" borderDimColor paddingX={1}>
+        <Text dimColor size="caption">
+          {name}
+        </Text>
+        {value}
+      </Box>,
+      lines,
+    )
+  const middleColumns = Math.max(2, columns - MARK_COLUMNS - 1 - PROOF_COLUMNS - 1)
+  const mspRow = (msp: MspRow, i: number) => {
+    const full = mspLabel(msp, now)
+    const label = cut(full, middleColumns - 2)
+    const lines = [...(label === full ? [] : [full]), msp.branch, mspStatusText(msp), `Lanes ${msp.lanesDone}/${msp.lanesTotal}`]
+    return (
+      <Box key={`msp-row-${msp.label}`} flexDirection="row" alignItems="center" gap={1}>
+        {hint(
+          ui,
+          `msp-card-${msp.label}`,
+          [
+            <Svg key={`msp-mark-${msp.label}`} source={mspMarkSvg(msp, i)} alt={`${msp.label} crab`} width={MARK_W} height={MARK_H} />,
+            <Box key={`msp-main-${msp.label}`} flexDirection="column" flexGrow={1}>
+              {mspButton($, ui, msp, i, label)}
+              <Svg
+                source={laneBarSvg(middleColumns * CELL_PX, msp, i)}
+                alt={`${msp.label} lanes ${msp.lanesDone} of ${msp.lanesTotal}`}
+                width={middleColumns * CELL_PX}
+                height={LANE_BAR_H}
+              />
+            </Box>,
+          ],
+          lines,
+        )}
+        {msp.proof === null
+          ? null
+          : hint(
+              ui,
+              `msp-proof-${msp.label}`,
+              [
+                <Text key={`proof-word-${msp.label}`} dimColor size="caption">
+                  proof
+                </Text>,
+                <Svg key={`proof-dots-${msp.label}`} source={proofSvg(msp)} alt={proofMarks(msp)} width={PROOF_W} height={PROOF_H} />,
+              ],
+              [PROOF_HINT],
+            )}
+      </Box>
+    )
+  }
+  const listed = listedWorkers(view, selected)
+  const rightColumns = Math.max(
+    0,
+    ...listed.map(worker => [...rightText(worker, now)].length),
+    ...listed.map(worker => (worker.contextShare === null ? 0 : CONTEXT_W / CELL_PX)),
+  )
+  const wordsColumns = Math.max(4, columns - WORKER_CRAB_COLUMNS - 1 - rightColumns - 1)
+  const workerRow = (worker: WorkerRow, i: number) => {
+    const key = workerKey(worker, i)
+    const role = ROLE_LOOK[worker.role]
+    const round = isVerdictRow(view, worker) ? roundOf(view, worker) : undefined
+    const kind = round === undefined ? undefined : firstKindOf(view, worker)
+    const words = round === undefined ? worker.words : verdictWords(worker)
+    const shown = cut(words, wordsColumns)
+    const right = rightText(worker, now)
+    return (
+      <Box key={key} flexDirection="row" gap={1}>
+        <Svg
+          key={`${key}-crab`}
+          source={crabSvg(WORKER_CRAB_PX, role, worker.isLive, !worker.isLive)}
+          alt={`${ROLE_NAME[worker.role]} crab`}
+          width={WORKER_CRAB_PX}
+          height={WORKER_CRAB_PX}
+        />
+        <Box key={`${key}-words`} flexDirection="column" flexGrow={1}>
+          <Text weight="semibold">{ROLE_NAME[worker.role]}</Text>
+          {shown === words ? <Text dimColor>{words}</Text> : hint(ui, `${key}-words-hint`, <Text dimColor>{shown}</Text>, [words])}
+          {round === undefined ? null : verdictPicture(ui, key, verdictLayout(wordsColumns * CELL_PX, round), round)}
+          {kind === undefined ? null : <Text dimColor>{kind}</Text>}
+        </Box>
+        <Box key={`${key}-right`} flexDirection="column" alignItems="flex-start" width={rightColumns} flexShrink={0}>
+          {right === '' ? null : <Text dimColor tabular>{right}</Text>}
+          {worker.contextShare === null
+            ? null
+            : hint(
+                ui,
+                `${key}-context`,
+                <Svg source={contextSvg(worker)} alt={contextHint(worker)} width={CONTEXT_W} height={CONTEXT_H} />,
+                [contextHint(worker)],
+              )}
+        </Box>
+      </Box>
+    )
+  }
+  return (
+    <Box flexDirection="column" gap={1}>
+      <Box key="pane-title" flexDirection="column">
+        <Text weight="semibold" size="heading">
+          {TITLE}
+        </Text>
+        <Box key="pane-thread" flexDirection="row" gap={1}>
+          {hint(ui, 'pane-slug-hint', <Text>{slug}</Text>, [view.slug])}
+          {lane === null ? null : (
+            <Text dimColor weight="semibold">
+              {lane}
+            </Text>
+          )}
+        </Box>
+      </Box>
+      <Box key="pane-tiles" flexDirection="row" gap={1} flexWrap="wrap">
+        {tile('tile-cost', 'Cost', <Text weight="semibold" tabular>{costText(view)}</Text>, [COST_HINT])}
+        {tile(
+          'tile-agents',
+          'Agents',
+          <Box flexDirection="row" alignItems="center" gap={1}>
+            <Svg source={crabSvg(CREW_CRAB_PX, crewRole, true, false)} alt={`${costumeOf(crewRole)} crab`} width={CREW_CRAB_PX} height={CREW_CRAB_PX} />
+            <Text weight="semibold" tabular>
+              {String(live.length)}
+            </Text>
+          </Box>,
+          [agentsHint(view)],
+        )}
+        {tile('tile-time', 'Time', <Text weight="semibold" tabular>{time}</Text>, [TIME_HINT])}
+      </Box>
+      {hint(
+        ui,
+        'pane-rail-hint',
+        <Svg key="pane-rail" source={railSvg(railW, view, columns >= RAIL_NAMES_COLUMNS)} alt={railAlt(view)} width={railW} height={RAIL_H} />,
+        railLines(view),
+      )}
+      <Text dimColor>{`MSPs · ${view.msps.length}`}</Text>
+      {view.msps.map(mspRow)}
+      {workingHeading(ui, selected, listed.length)}
+      {listed.map(workerRow)}
+    </Box>
+  )
+}
+
+const terminalWorkerLine = (view: RunView, worker: WorkerRow, now: number) => {
+  const round = isVerdictRow(view, worker) ? roundOf(view, worker) : undefined
+  const verdict =
+    round === undefined
+      ? ''
+      : `${round.outcome} · ${round.blockers} blockers, ${round.advisories} advisories${firstKindOf(view, worker) === undefined ? '' : ` · ${firstKindOf(view, worker)}`}`
+  return [
+    ROLE_NAME[worker.role],
+    round === undefined ? worker.words : verdictWords(worker),
+    verdict,
+    rightText(worker, now),
+    worker.contextShare === null ? '' : `context ${contextPercent(worker)}%`,
+  ]
+    .filter(part => part !== '')
+    .join('  ')
+}
+
+function terminalPane($: EngineInterface, ui: PaneElements, view: RunView, selected: string | null, now: number) {
+  const { Box, Text } = ui
+  const time = elapsed(view.startedAt, now)
+  const lane = laneWordOf(view)
+  const listed = listedWorkers(view, selected)
+  const mspExtra = (msp: MspRow) =>
+    [`${msp.lanesDone}/${msp.lanesTotal}`, proofMarks(msp), mspStatusText(msp)].filter(part => part !== '').join('  ')
+  return (
+    <Box flexDirection="column">
+      <Text bold>{TITLE}</Text>
+      <Text>{lane === null ? view.slug : `${view.slug}  [${lane}]`}</Text>
+      <Text>{`Cost ${costText(view)}  ·  Agents ${liveCrewOf(view).length}  ·  Time ${time}`}</Text>
+      <Text>{railAlt(view)}</Text>
+      <Text dimColor>{`MSPs · ${view.msps.length}`}</Text>
+      {view.msps.map((msp, i) => (
+        <Box key={`msp-row-${msp.label}`} flexDirection="row" gap={1}>
+          {mspButton($, ui, msp, i, mspLabel(msp, now))}
+          <Text dimColor>{mspExtra(msp)}</Text>
+        </Box>
+      ))}
+      {workingHeading(ui, selected, listed.length)}
+      {listed.map((worker, i) => (
+        <Text key={workerKey(worker, i)}>{terminalWorkerLine(view, worker, now)}</Text>
+      ))}
+    </Box>
+  )
 }
 
 export async function drawPane($: EngineInterface, e: RenderInput<'Pane'>) {
@@ -294,53 +569,9 @@ export async function drawPane($: EngineInterface, e: RenderInput<'Pane'>) {
     )
   }
   const now = await $.clock.now()
-  const time = elapsed(view.startedAt, now)
-  const working = workingRows(view, now)
+  const selected = selectedOf(view, await read($, selectedState))
   if (e.surface === 'desktop' && 'Svg' in ui) {
-    const { Svg } = ui
-    const W = Math.max(240, Math.min(900, (e.props.bodyColumns || 60) * 8 - 8))
-    return (
-      <Box flexDirection="column" gap={1}>
-        <Svg key="header" source={headerSvg(W, view, time)} alt={headerAlt(view)} width={W} height={HEADER_H} />
-        <Svg key="rail" source={railSvg(W, view)} alt={`Stage ${stageName(view)}`} width={W} height={RAIL_H} />
-        <Text dimColor>{`MSPs · ${view.msps.length}`}</Text>
-        {view.msps.map((msp, i) => (
-          <Svg key={`msp-${msp.label}`} source={mspSvg(W, msp, i)} alt={`${msp.label}: ${MSP_STATUS[msp.status].word}`} width={W} height={MSP_H} />
-        ))}
-        <Text dimColor>{`Working now · ${working.length}`}</Text>
-        {working.map(row => (
-          <Svg key={row.key} source={agentSvg(W, row)} alt={row.alt} width={W} height={AGENT_H} />
-        ))}
-        <Text dimColor>{`Review rounds · ${view.rounds.length}`}</Text>
-        {view.rounds.map(round => (
-          <Svg
-            key={`round-${round.n}-${round.msp}`}
-            source={roundSvg(W, round)}
-            alt={`Round ${round.n} ${round.msp}: ${round.outcome}`}
-            width={W}
-            height={ROUND_H}
-          />
-        ))}
-      </Box>
-    )
+    return desktopPane($, ui, view, selected, { columns: e.props.bodyColumns || 60, now })
   }
-  return (
-    <Box flexDirection="column">
-      <Text bold>{headerLine(view)}</Text>
-      <Text>{`${costText(view)}  ·  Agents ${agentsText(view)}  ·  Time ${time}`}</Text>
-      <Text>{`Stage ${stageName(view)}`}</Text>
-      <Text dimColor>{`MSPs · ${view.msps.length}`}</Text>
-      {view.msps.map(msp => (
-        <Text key={`msp-${msp.label}`}>{mspLine(msp)}</Text>
-      ))}
-      <Text dimColor>{`Working now · ${working.length}`}</Text>
-      {working.map(row => (
-        <Text key={row.key}>{workingLine(row)}</Text>
-      ))}
-      <Text dimColor>{`Review rounds · ${view.rounds.length}`}</Text>
-      {view.rounds.map(round => (
-        <Text key={`round-${round.n}-${round.msp}`}>{roundLine(round)}</Text>
-      ))}
-    </Box>
-  )
+  return terminalPane($, ui, view, selected, now)
 }
