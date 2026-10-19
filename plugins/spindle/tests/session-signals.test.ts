@@ -220,3 +220,49 @@ test('elapsed counts from the oldest run-home file', async ($, on) => {
 
   expect(await status($)).toContain('elapsed 48m')
 })
+
+test('a grep naming pipeline clean during Review is not Done', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  await bash($, 'grep -rn "pipeline clean" docs/')
+
+  expect(await status($)).toContain('stage review round 1 finished no')
+})
+
+test('reading run.zsh during Spec is not Build', async ($, on) => {
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+
+  await bash($, 'cat /home/owner/.mitosis/api/rate-limit-api/run.zsh')
+
+  expect(await status($)).toContain('stage spec round 0 finished no')
+})
+
+test('a grep for SHIP=1 in run.zsh during Review is not Ship', async ($, on) => {
+  const world = harness(on, review, { now: NOW })
+  await world.start($)
+
+  await bash($, 'grep -n SHIP=1 /home/owner/.mitosis/api/rate-limit-api/run.zsh')
+
+  expect(await status($)).toContain('stage review round 1 finished no')
+})
+
+test('a quoted note naming run.zsh during Spec is not Build', async ($, on) => {
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+
+  await bash($, `lb.zsh update_thread '{"next_step":"Run /home/owner/.mitosis/api/rate-limit-api/run.zsh after the review"}'`)
+
+  expect(await status($)).toContain('stage spec round 0 finished no')
+})
+
+test('pipeline clean after cd in a compound command is Done', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+
+  await bash($, 'cd /home/owner/work/api && pipeline clean --repo /home/owner/work/api --slug rate-limit-api')
+
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+})
