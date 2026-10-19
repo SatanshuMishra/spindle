@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: active
-Updated: 2026-10-19T22:58:50.586Z
+Updated: 2026-10-19T22:58:52.362Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Grounding facts: the pipeline run skill defines the round files spindle reads (.
 
 ## Next step
 
-Pane's fix pass; record band's two diagnoses and fix it; merge each fixed MSP up the stack and run round 2.
+Finish pane's fix and advisory; fix band; merge each fixed MSP up the stack in order and run round 2.
 
 Needs: D1.
 
