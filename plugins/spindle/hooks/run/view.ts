@@ -4,6 +4,7 @@ import type { CoreEngineInterface } from 'claude-code'
 import type { RunView } from '../../types'
 import { buildView, isSameRun } from './infer'
 import { NO_SIGNALS } from './state'
+import { currentActivity } from './summary'
 import { changes } from './toasts'
 
 export type ViewDollar = Pick<CoreEngineInterface, 'state' | 'ui'>
@@ -17,7 +18,7 @@ const selectedState = atom({ plugin: 'spindle', key: 'selectedMsp' } as const, n
 export const activitySignature = (view: RunView): string =>
   JSON.stringify(
     view.msps.map(msp => {
-      const activity = msp.activities[msp.current]
+      const activity = currentActivity(msp)
       return [msp.label, activity?.words ?? '', activity?.state ?? '']
     }),
   )

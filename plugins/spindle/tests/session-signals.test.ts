@@ -180,13 +180,13 @@ test('run.zsh call moves Spec to Build', async ($, on) => {
   expect(await status($)).toContain('stage build round 0 finished no')
 })
 
-test('ship call moves to Ship', async ($, on) => {
+test('ship call keeps a run in review at Review', async ($, on) => {
   const world = harness(on, review, { now: NOW })
   await world.start($)
 
   await bash($, 'SHIP=1 /home/owner/.mitosis/api/rate-limit-api/run.zsh --resume')
 
-  expect(await status($)).toContain('stage ship round 0 finished no')
+  expect(await status($)).toContain('stage review round 1 finished no')
 })
 
 test('pipeline clean exit 0 is Done', async ($, on) => {
@@ -344,7 +344,7 @@ test('a create_pull_request call that rejects leaves no Courier working', async 
     component: 'AbovePrompt',
     props: { hasSurvey: false, isWorking: false, maxRows: 4, bodyColumns: 100, scroll: { offset: 0, bodyRows: 4 }, view: {} },
   })
-  expect((await band.find({ type: 'Text', text: /rate-limit-api/ }))?.text).toContain('0 agents')
+  expect((await band.find({ key: 'spindle-crew' }))?.text).toBe('×0')
 })
 
 test('a heredoc line naming pipeline clean during Review is not Done', async ($, on) => {
@@ -406,31 +406,31 @@ test('pipeline clean on the line after an arithmetic shift is Done', async ($, o
   expect(await status($)).toContain('stage clean round 0 finished yes')
 })
 
-test('an exported SHIP before the run script moves to Ship', async ($, on) => {
+test('an exported SHIP before the run script keeps a run in review at Review', async ($, on) => {
   const world = harness(on, review, { now: NOW })
   await world.start($)
 
   await bash($, 'export SHIP=1; /home/owner/.mitosis/api/rate-limit-api/run.zsh --resume')
 
-  expect(await status($)).toContain('stage ship round 0 finished no')
+  expect(await status($)).toContain('stage review round 1 finished no')
 })
 
-test('SHIP set through env moves to Ship', async ($, on) => {
+test('SHIP set through env keeps a run in review at Review', async ($, on) => {
   const world = harness(on, review, { now: NOW })
   await world.start($)
 
   await bash($, 'env SHIP=1 /home/owner/.mitosis/api/rate-limit-api/run.zsh --resume')
 
-  expect(await status($)).toContain('stage ship round 0 finished no')
+  expect(await status($)).toContain('stage review round 1 finished no')
 })
 
-test('the run script started from its run home moves to Ship', async ($, on) => {
+test('the run script started from its run home keeps a run in review at Review', async ($, on) => {
   const world = harness(on, review, { now: NOW })
   await world.start($)
 
   await bash($, 'cd /home/owner/.mitosis/api/rate-limit-api && SHIP=1 ./run.zsh --resume')
 
-  expect(await status($)).toContain('stage ship round 0 finished no')
+  expect(await status($)).toContain('stage review round 1 finished no')
 })
 
 test('a run script outside a run home is not Build', async ($, on) => {

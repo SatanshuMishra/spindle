@@ -16,6 +16,7 @@ import type {
 import type { FileText, ReviewRound, RunFiles } from './home'
 import { isObject, parseJson } from './state'
 import type { Json } from './state'
+import { currentActivity, plural } from './summary'
 import { workersOf } from './workers'
 
 export const STAGES: readonly Stage[] = ['spec', 'build', 'review', 'fix', 'ship', 'integrate', 'clean']
@@ -136,9 +137,6 @@ const earliestOf = (times: readonly (number | null | undefined)[]): number | nul
   return known.length > 0 ? Math.min(...known) : null
 }
 
-const plural = (count: number, word: string) =>
-  `${count} ${count === 1 ? word : word.endsWith('y') ? `${word.slice(0, -1)}ies` : `${word}s`}`
-
 const countWords = (verdict: Verdict) =>
   `${plural(verdict.blockers.length, 'blocker')}, ${plural(verdict.advisories.length, 'advisory')}`
 
@@ -148,13 +146,18 @@ function findingLines(blockers: readonly string[], advisories: readonly string[]
   return [...lines.slice(0, MOST_FINDING_LINES - 1), `+${lines.length - (MOST_FINDING_LINES - 1)} more`]
 }
 
-function outcomeLine(verdict: Verdict): string {
+function outcomeParts(verdict: Verdict): { outcome: string; counts: string } {
   const hasFindings = verdict.blockers.length + verdict.advisories.length > 0
-  if (verdict.outcome === 'green') return hasFindings ? `Green · ${countWords(verdict)}` : 'Green · no findings'
-  if (verdict.outcome === 'loop') return `Needs fixes · ${countWords(verdict)}`
-  if (verdict.outcome === 'blocked') return `Blocked · ${plural(verdict.blockers.length, 'blocker')}`
-  if (verdict.outcome === 'diagnose') return `Diagnosing · ${plural(verdict.blockers.length, 'blocker')}`
-  return 'Failed'
+  if (verdict.outcome === 'green') return { outcome: 'Green', counts: hasFindings ? countWords(verdict) : 'no findings' }
+  if (verdict.outcome === 'loop') return { outcome: 'Needs fixes', counts: countWords(verdict) }
+  if (verdict.outcome === 'blocked') return { outcome: 'Blocked', counts: plural(verdict.blockers.length, 'blocker') }
+  if (verdict.outcome === 'diagnose') return { outcome: 'Diagnosing', counts: plural(verdict.blockers.length, 'blocker') }
+  return { outcome: 'Failed', counts: '' }
+}
+
+function outcomeLine(verdict: Verdict): string {
+  const { outcome, counts } = outcomeParts(verdict)
+  return counts === '' ? outcome : `${outcome} · ${counts}`
 }
 
 function verdictSummary(verdict: Verdict): string[] {
@@ -163,8 +166,11 @@ function verdictSummary(verdict: Verdict): string[] {
 
 const capitalised = (words: string) => words.charAt(0).toUpperCase() + words.slice(1)
 
+const ownFiles = (round: ReviewRound, label: string): string[] =>
+  round.names.filter(name => name.startsWith(`${label}.`))
+
 function roundRead(round: ReviewRound, label: string, verdictOf: (round: ReviewRound, label: string) => Parsed<Verdict>): RoundRead | null {
-  const own = round.names.filter(name => name.startsWith(`${label}.`))
+  const own = ownFiles(round, label)
   if (own.length === 0) return null
   const startedAt = earliestOf(own.map(name => round.times[name]))
   const verdictName = `${label}.verdict.json`
@@ -198,6 +204,7 @@ function roundActivity(read: RoundRead): Activity {
           ? ['Result unreadable']
           : [capitalised(read.state)],
     kinds: read.verdict === null ? [] : [...read.verdict.blockers, ...read.verdict.advisories],
+    counts: read.verdict === null ? '' : outcomeParts(read.verdict).counts,
   }
 }
 
@@ -212,6 +219,7 @@ function fixActivity(read: RoundRead, verdict: Verdict, isFixed: boolean): Activ
     startedAt: read.verdictAt,
     summary: [`Fixing ${countWords(verdict)}`, ...findingLines(verdict.blockers, [])],
     kinds: [...verdict.blockers, ...verdict.advisories],
+    counts: countWords(verdict),
   }
 }
 
@@ -225,6 +233,7 @@ const shipActivity = (words: string, summary: readonly string[], kinds: readonly
   startedAt: null,
   summary,
   kinds,
+  counts: '',
 })
 
 const pullShip = (pr: string) => shipActivity(`pull request ${pr}`, [`Pull request ${pr} open`])
@@ -276,16 +285,19 @@ function buildActivity(build: BuildFacts, hasRounds: boolean): Activity {
     startedAt: build.startedAt,
     summary: [`${build.lanesDone} of ${build.lanesTotal} ${lanes} done`, ...gate, ...failed.map(lane => `Lane ${lane.n} failed`)].slice(0, 4),
     kinds: [],
+    counts: '',
   }
 }
 
-function activitiesOf(build: BuildFacts, reads: readonly RoundRead[], pr: string): Activity[] {
-  const rounds = reads.flatMap((read, i) => {
+const roundActivities = (reads: readonly RoundRead[]): Activity[] =>
+  reads.flatMap((read, i) => {
     const isFixed = i < reads.length - 1
     return read.verdict?.outcome === 'loop' ? [roundActivity(read), fixActivity(read, read.verdict, isFixed)] : [roundActivity(read)]
   })
+
+function activitiesOf(build: BuildFacts, reads: readonly RoundRead[], pr: string): Activity[] {
   const ship = pr !== '' ? pullShip(pr) : shipAfter(reads[reads.length - 1])
-  return [buildActivity(build, reads.length > 0), ...rounds, ...(ship === null ? [] : [ship])]
+  return [buildActivity(build, reads.length > 0), ...roundActivities(reads), ...(ship === null ? [] : [ship])]
 }
 
 const withPullShip = (activities: readonly Activity[], pr: string): Activity[] => [
@@ -341,14 +353,14 @@ function diagnosisWords(slug: string, kinds: readonly string[]): string {
 }
 
 function roundFilesOf(round: ReviewRound, label: string, kinds: readonly string[]): RoundFiles {
-  const own = round.names.filter(name => name.startsWith(`${label}.`)).map(name => name.slice(label.length + 1))
+  const own = ownFiles(round, label).map(name => name.slice(label.length + 1))
   const findings = parsed(round.findings[label] ?? { kind: 'absent' }, findingsShape)
   const sources = findings.kind === 'ok' ? findings.value.filter(source => source !== '' && !UNSHOWN_SOURCES.has(source)) : []
   const counted = [...new Set(sources)].map(source => ({ source, count: sources.filter(one => one === source).length }))
   return {
     n: round.n,
     msp: label,
-    findingSources: counted,
+    findingSources: findings.kind === 'bad' ? null : counted,
     candidates: findings.kind === 'ok' ? findings.value.length : null,
     diagnoses: own
       .map(name => /^(.+)\.diagnosis\.json$/.exec(name)?.[1])
@@ -411,19 +423,22 @@ export function inferFacts(files: RunFiles): FileFacts {
           }
     const lanesDone = own.filter(lane => entryOf(lane.n) !== undefined).length
     const pr = msp?.ship?.pullRequest ?? ''
-    const activities = activitiesOf(
-      {
-        lanes: laneFacts.filter(lane => lane.msp === label),
-        lanesDone,
-        lanesTotal: own.length,
-        isCommitted: msp?.state === 'committed',
-        proof,
-        startedAt: files.planMtimeMs,
-      },
-      readsOf(label),
-      pr,
-    )
-    const current = activities.length - 1
+    const activities =
+      state.kind === 'bad'
+        ? roundActivities(readsOf(label))
+        : activitiesOf(
+            {
+              lanes: laneFacts.filter(lane => lane.msp === label),
+              lanesDone,
+              lanesTotal: own.length,
+              isCommitted: msp?.state === 'committed',
+              proof,
+              startedAt: files.planMtimeMs,
+            },
+            readsOf(label),
+            pr,
+          )
+    const current = state.kind === 'bad' ? -1 : activities.length - 1
     return {
       label,
       branch: tree?.branch ?? `mitosis/${label}`,
@@ -448,7 +463,7 @@ export function inferFacts(files: RunFiles): FileFacts {
   }
   const roundFiles: RoundFiles[] = files.rounds.flatMap(round =>
     labels
-      .filter(label => round.names.some(name => name.startsWith(`${label}.`)))
+      .filter(label => ownFiles(round, label).length > 0)
       .map(label => {
         const verdict = verdictOf(round, label)
         return roundFilesOf(round, label, verdict.kind === 'ok' ? [...verdict.value.blockers, ...verdict.value.advisories] : [])
@@ -519,7 +534,7 @@ function roundOf(stage: Stage | 'unknown', msps: readonly MspRow[], highestRound
   if (stage !== 'review' && stage !== 'fix') return 0
   const rounds = msps
     .filter(msp => msp.pr === '' && msp.stage === stage)
-    .map(msp => msp.activities[msp.current]?.round ?? 0)
+    .map(msp => currentActivity(msp)?.round ?? 0)
   return rounds.length > 0 ? Math.max(...rounds) : highestRound
 }
 

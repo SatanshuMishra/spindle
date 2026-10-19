@@ -9,6 +9,13 @@ export function hint(
   lines: readonly string[],
 ): RenderElement {
   const { Box, Text } = ui
+  if (lines.length === 0) {
+    return (
+      <Box key={key} flexDirection="row" alignItems="center" gap={1}>
+        {visible}
+      </Box>
+    )
+  }
   return (
     <Box key={key} flexDirection="row" alignItems="center" gap={1}>
       {visible}
