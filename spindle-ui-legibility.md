@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: active
-Updated: 2026-10-19T22:29:01.798Z
+Updated: 2026-10-19T22:33:56.935Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -11,7 +11,7 @@ Redesign spindle's band and Pipeline pane so they fit any width, explain every c
 
 ## Where things stand
 
-Full lane, slug spindle-ui-legibility. The owner approved the read-back of preview 2; interphase handed off (record handed-off, ADR 0005 supersedes ADR 0004, glossary terms Activity, Round state and Worker in the checkout, uncommitted until Ship). Stage 2: FEATURE branch feat/spindle-ui-legibility cut at 3fd829b and pushed; run home ~/.mitosis/spindle/spindle-ui-legibility holds CHARTER.md, run.zsh, dispatch.zsh, worker-rules.txt, items.json and graph.json; plan-only gives three stacked MSPs (activity-model, band, pane), one Lane each. The first build committed all three MSPs (gate 46 pass); review round 1 is running: eight reviewers (code and conformance on each MSP, security on activity-model and band), whose JSON arrays are saved under review/round-1/replies/ (activity-model and pane conformance: none; band conformance: 5.11 and 5.12 not met, their width-sweep tests timing out under suite load). Suite findings to add: activity-model's six older tests encoding the old stage rule and status line count, band's two width-sweep tests timing out at 5 s and its Courier test.
+Full lane, slug spindle-ui-legibility. The owner approved the read-back of preview 2; interphase handed off (record handed-off, ADR 0005 supersedes ADR 0004, glossary terms Activity, Round state and Worker in the checkout, uncommitted until Ship). Stage 2: FEATURE branch feat/spindle-ui-legibility cut at 3fd829b and pushed; run home ~/.mitosis/spindle/spindle-ui-legibility holds CHARTER.md, run.zsh, dispatch.zsh, worker-rules.txt, items.json and graph.json; plan-only gives three stacked MSPs (activity-model, band, pane), one Lane each. The first build committed all three MSPs (gate 46 pass); review round 1 is running: eight reviewers (code and conformance on each MSP, security on activity-model and band), whose JSON arrays are saved under review/round-1/replies/ (activity-model and pane conformance: none; band conformance: 5.11 and 5.12 not met, their width-sweep tests timing out under suite load; band security: the same two timeouts plus LOW glyph-only Button names and an unvalidated slug sent to the clipboard; code reviewers on all three MSPs and the activity-model security reviewer still running). Suite findings to add: activity-model's six older tests encoding the old stage rule and status line count, band's two width-sweep tests timing out at 5 s and its Courier test.
 
 Grounding facts: the pipeline run skill defines the round files spindle reads (.diff, .suite.txt, .findings.json, .verdicts.json, .verdict.json, .diagnosis.json), while .suite.run is ad hoc; every finding in all 112 verdict files on this machine has a short `kind` label; the mod API has no Button tooltip prop but offers keyed-Box hover cards and `<title>` tooltips in an interactive Svg, and tests can mount at any width and press Buttons.
 
