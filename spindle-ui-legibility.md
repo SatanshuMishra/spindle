@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: active
-Updated: 2026-10-19T22:44:47.476Z
+Updated: 2026-10-19T22:44:49.028Z
 Next ids: c1 D2 R1 S1
 
 ## Goal
@@ -17,7 +17,7 @@ Grounding facts: the pipeline run skill defines the round files spindle reads (.
 
 ## Next step
 
-Save each validator's JSON array to review/round-1/<msp>.verdicts.json, then run pipeline record and pipeline verdict per MSP, and diagnosis where the verdict says so.
+Save each diagnosis as review/round-1/<msp>.<kind slug>.diagnosis.json and record it with pipeline diagnosis, rerun pipeline verdict; record band's verdicts the same way; then the fix pass on each MSP's branch.
 
 Needs: D1.
 
