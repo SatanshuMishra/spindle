@@ -1,6 +1,6 @@
 # spindle-0-1: Build Spindle 0.1, the pipeline companion mod
 Status: active
-Updated: 2026-10-19T10:35:41.105Z
+Updated: 2026-10-19T10:37:08.055Z
 Next ids: c5 D4 R3 S2
 
 ## Goal
@@ -16,11 +16,11 @@ Ship Spindle 0.1, a Claude Code function-hooks mod in this repository that shows
 
 ## Where things stand
 
-Stage 3, round 3 of MSP spindle on branch mitosis/spindle at 6a29a67 (base feat/spindle-0-1, previous head d6fe881); every round 2 blocker and advisory is fixed (M1 in accept.zsh with accept-unloaded.awk, proof review/round-2/mitosis-gate/gate_receipt.py). Round 3 verdict is diagnose (review/round-3/spindle.verdict.json): blocker C1 (a here-string <<< is read as a heredoc and hides later lines, kind narrow command match) and advisories C2 (cd and export context leaks out of subshells, unset ignored), S3 ($'...' quoting unknown) and S4 (cd ignores .. and crosses subshells). Narrow command match is diagnosed fixable and recorded, so round 3 is loop (selecting check review/round-3/narrow-command-match/narrow-command-match.sh); the receipts for C1, C2, S3 and S4 are committed (6f0bce7) and the lexer fix is in progress. C9 keeps one atom per module because the engine refuses an atom imported from another file.
+Stage 3, round 4 of MSP spindle on branch mitosis/spindle at 2cf784e (base feat/spindle-0-1, previous head 6a29a67). Every round 2 and round 3 blocker and advisory is fixed (M1 in accept.zsh with accept-unloaded.awk, proof review/round-2/mitosis-gate/gate_receipt.py; selecting check review/round-3/narrow-command-match/narrow-command-match.sh prints nothing). The round 4 suite shows 89 pass, check.sh and tsc exit 0; the code and security reviewers run on the briefs in review/round-4/. C9 keeps one atom per module because the engine refuses an atom imported from another file.
 
 ## Next step
 
-When the diagnosis returns, save it as review/round-3/spindle.narrow-command-match.diagnosis.json, record it with pipeline diagnosis, re-run pipeline verdict, then fix C1 with a receipt test plus advisories C2, S3 and S4, and start round 4 with previous head 6a29a67.
+When both round 4 reviewers return, collect review/round-4/spindle.findings.json and spindle.md, run pipeline candidates, the validator when the count is above zero, record and verdict, and add the round 4 line to rounds.md.
 
 Needs: D2, D3.
 
