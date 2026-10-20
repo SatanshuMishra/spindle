@@ -1,7 +1,7 @@
 # spindle-paint-repair: Repair spindle 0.2.0's band and Pipeline pane as the desktop app actually draws them
 Status: active
-Updated: 2026-10-20T00:53:55.923Z
-Next ids: c1 D1 R1 S1
+Updated: 2026-10-20T01:16:48.521Z
+Next ids: c1 D2 R3 S1
 
 ## Goal
 
@@ -11,20 +11,27 @@ Make spindle's band and Pipeline pane, as the Claude desktop app really paints t
 
 ## Where things stand
 
-Not started.
+The repair is committed and pushed as release 0.2.1 on fix/spindle-paint-repair (86b5b1c); the full check passes with 157 tests. The pull request is not open: this session's GitHub connection predates the X-MCP-Features header, so create_pull_request returned the invisible form. The real desktop paint is unverified; a stand-in browser renderer of the drawn trees showed no overflow, a fixed-height bar, opaque one-line cards and working selection.
 
 ## Next step
 
-Run interphase:bug for the paint repair with an interview, starting with how the real desktop paint will be verified.
+From a new session, open the pull request with create_pull_request using the title and body in ~/.mitosis/spindle/paint-repair-pr.json (head fix/spindle-paint-repair, base main); after the owner merges, update and reload spindle and check the real paint.
 
 ## Decisions in force
 
+- D1 Work without the pipeline: the owner asked for fast autonomous work from the approved preview, so the fix went directly on a branch with no interview, spec or review agents.
+
 ## Open risks
+
+- R1 The desktop may draw a Button's hotkey itself, which would show the MSP digit twice.
+- R2 The desktop's handling of Text styling inside Buttons and of Svg pictures without a width prop is inferred from the API docs, not seen.
 
 ## Settled, do not reopen
 
 ## Where the details live
 
 - Reported defects: owner's screenshot of 0.2.0; Button label drawn as text, bar Svg height scales with width, hover cards without background, MSP selection stuck after the first press
-- Plugin: plugins/spindle (band.tsx, pane.tsx, hint.tsx under hooks/draw)
+- Plugin: plugins/spindle (band.tsx, pane.tsx, hint.tsx, text.ts under hooks/draw)
 - Mod API: plugin-authoring types claude-code.d.ts (ButtonProps, BoxProps hover, SvgProps)
+- Worktree: ~/.mitosis/runs/spindle/paint-repair
+- Approved preview: session scratchpad spindle-preview-2.html; paint stand-in at scratchpad paint/index.html with redump.sh
