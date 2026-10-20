@@ -1,6 +1,6 @@
 # spindle-paint-repair: Repair spindle 0.2.0's band and Pipeline pane as the desktop app actually draws them
 Status: active
-Updated: 2026-10-20T01:37:37.785Z
+Updated: 2026-10-20T01:38:41.625Z
 Next ids: c1 D2 R3 S1
 
 ## Goal
@@ -11,7 +11,7 @@ Make spindle's band and Pipeline pane, as the Claude desktop app really paints t
 
 ## Where things stand
 
-Release 0.2.1 is installed. Release 0.2.2 (white card text on a fixed dark card, no card on the crab, a "Copied" card after pressing the thread name) waits for the owner's merge in SatanshuMishra/spindle#11, from fix/spindle-band-touchups in worktree ~/.mitosis/runs/spindle/paint-touchups, with 159 tests passing.
+Release 0.2.2 (white card text on a fixed dark card, no card on the crab, a "Copied" card after pressing the thread name) is merged into main at 343fbb9 and installed for the user scope; it loads after an app restart or in a new session. No fix branches or worktrees remain.
 
 ## Next step
 
