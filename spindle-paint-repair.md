@@ -1,6 +1,6 @@
 # spindle-paint-repair: Repair spindle 0.2.0's band and Pipeline pane as the desktop app actually draws them
 Status: active
-Updated: 2026-10-20T01:29:15.548Z
+Updated: 2026-10-20T01:29:21.878Z
 Next ids: c1 D2 R3 S1
 
 ## Goal
@@ -15,7 +15,7 @@ The repair is committed and pushed as release 0.2.1 on fix/spindle-paint-repair 
 
 ## Next step
 
-From a new session, open the pull request with create_pull_request using the title and body in ~/.mitosis/spindle/paint-repair-pr.json (head fix/spindle-paint-repair, base main); after the owner merges, update and reload spindle and check the real paint.
+Confirm the pull request that session local_b0425b05-bd8e-4c7b-9743-6bb1ca005294 opens from ~/.mitosis/spindle/paint-repair-pr.json (head fix/spindle-paint-repair, base main); after the owner merges, update and reload spindle and have the owner check the real paint for R1 and R2.
 
 ## Decisions in force
 
