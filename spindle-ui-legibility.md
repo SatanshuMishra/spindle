@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: parked
-Updated: 2026-10-20T00:21:37.900Z
+Updated: 2026-10-20T00:23:57.818Z
 Next ids: c1 D3 R1 S1
 
 ## Goal
@@ -11,7 +11,7 @@ Redesign spindle's band and Pipeline pane so they fit any width, explain every c
 
 ## Where things stand
 
-Full lane, slug spindle-ui-legibility, in Integration. Review ended green for all three MSPs after two rounds with every advisory fixed. The owner merged SatanshuMishra/spindle#5, #6 and #7, each passing CI, but each into its own stacked base: feat/spindle-ui-legibility holds only activity-model (plus the lighthouse profile commit 3d3d33e), while origin/mitosis/band (8100fe4) holds all three MSPs and merges into feat without conflict. pipeline integration-ready reports ready because it checks only that each pull request merged. Lighthouse run 1 stopped blocked on this before testing. The checkout's main is in sync with origin and still holds the uncommitted glossary, ADR 0004/0005 and docs/specs files, which now ship on the FEATURE branch.
+Full lane, slug spindle-ui-legibility, in Integration. Review ended green for all three MSPs after two rounds with every advisory fixed. The owner merged SatanshuMishra/spindle#5, #6 and #7 each into its stacked base, so at the owner's word mitosis/band was merged into feat/spindle-ui-legibility (d9a697a, pushed; scripts/check.sh passes, 151 tests); feat now holds all three MSPs, its plugin tree equal to the pane head. pipeline integration-ready checks only that each pull request merged, not that its work reached the FEATURE branch. Lighthouse run 1 stopped blocked before testing; the integration worktree is ~/.mitosis/runs/spindle/spindle-ui-legibility/integration. The checkout's main is in sync with origin and still holds the uncommitted glossary, ADR 0004/0005 and docs/specs files, which now ship on the FEATURE branch.
 
 Grounding facts: the pipeline run skill defines the round files spindle reads (.diff, .suite.txt, .findings.json, .verdicts.json, .verdict.json, .diagnosis.json), while .suite.run is ad hoc; every finding in all 112 verdict files on this machine has a short `kind` label; the mod API has no Button tooltip prop but offers keyed-Box hover cards and `<title>` tooltips in an interactive Svg, and tests can mount at any width and press Buttons.
 
