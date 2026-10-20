@@ -1,6 +1,6 @@
 # spindle-paint-repair: Repair spindle 0.2.0's band and Pipeline pane as the desktop app actually draws them
 Status: active
-Updated: 2026-10-20T01:36:08.400Z
+Updated: 2026-10-20T01:37:18.105Z
 Next ids: c1 D2 R3 S1
 
 ## Goal
@@ -11,11 +11,11 @@ Make spindle's band and Pipeline pane, as the Claude desktop app really paints t
 
 ## Where things stand
 
-Release 0.2.1 (SatanshuMishra/spindle#10) is merged and installed; the owner's desktop screenshot of its band shows glyph buttons and a full-height bar, but black card text on a dark card, a crab inside the count's card, and no response to clicking the thread name. Release 0.2.2 fixes those three on fix/spindle-band-touchups (9228a96, worktree ~/.mitosis/runs/spindle/paint-touchups), with the full check passing at 159 tests; session local_b0425b05-bd8e-4c7b-9743-6bb1ca005294 is opening its pull request from ~/.mitosis/spindle/band-touchups-pr.json.
+Release 0.2.1 (SatanshuMishra/spindle#10) is merged and installed; the owner's desktop screenshot of its band shows glyph buttons and a full-height bar, but black card text on a dark card, a crab inside the count's card, and no response to clicking the thread name. Release 0.2.2 fixes those three on fix/spindle-band-touchups (9228a96, worktree ~/.mitosis/runs/spindle/paint-touchups), with the full check passing at 159 tests; its pull request is SatanshuMishra/spindle#11, open and ready for review at head 9228a96.
 
 ## Next step
 
-Confirm the 0.2.2 pull request exists; after the owner merges it, update spindle, remove the branch and worktree, and have the owner check the pane's real paint, including R1 and R2.
+After the owner merges SatanshuMishra/spindle#11, fast-forward main, update spindle, remove the branch and worktree, and have the owner check the pane's real paint, including R1 and R2.
 
 ## Decisions in force
 
