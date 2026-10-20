@@ -1,6 +1,6 @@
 # spindle-paint-repair: Repair spindle 0.2.0's band and Pipeline pane as the desktop app actually draws them
 Status: active
-Updated: 2026-10-20T01:37:34.782Z
+Updated: 2026-10-20T01:37:37.785Z
 Next ids: c1 D2 R3 S1
 
 ## Goal
