@@ -86,6 +86,8 @@ const crabOf = (seen: Seen) => seen.svgs.find(svg => svg.alt.endsWith(' crab'))
 
 const hasButton = (seen: Seen, key: string) => seen.buttons.some(button => button.key === key)
 
+const slugOf = (seen: Seen) => seen.buttons.find(button => button.key === 'spindle-slug')?.drawn
+
 const columnsDrawn = (seen: Seen) => {
   const parts = [
     ...seen.texts.map(text => [...text].length),
@@ -147,7 +149,7 @@ test('the band at 160 columns shows every part', async ($, on) => {
 
   const seen = await seenAt($, 'desktop', 160)
 
-  expect(seen.texts).toContain(FIRE_SLUG)
+  expect(slugOf(seen)).toBe(FIRE_SLUG)
   expect(hasChip(seen, 'Full')).toBe(true)
   expect(barOf(seen)).toBeDefined()
   expect(seen.texts).toContain(FIRE_TIME)
@@ -162,12 +164,13 @@ test('the band shows the slug whole or as an icon, and keeps the bar while it fi
   const atWidth = new Map<number, Seen>()
   for (const width of WIDTHS) atWidth.set(width, await seenAt($, 'desktop', width))
 
-  const slugWidths = WIDTHS.filter(width => atWidth.get(width)?.texts.includes(FIRE_SLUG))
+  const slugWidths = WIDTHS.filter(width => slugOf(atWidth.get(width) as Seen) === FIRE_SLUG)
   const barWidths = WIDTHS.filter(width => barOf(atWidth.get(width) as Seen) !== undefined)
   for (const width of WIDTHS) {
     const seen = atWidth.get(width) as Seen
     expect([...seen.texts, ...seen.cardTexts].some(text => text.includes('…'))).toBe(false)
-    for (const text of seen.texts.filter(one => one.startsWith('mac-'))) expect(text).toContain(FIRE_SLUG)
+    const slug = slugOf(seen)
+    if (slug !== undefined) expect(slug).toBe(FIRE_SLUG)
     expect(seen.texts).toContain(FIRE_TIME)
     expect(crabOf(seen)).toBeDefined()
     expect(hasButton(seen, 'spindle-crew')).toBe(true)
@@ -299,7 +302,7 @@ test('the count button opens the pane', async ($, on) => {
 
   const band = await mountBand($, 'desktop', 160)
   const card = seenOf(await band.find({ key: 'spindle-crew-card' }))
-  expect(crabOf(card)).toBeDefined()
+  expect(crabOf(card)).toBeUndefined()
   expect(card.buttons).toEqual([{ ...COUNT_BUTTON, drawn: '×1' }])
   expect(card.labels).toEqual(['×1'])
   await band.press({ key: 'spindle-crew' })
@@ -351,7 +354,7 @@ test('desktop band shows slug, lane and Review R1', async ($, on) => {
   await reviewRun($, on)
 
   const seen = await seenAt($, 'desktop', 100)
-  expect(seen.texts).toContain('rate-limit-api')
+  expect(slugOf(seen)).toBe('rate-limit-api')
   expect(hasChip(seen, 'Full')).toBe(true)
   const bar = seen.svgs.find(svg => svg.alt === 'rate-limit-api: Review · R1')
   expect(bar?.source).toContain('Review · R1')
@@ -442,7 +445,7 @@ test('no band Button draws words in place of its glyph', async ($, on) => {
     for (const surface of ['desktop', 'terminal'] as const) {
       const seen = await seenAt($, surface, width)
       expect(seen.labels.length).toBeGreaterThan(0)
-      for (const label of seen.labels) expect([...String(label)].length).toBeLessThanOrEqual(2)
+      for (const label of seen.labels) expect([...String(label)].length <= 2 || label === FIRE_SLUG).toBe(true)
     }
   }
   const narrow = await seenAt($, 'desktop', 60)
@@ -460,9 +463,9 @@ test('every band hover card is opaque and wide enough for its words', async ($, 
     const cards = allCards(await band.drawn())
     expect(cards.length).toBeGreaterThan(0)
     for (const card of cards) {
-      expect(card.props?.backgroundColor).toBe('text')
+      expect(card.props?.backgroundColor).toBe('#2a2a29')
       const lines = (card.children ?? []).filter(isDrawn)
-      for (const line of lines) expect(line.props?.color).toBe('inverseText')
+      for (const line of lines) expect(line.props?.color).toBe('#ffffff')
       const longest = Math.max(...lines.map(line => [...textOf(line)].length))
       expect(Number(card.props?.width)).toBeGreaterThan(longest)
     }
@@ -481,4 +484,25 @@ test('a hover card with nothing to say is not drawn', async ($, on) => {
     expect(emptyCardsOf(drawn)).toEqual([])
     await band.unmount()
   }
+})
+
+test('pressing the thread name copies it and its card says Copied for two seconds', async ($, on) => {
+  const world = await fireRun($, on, true)
+
+  const band = await mountBand($, 'desktop', 160)
+  await band.press({ key: 'spindle-slug' })
+  expect(world.copies()).toEqual([FIRE_SLUG])
+  expect(seenOf(await band.find({ key: 'spindle-slug-hint' })).cardTexts).toEqual(['Copied'])
+
+  await world.clock.advance(2100)
+  expect(seenOf(await band.find({ key: 'spindle-slug-hint' })).cardTexts).toEqual([`${FIRE_SLUG} · Full lane`, 'Press to copy the name'])
+})
+
+test('the crab carries no hover card', async ($, on) => {
+  await fireRun($, on, true)
+
+  const band = await mountBand($, 'desktop', 160)
+  const crab = placedOf(await band.drawn()).find(one => one.node.type === 'Svg' && String(one.node.props?.alt).endsWith(' crab'))
+  expect(crab?.isInCard).toBe(false)
+  expect(seenOf(await band.find({ key: 'spindle-crew-card' })).svgs).toEqual([])
 })
