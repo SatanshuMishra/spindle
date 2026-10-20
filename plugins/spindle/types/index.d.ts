@@ -8,7 +8,7 @@ export type ActivityKind = 'build' | 'round' | 'fix' | 'ship'
 
 export type RoundState = 'suite running' | 'reviewing' | 'validating' | 'diagnosing' | 'status unknown' | Exclude<Outcome, 'diagnose' | 'unknown'>
 
-type ActivityFacts = {
+export type ActivityFacts = {
   round: number | null
   name: string
   words: string
