@@ -40,6 +40,12 @@ export const charEm = (ch: string) => (/[\s.,:;'|!il1()[\]]/.test(ch) ? 0.3 : /[
 
 export const textWidth = (s: string, size: number) => [...s].reduce((w, ch) => w + charEm(ch) * size, 0)
 
+export const CELL_PX = 8
+
+export const TEXT_PX = 13
+
+export const columnsOf = (s: string) => Math.max([...s].length, Math.ceil(textWidth(s, TEXT_PX) / CELL_PX))
+
 export function fitText(s: string, size: number, maxW: number): string {
   if (textWidth(s, size) <= maxW) return s
   const chars = [...s]
