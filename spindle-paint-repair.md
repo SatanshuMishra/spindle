@@ -1,6 +1,6 @@
 # spindle-paint-repair: Repair spindle 0.2.0's band and Pipeline pane as the desktop app actually draws them
 Status: active
-Updated: 2026-10-20T01:38:41.625Z
+Updated: 2026-10-20T01:38:43.059Z
 Next ids: c1 D2 R3 S1
 
 ## Goal
@@ -15,7 +15,7 @@ Release 0.2.2 (white card text on a fixed dark card, no card on the crab, a "Cop
 
 ## Next step
 
-After the owner merges SatanshuMishra/spindle#11, fast-forward main, update spindle, remove the branch and worktree, and have the owner check the pane's real paint, including R1 and R2.
+The owner restarts the app, opens /spindle, and checks the real band and pane paint, including R1 and R2.
 
 ## Decisions in force
 
