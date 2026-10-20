@@ -1,6 +1,6 @@
 # spindle-paint-repair: Repair spindle 0.2.0's band and Pipeline pane as the desktop app actually draws them
 Status: active
-Updated: 2026-10-20T01:29:46.879Z
+Updated: 2026-10-20T01:30:23.991Z
 Next ids: c1 D2 R3 S1
 
 ## Goal
@@ -11,11 +11,11 @@ Make spindle's band and Pipeline pane, as the Claude desktop app really paints t
 
 ## Where things stand
 
-The repair is committed and pushed as release 0.2.1 on fix/spindle-paint-repair (86b5b1c); the full check passes with 157 tests. Pull request SatanshuMishra/spindle#10 is open and ready for review, its checks not yet green. The real desktop paint is unverified; a stand-in browser renderer of the drawn trees showed no overflow, a fixed-height bar, opaque one-line cards and working selection.
+Release 0.2.1 is merged into main (SatanshuMishra/spindle#10) and installed for the user scope; the fix branch and worktree are removed. The real desktop paint is unverified; a stand-in browser renderer of the drawn trees showed no overflow, a fixed-height bar, opaque one-line cards and working selection.
 
 ## Next step
 
-After the owner merges #10, update and reload spindle and have the owner check the real paint for R1 and R2.
+After a restart loads 0.2.1, the owner checks the real desktop paint against the approved preview, including R1 and R2.
 
 ## Decisions in force
 
