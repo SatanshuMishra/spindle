@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: parked
-Updated: 2026-10-20T00:23:57.818Z
+Updated: 2026-10-20T00:24:00.409Z
 Next ids: c1 D3 R1 S1
 
 ## Goal
@@ -17,7 +17,7 @@ Grounding facts: the pipeline run skill defines the round files spindle reads (.
 
 ## Next step
 
-Land origin/mitosis/band (8100fe4, all three MSPs) on feat/spindle-ui-legibility as the owner chooses, then run lighthouse:test as run 2 with --previous lighthouse/run-1.
+Run lighthouse:test as run 2 on feat/spindle-ui-legibility against main with --previous lighthouse/run-1; it opens the FEATURE pull request.
 
 Needs: D1.
 
