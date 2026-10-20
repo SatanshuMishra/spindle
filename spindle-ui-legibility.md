@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
-Status: active
-Updated: 2026-10-20T00:11:19.134Z
+Status: parked
+Updated: 2026-10-20T00:11:29.008Z
 Next ids: c1 D3 R1 S1
 
 ## Goal
@@ -17,7 +17,7 @@ Grounding facts: the pipeline run skill defines the round files spindle reads (.
 
 ## Next step
 
-Run SHIP=1 ~/.mitosis/spindle/spindle-ui-legibility/run.zsh --resume, read each MSP's title, body, branch and base from its JSON result, then open the three pull requests in stack order through GitHub MCP create_pull_request, assign them to the owner and post the activity-model and band comments.
+The owner starts Integration by saying the MSP pull requests SatanshuMishra/spindle#5, #6 and #7 merged; then lighthouse tests feat/spindle-ui-legibility and the FEATURE pull request opens.
 
 Needs: D1, D2.
 
