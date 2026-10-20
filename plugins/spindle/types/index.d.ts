@@ -156,6 +156,7 @@ declare module 'claude-code' {
       view: RunView | null
       dismissedAt: string | null
       selectedMsp: string | null
+      copiedName: string | null
     }
   }
 }

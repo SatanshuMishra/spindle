@@ -10,8 +10,8 @@ export type HintPlace = {
   size?: 'fixed' | 'shrink' | 'grow'
 }
 
-export const CARD_BACKGROUND = 'text'
-export const CARD_TEXT = 'inverseText'
+export const CARD_BACKGROUND = '#2a2a29'
+export const CARD_TEXT = '#ffffff'
 const CARD_PAD = 1
 const CARD_SPARE = 2
 

@@ -524,8 +524,8 @@ test('every pane hover card is opaque', async ($, on) => {
   const cards = allCards(await pane.drawn())
   expect(cards.length).toBeGreaterThan(0)
   for (const card of cards) {
-    expect(card.props?.backgroundColor).toBe('text')
-    for (const line of (card.children ?? []).filter(isDrawn)) expect(line.props?.color).toBe('inverseText')
+    expect(card.props?.backgroundColor).toBe('#2a2a29')
+    for (const line of (card.children ?? []).filter(isDrawn)) expect(line.props?.color).toBe('#ffffff')
   }
 })
 

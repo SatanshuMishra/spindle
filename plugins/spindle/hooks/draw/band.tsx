@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { Elements, EngineInterface, RenderElement, RenderInput } from 'claude-code'
+import type { Elements, EngineInterface, RenderElement, RenderInput, UiPressArgument } from 'claude-code'
 
 import type { Lane, Role, RunView } from '../../types'
 import { LANE_NAME } from '../run/state'
@@ -12,6 +12,7 @@ import { ACCENT, CELL_PX, CHIP_H, DONE, FONT, STAGE_TABLE, chipSvg, chipWidthOf,
 
 const viewState = atom({ plugin: 'spindle', key: 'view' } as const, null)
 const dismissedState = atom({ plugin: 'spindle', key: 'dismissedAt' } as const, null)
+const copiedState = atom({ plugin: 'spindle', key: 'copiedName' } as const, null)
 
 const BAR_H = 16
 const CELL = 3
@@ -30,6 +31,8 @@ const ICON = '◉'
 const DISMISS = '✕'
 const DISMISS_HINT = 'Hide until an MSP moves to a new activity'
 const COPY_HINT = 'Press to copy the name'
+const COPIED = 'Copied'
+const COPIED_MS = 2000
 const TIME_HINT = 'Time since the run started'
 const COUNT_HINT = 'Show the Pipeline pane'
 const LANE_MEANING: Readonly<Record<Lane, string>> = {
@@ -217,18 +220,35 @@ const isDismissed = (marker: string | null, view: RunView) => marker !== null &&
 
 type BandElements = Pick<Elements['terminal'], 'Box' | 'Text' | 'Button'>
 
-type Controls = { icon: RenderElement; count: RenderElement; dismiss: RenderElement }
+type Controls = { slug: RenderElement; icon: RenderElement; count: RenderElement; dismiss: RenderElement }
 
-function controlsOf($: EngineInterface, ui: BandElements, view: RunView): Controls {
+async function copyName($: EngineInterface, slug: string, surface: UiPressArgument['surface']): Promise<void> {
+  await $.ui.copy({ text: slug, surface })
+  await update($, copiedState, () => slug)
+  $.clock.after(COPIED_MS, () => {
+    void update($, copiedState, current => (current === slug ? null : current))
+  })
+}
+
+function controlsOf($: EngineInterface, ui: BandElements, view: RunView, isCopied: boolean): Controls {
   const { Button } = ui
+  const nameLines = isCopied ? [COPIED] : [nameHintOf(view), COPY_HINT]
   return {
+    slug: hint(
+      ui,
+      'spindle-slug-hint',
+      <Button key="spindle-slug" plain onPress={press => void copyName($, view.slug, press.surface)}>
+        {view.slug}
+      </Button>,
+      nameLines,
+    ),
     icon: hint(
       ui,
       'spindle-name-hint',
-      <Button key="spindle-name" plain onPress={press => void $.ui.copy({ text: view.slug, surface: press.surface })}>
+      <Button key="spindle-name" plain onPress={press => void copyName($, view.slug, press.surface)}>
         {ICON}
       </Button>,
-      [nameHintOf(view), COPY_HINT],
+      nameLines,
     ),
     count: (
       <Button key="spindle-crew" plain onPress={() => void togglePane($)}>
@@ -273,7 +293,7 @@ export async function drawBand(
   const lane = laneOf(view)
   const pill = pillText(view)
   const mspLines = mspLinesOf(view, now)
-  const controls = controlsOf($, ui, view)
+  const controls = controlsOf($, ui, view, (await read($, copiedState)) === view.slug)
   if (e.surface === 'desktop' && 'Svg' in ui) {
     const { Svg } = ui
     const pillW = pillWidthOf(pill)
@@ -287,15 +307,13 @@ export async function drawBand(
         columnsOf(DISMISS) + BUTTON_CHROME,
         BAND_SPARE,
       ],
-      slug: Math.ceil(columnsOf(view.slug) * MEDIUM_WIDTH),
+      slug: Math.ceil(columnsOf(view.slug) * MEDIUM_WIDTH) + BUTTON_CHROME,
       icon: columnsOf(ICON) + BUTTON_CHROME,
       lane: lane === null ? null : pxColumns(chipWidthOf(lane)),
       pill: pxColumns(pillW),
       barMin: pxColumns(pillW + BAR_SPARE_PX),
     })
-    const name = plan.isSlugShown
-      ? hint(ui, 'spindle-slug-hint', <Text weight="medium">{view.slug}</Text>, [nameHintOf(view)])
-      : controls.icon
+    const name = plan.isSlugShown ? controls.slug : controls.icon
     const progress = plan.isBarShown
       ? hint(
           ui,
@@ -329,13 +347,8 @@ export async function drawBand(
             [TIME_HINT],
             { edge: 'end' },
           )}
-          {hint(
-            ui,
-            'spindle-crew-card',
-            [<Svg source={crabSvg(view)} alt={`${costumeOf(leadOf(view))} crab`} width={CRAB_W} height={CRAB_H} />, controls.count],
-            [countHintOf(working)],
-            { edge: 'end' },
-          )}
+          <Svg source={crabSvg(view)} alt={`${costumeOf(leadOf(view))} crab`} width={CRAB_W} height={CRAB_H} />
+          {hint(ui, 'spindle-crew-card', controls.count, [countHintOf(working)], { edge: 'end' })}
           {controls.dismiss}
         </Box>
         {below}
