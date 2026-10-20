@@ -20,9 +20,8 @@ export const STAGE_TABLE: readonly StageInfo[] = [
 ]
 
 export const THEME_CSS = `<style>
-.sv-t{fill:#1f1f1f}.sv-s{fill:#6b6b68}.sv-m{fill:#9a9a96}.sv-k{fill:#ecebe8}.sv-tile{fill:#f4f3f0}
-.sv-tk{fill:#9a9a96;opacity:.55}.sv-mstroke{stroke:#9a9a96}.sv-mfill{fill:#9a9a96}
-@media (prefers-color-scheme: dark){.sv-t{fill:#ececec}.sv-s{fill:#a8a8a4}.sv-m{fill:#7d7d79}.sv-k{fill:#2c2c2b}.sv-tile{fill:#262625}.sv-tk{fill:#7d7d79}.sv-mstroke{stroke:#7d7d79}.sv-mfill{fill:#7d7d79}}
+.sv-t{fill:#77776f}.sv-s{fill:#85857f}.sv-m{fill:#93938d}.sv-k{fill:rgba(128,128,120,.24)}.sv-tile{fill:rgba(128,128,120,.12)}
+.sv-tk{fill:#93938d;opacity:.6}.sv-mstroke{stroke:#93938d}.sv-mfill{fill:#93938d}
 .sv-live{animation:sv-p 1.6s ease-in-out infinite}@keyframes sv-p{50%{opacity:.3}}
 @media (prefers-reduced-motion: reduce){.sv-live{animation:none}}
 </style>`
@@ -46,10 +45,12 @@ export const TEXT_PX = 13
 
 export const columnsOf = (s: string) => Math.max([...s].length, Math.ceil(textWidth(s, TEXT_PX) / CELL_PX))
 
+const FIT_SLACK = 0.01
+
 export function fitText(s: string, size: number, maxW: number): string {
-  if (textWidth(s, size) <= maxW) return s
+  if (textWidth(s, size) <= maxW + FIT_SLACK) return s
   const chars = [...s]
-  const kept = chars.findIndex((_, i) => textWidth(chars.slice(0, i + 1).join('') + '…', size) > maxW)
+  const kept = chars.findIndex((_, i) => textWidth(chars.slice(0, i + 1).join('') + '…', size) > maxW + FIT_SLACK)
   return chars.slice(0, kept === -1 ? chars.length : kept).join('') + '…'
 }
 
@@ -70,5 +71,28 @@ export function statusMark(x: number, y: number, status: Mark, color: string): s
   return `<circle cx="${x}" cy="${y}" r="5" fill="none" class="sv-mstroke" stroke-width="1.4"/>`
 }
 
-export const svg = (W: number, H: number, body: string, label = '') =>
-  `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"${label ? ` role="img" aria-label="${xml(label)}"` : ''}>${THEME_CSS}${CRAB_CSS}${body}</svg>`
+export const tip = (lines: readonly string[]) =>
+  lines.length === 0 ? '' : `<title>${xml(lines.join('\n'))}</title><rect width="100%" height="100%" fill="transparent"/>`
+
+export const svg = (W: number, H: number, body: string, tipLines: readonly string[] = []) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${tip(tipLines)}${THEME_CSS}${CRAB_CSS}${body}</svg>`
+
+export const fluidSvg = (H: number, body: string, tipLines: readonly string[] = []) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="${H}" overflow="hidden">${tip(tipLines)}${THEME_CSS}${body}</svg>`
+
+export const CHIP_H = 16
+const CHIP_PX = 10.5
+const CHIP_PAD = 12
+const SEMIBOLD_WIDTH = 1.08
+
+export const chipWidthOf = (label: string) => Math.ceil(textWidth(label, CHIP_PX) * SEMIBOLD_WIDTH) + CHIP_PAD
+
+export function chipSvg(label: string): string {
+  const W = chipWidthOf(label)
+  return svg(
+    W,
+    CHIP_H,
+    `<rect class="sv-k" y="1" width="${W}" height="${CHIP_H - 2}" rx="4"/>
+<text class="sv-s" x="${W / 2}" y="${CHIP_H / 2 + 3.5}" text-anchor="middle" font-family="${FONT}" font-size="${CHIP_PX}" font-weight="600">${xml(label)}</text>`,
+  )
+}

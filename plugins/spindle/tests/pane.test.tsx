@@ -12,7 +12,7 @@ const SPEC_TIME = '48m'
 const VIDEO = 'video-starts-like-a-camera'
 const MIN = 60_000
 const STAGES = ['Spec', 'Build', 'Review', 'Fix', 'Ship', 'Integrate', 'Clean-up']
-const PROOF_HINT = 'Acceptance test failed without the work (red) and passed with it (green)'
+const PROOF_HINT = 'Acceptance test failed without the work (red)'
 const COST_HINT = "Cost of this session's model calls"
 
 const paneProps = (bodyColumns: number) =>
@@ -55,12 +55,14 @@ const textOf = (node: Drawn) => (node.children ?? []).filter(child => typeof chi
 
 const keyOf = (node: Drawn) => String(node.props?.key ?? '')
 
-type Svg = { alt: string; width: number; source: string }
+const buttonLabel = (node: Drawn) => String(node.props?.label ?? '').replace(/^\d /, '').replace(' ', ' · ')
+
+type Svg = { alt: string; width: number; source: string; isInteractive: boolean }
 
 type Seen = {
   texts: readonly string[]
   cardTexts: readonly string[]
-  buttons: readonly { key: string; label: string; hotkey: string }[]
+  buttons: readonly { key: string; label: string; hotkey: string; prop: unknown }[]
   svgs: readonly Svg[]
   allSvgs: readonly Svg[]
 }
@@ -69,6 +71,7 @@ const svgOf = (node: Drawn): Svg => ({
   alt: String(node.props?.alt ?? ''),
   width: Number(node.props?.width ?? 0),
   source: String(node.props?.source ?? ''),
+  isInteractive: node.props?.isInteractive === true,
 })
 
 function seenOf(tree: unknown): Seen {
@@ -79,7 +82,7 @@ function seenOf(tree: unknown): Seen {
     cardTexts: placed.filter(one => one.isInCard && one.node.type === 'Text').map(one => textOf(one.node)),
     buttons: shown
       .filter(node => node.type === 'Button')
-      .map(node => ({ key: keyOf(node), label: String(node.props?.label ?? ''), hotkey: String(node.props?.hotkey ?? '') })),
+      .map(node => ({ key: keyOf(node), label: buttonLabel(node), hotkey: String(node.props?.hotkey ?? ''), prop: node.props?.label })),
     svgs: shown.filter(node => node.type === 'Svg').map(svgOf),
     allSvgs: placed.filter(one => one.node.type === 'Svg').map(one => svgOf(one.node)),
   }
@@ -239,8 +242,8 @@ test('a 36-column pane keeps values whole', async ($, on) => {
   expect(seen.texts).toContain(FIRE_TIME)
   const rail = railOf(seen)
   expect(railLabels(rail?.source ?? '').map(label => label.name)).toEqual(['Review'])
-  const card = seenOf(await pane.find({ key: 'pane-rail-hint' })).cardTexts
-  for (const stage of STAGES) expect(card.some(line => line.startsWith(stage))).toBe(true)
+  const title = /<title>([^<]*)<\/title>/.exec(rail?.source ?? '')?.[1] ?? ''
+  for (const stage of STAGES) expect(title.split('\n').some(line => line.startsWith(stage))).toBe(true)
 })
 
 test('a 100-column rail names every stage', async ($, on) => {
@@ -256,7 +259,9 @@ test('a 100-column rail names every stage', async ($, on) => {
   }
 })
 
-test('marks carry hover cards', async ($, on) => {
+const titleOf = (source: string) => /<title>([^<]*)<\/title>/.exec(source)?.[1] ?? ''
+
+test('marks carry tooltips and the tiles carry hover cards', async ($, on) => {
   answerContext(on, 400_000)
   const world = harness(on, review, { now: NOW })
   world.queueSpawn({ agentId: 'a1', model: 'claude-opus-5-5' })
@@ -266,14 +271,16 @@ test('marks carry hover cards', async ($, on) => {
   await agentStep($, 'a1')
 
   const pane = await mountPane($, 'desktop', 100)
-  const proof = seenOf(await pane.find({ key: 'msp-proof-limiter-core' }))
-  expect(proof.texts).toEqual(['proof'])
-  expect(proof.svgs.length).toBe(1)
-  const cards = seenOf(await pane.drawn()).cardTexts
-  expect(cards).toContain(PROOF_HINT)
-  expect(cards).toContain('mitosis/limiter-core')
-  expect(cards).toContain('Context 40%')
-  expect(cards).toContain(COST_HINT)
+  const seen = seenOf(await pane.drawn())
+  const proof = seen.allSvgs.find(svg => svg.alt.startsWith('Proof: '))
+  expect(proof?.isInteractive).toBe(true)
+  expect(proof?.source).toContain('>proof</text>')
+  expect(titleOf(proof?.source ?? '')).toContain(PROOF_HINT)
+  const avatar = seen.allSvgs.find(svg => svg.alt === 'limiter-core crab')
+  expect(avatar?.isInteractive).toBe(true)
+  expect(titleOf(avatar?.source ?? '').split('\n')).toContain('mitosis/limiter-core')
+  expect(seen.allSvgs.some(svg => titleOf(svg.source).startsWith('Context 40%'))).toBe(true)
+  expect(seen.cardTexts).toContain(COST_HINT)
 })
 
 test('press an MSP to see its workers', async ($, on) => {
@@ -364,7 +371,7 @@ test('desktop pane at Fix shows every section', async ($, on) => {
   const tree = await drawnAt($, 100)
   const seen = seenOf(tree)
   expect(seen.texts).toContain('rate-limit-api')
-  expect(seen.texts).toContain('Full lane')
+  expect(seen.svgs.some(svg => svg.alt === 'Full lane')).toBe(true)
   expect(railOf(seen)?.alt).toBe('Stage Fix · 1 at Fix, 2 at Ship')
   expect(mspButtons(seen).map(button => button.label.split(' · ')[0])).toEqual(['limiter-core', 'redis-store', 'headers-docs'])
   expect(rowsOf(tree).map(row => row.seen.texts[0])).toEqual(['Judge'])
@@ -393,9 +400,8 @@ test('build pane shows the Builder row and proof dots', async ($, on) => {
   world.use(review)
   await world.clock.advance(2000)
 
-  const pane = await mountPane($, 'desktop')
-  const proof = seenOf(await pane.find({ key: 'msp-proof-limiter-core' }))
-  expect(proof.svgs[0]?.source ?? '').toContain('fill="#D0453F"')
+  const proof = seenOf(await drawnAt($)).allSvgs.find(svg => svg.alt.startsWith('Proof: '))
+  expect(proof?.source ?? '').toContain('fill="#D0453F"')
 })
 
 test('a finished Judge row says its blocker and advisory counts in words', async ($, on) => {
@@ -405,15 +411,9 @@ test('a finished Judge row says its blocker and advisory counts in words', async
   const tree = await pane.drawn()
   const judged = rowsOf(tree).find(row => row.seen.texts[0] === 'Judge' && roundIn(row) === 4)
   const verdict = judged?.seen.svgs.find(svg => svg.source.includes('data-pip'))
-  const node = placedOf(tree)
-    .map(one => one.node)
-    .find(one => keyOf(one) === judged?.key)
-  const cards = placedOf(node)
-    .filter(one => one.isInCard && one.node.type === 'Text')
-    .map(one => textOf(one.node))
 
   expect(verdict?.alt).toContain('1 blocker, 1 advisory')
-  expect(cards.some(line => line.includes('1 blocker, 1 advisory'))).toBe(true)
+  expect(titleOf(verdict?.source ?? '')).toContain('1 blocker, 1 advisory')
 })
 
 const MANY_FINDINGS = {
@@ -480,4 +480,82 @@ test('MSP marks and proof dots name what they show', async ($, on) => {
   for (const label of ['limiter-core', 'redis-store', 'headers-docs']) expect(alts.some(alt => alt.startsWith(`${label}: `))).toBe(true)
   expect(alts.some(alt => alt === 'Proof: failed without the work, passed with it')).toBe(true)
   expect(alts.some(alt => alt.includes('●') || alt.includes('○'))).toBe(false)
+})
+
+test('pressing a second MSP moves the selection to it', async ($, on) => {
+  await fireRun($, on)
+
+  const pane = await mountPane($, 'desktop', 100)
+  await press(pane, VIDEO)
+  await press(pane, 'button-consistency')
+  const tree = await pane.drawn()
+
+  expect(seenOf(tree).texts).toContain('button-consistency · workers')
+  expect(rowsOf(tree).some(row => row.key.includes(VIDEO))).toBe(false)
+  const selectedAvatars = seenOf(tree).allSvgs.filter(svg => svg.source.includes('data-selected')).map(svg => svg.alt)
+  expect(selectedAvatars).toEqual(['button-consistency crab'])
+  await pane.press({ key: 'show-all' })
+  expect(seenOf(await pane.drawn()).texts).toContain('Working now')
+})
+
+test('MSP buttons draw their words as text and carry no label', async ($, on) => {
+  await fireRun($, on)
+
+  for (const columns of [36, 46, 100]) {
+    const pane = await mountPane($, 'desktop', columns)
+    const buttons = seenOf(await pane.drawn()).buttons
+    for (const button of mspButtons({ buttons } as Seen)) expect(String(button.prop)).toMatch(/^\d /)
+    const names = mspButtons({ buttons } as Seen).map(button => button.label.split(' · ')[0] ?? '')
+    const labels = ['mic-recovery', VIDEO, 'hearing-and-ring', 'button-consistency']
+    expect(names.length).toBe(labels.length)
+    names.forEach((name, i) => expect((labels[i] ?? '').startsWith(name.replace(/…$/, ''))).toBe(true))
+    if (columns === 100) expect(names).toEqual(labels)
+    await pane.unmount()
+  }
+})
+
+const allCards = (tree: unknown) => placedOf(tree).filter(one => isCard(one.node)).map(one => one.node)
+
+test('every pane hover card is opaque', async ($, on) => {
+  await fireRun($, on)
+
+  const pane = await mountPane($, 'desktop', 46)
+  await press(pane, VIDEO)
+  const cards = allCards(await pane.drawn())
+  expect(cards.length).toBeGreaterThan(0)
+  for (const card of cards) {
+    expect(card.props?.backgroundColor).toBe('text')
+    for (const line of (card.children ?? []).filter(isDrawn)) expect(line.props?.color).toBe('inverseText')
+  }
+})
+
+const cardsIn = async (pane: Pane, key: string) => allCards(await pane.find({ key }))
+
+test('no pane hover card opens over a button', async ($, on) => {
+  await fireRun($, on)
+
+  for (const columns of [36, 46, 100]) {
+    const pane = await mountPane($, 'desktop', columns)
+    for (const selection of [null, VIDEO]) {
+      if (selection !== null) await press(pane, selection)
+      const tree = await pane.drawn()
+      expect(allCards(await pane.find({ key: 'pane-msps' }))).toEqual([])
+      for (const key of ['pane-title', 'pane-tiles']) {
+        expect(placedOf(await pane.find({ key })).some(one => one.node.type === 'Button')).toBe(false)
+      }
+      for (const card of await cardsIn(pane, 'pane-title')) expect((card.children ?? []).filter(isDrawn).length).toBe(1)
+      const heading = placedOf(await pane.find({ key: 'working-heading' })).length
+      const workers = placedOf(await pane.find({ key: 'pane-workers' })).map(one => one.node)
+      workers.forEach((node, i) => {
+        if (!isCard(node)) return
+        expect(node.props?.top).toBeUndefined()
+        expect(node.props?.bottom).toBeDefined()
+        expect(i).toBeGreaterThan(heading)
+      })
+      expect(allCards(tree).length).toBe(
+        (await cardsIn(pane, 'pane-title')).length + (await cardsIn(pane, 'pane-tiles')).length + workers.filter(isCard).length,
+      )
+    }
+    await pane.unmount()
+  }
 })
