@@ -47,7 +47,9 @@ test('first read raises no toast', async ($, on) => {
   expect(world.toasts()).toEqual([])
 })
 
-test('new verdict and new stage toast once each', async ($, on) => {
+const STAGE_NAMES = ['Spec', 'Build', 'Review', 'Fix', 'Ship', 'Integrate', 'Clean-up', 'Done'] as const
+
+test('a new verdict toasts its outcome and first kind', async ($, on) => {
   const world = harness(on, review, { now: NOW })
   await world.start($)
   expect(world.toasts()).toEqual([])
@@ -56,8 +58,18 @@ test('new verdict and new stage toast once each', async ($, on) => {
   await world.clock.advance(2000)
   await world.clock.advance(2000)
 
-  expect(timesSeen(world.toasts(), 'rate-limit-api: Fix')).toBe(1)
-  expect(timesSeen(world.toasts(), 'R1 limiter-core: loop · 2 blockers, 1 advisories')).toBe(1)
+  expect(timesSeen(world.toasts(), 'limiter-core round 1: Needs fixes · 2 blockers, 1 advisory · window resets one request early')).toBe(1)
+  expect(world.toasts().filter(toast => STAGE_NAMES.some(stage => toast === `rate-limit-api: ${stage}`))).toEqual([])
+})
+
+test('a green verdict toast has no kind part', async ($, on) => {
+  const world = harness(on, fixRound2, { now: NOW })
+  await world.start($)
+
+  world.use(green)
+  await world.clock.advance(2000)
+
+  expect(world.toasts()).toContain('limiter-core round 2: Green · no findings')
 })
 
 test('pull request toast', async ($, on) => {

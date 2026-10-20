@@ -11,6 +11,8 @@ async function status($: Engine): Promise<string[]> {
   return String(answered.text ?? '').split('\n')
 }
 
+const LABELS = ['limiter-core', 'redis-store', 'headers-docs']
+
 const mspLine = (lines: readonly string[], label: string) => lines.find(line => line.startsWith(`msp ${label} `)) ?? ''
 
 test('run home comes from latest_anchor', async ($, on) => {
@@ -204,9 +206,10 @@ test('state.json of another shape marks MSPs unknown', async ($, on) => {
   await world.start($)
 
   const lines = await status($)
-  const msps = lines.filter(line => line.startsWith('msp '))
+  const msps = lines.filter(line => line.startsWith('msp ') && line.split(' ')[2] !== 'now')
   expect(msps.length).toBe(3)
   for (const line of msps) expect(line.split(' ')[2]).toBe('unknown')
+  for (const label of LABELS) expect(lines).toContain(`msp ${label} now status unknown`)
   expect(lines).toContain('run rate-limit-api repo api')
   expect(lines).toContain('lane unknown')
 })
@@ -254,7 +257,19 @@ test('unreadable state.json marks MSPs unknown', async ($, on) => {
   world.failRead(`${R}/state.json`, 'EFBIG: file is larger than the 4 MiB read cap')
   await world.start($)
 
-  const msps = (await status($)).filter(line => line.startsWith('msp '))
+  const lines = await status($)
+  const msps = lines.filter(line => line.startsWith('msp ') && line.split(' ')[2] !== 'now')
   expect(msps.length).toBe(3)
   for (const line of msps) expect(line.split(' ')[2]).toBe('unknown')
+  for (const label of LABELS) expect(lines).toContain(`msp ${label} now status unknown`)
+})
+
+test('unreadable state.json at Ship guesses no pull request', async ($, on) => {
+  const world = harness(on, ship, { now: NOW })
+  world.failRead(`${R}/state.json`, 'EFBIG: file is larger than the 4 MiB read cap')
+  await world.start($)
+
+  const lines = await status($)
+  for (const label of LABELS) expect(lines).toContain(`msp ${label} now status unknown`)
+  expect(lines.some(line => line.includes('waiting for pull request'))).toBe(false)
 })
