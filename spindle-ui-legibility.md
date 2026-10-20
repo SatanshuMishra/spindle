@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
 Status: parked
-Updated: 2026-10-20T00:39:16.280Z
+Updated: 2026-10-20T00:39:17.674Z
 Next ids: c1 D3 R1 S1
 
 ## Goal
@@ -17,7 +17,7 @@ Grounding facts: the pipeline run skill defines the round files spindle reads (.
 
 ## Next step
 
-The owner starts Clean-up by saying the FEATURE pull request SatanshuMishra/spindle#8 merged; then run pipeline metrics --save and pipeline clean for spindle-ui-legibility.
+None: the thread closes as done.
 
 ## Decisions in force
 
