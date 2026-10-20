@@ -1,6 +1,6 @@
 # spindle-ui-legibility: Make the spindle band and Pipeline pane responsive and legible to a stranger
-Status: parked
-Updated: 2026-10-20T00:39:17.674Z
+Status: done
+Updated: 2026-10-20T00:39:19.899Z
 Next ids: c1 D3 R1 S1
 
 ## Goal
