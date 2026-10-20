@@ -1,6 +1,6 @@
 # spindle-paint-repair: Repair spindle 0.2.0's band and Pipeline pane as the desktop app actually draws them
 Status: active
-Updated: 2026-10-20T01:30:23.991Z
+Updated: 2026-10-20T01:30:25.983Z
 Next ids: c1 D2 R3 S1
 
 ## Goal
@@ -33,5 +33,4 @@ After a restart loads 0.2.1, the owner checks the real desktop paint against the
 - Reported defects: owner's screenshot of 0.2.0; Button label drawn as text, bar Svg height scales with width, hover cards without background, MSP selection stuck after the first press
 - Plugin: plugins/spindle (band.tsx, pane.tsx, hint.tsx, text.ts under hooks/draw)
 - Mod API: plugin-authoring types claude-code.d.ts (ButtonProps, BoxProps hover, SvgProps)
-- Worktree: ~/.mitosis/runs/spindle/paint-repair
 - Approved preview: session scratchpad spindle-preview-2.html; paint stand-in at scratchpad paint/index.html with redump.sh
