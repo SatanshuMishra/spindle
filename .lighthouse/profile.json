@@ -117,12 +117,12 @@
   "facts": {
     "claude_cli_version": {
       "value": "2.1.300 locally; CI installs @anthropic-ai/claude-code@2.1.303",
-      "confirmed": false,
+      "confirmed": true,
       "recheck": "claude --version, and the npm install line in .github/workflows/check.yml"
     },
     "headless_session_loads_function_hooks_mods": {
-      "value": "claude -p with --plugin-dir loads the mod and answers /spindle status through its command.run hook",
-      "confirmed": false,
+      "value": "yes: claude -p '/spindle status' --plugin-dir plugins/spindle prints 'spindle: No pipeline run in this session.' on 2026-10-19",
+      "confirmed": true,
       "recheck": "claude -p '/spindle status' --plugin-dir plugins/spindle --output-format stream-json --verbose and read the command's text"
     },
     "session_file_location": {
@@ -131,8 +131,8 @@
       "recheck": "plugins/spindle/hooks/run/session.ts sessionFile"
     },
     "ci_runner_login": {
-      "value": "claude plugin test runs on a GitHub runner without a Claude login",
-      "confirmed": false,
+      "value": "none needed: the check workflow installs the CLI and runs scripts/check.sh with no sign-in; run 39300695811 on main passed",
+      "confirmed": true,
       "recheck": "the check workflow's run on a push to the repository"
     }
   },
