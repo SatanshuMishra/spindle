@@ -1,6 +1,6 @@
 # spindle-paint-repair: Repair spindle 0.2.0's band and Pipeline pane as the desktop app actually draws them
 Status: active
-Updated: 2026-10-20T01:30:25.983Z
+Updated: 2026-10-20T01:31:25.932Z
 Next ids: c1 D2 R3 S1
 
 ## Goal
@@ -15,7 +15,7 @@ Release 0.2.1 is merged into main (SatanshuMishra/spindle#10) and installed for 
 
 ## Next step
 
-After a restart loads 0.2.1, the owner checks the real desktop paint against the approved preview, including R1 and R2.
+The owner restarts the app or opens a new session so 0.2.1 loads (this session still runs 0.2.0), opens the pane with /spindle, and checks the real desktop paint against the approved preview, including R1 and R2.
 
 ## Decisions in force
 
