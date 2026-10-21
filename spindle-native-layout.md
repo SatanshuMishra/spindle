@@ -1,7 +1,7 @@
 # spindle-native-layout: Rebuild spindle's desktop band and pane on native flex, with simpler tooltips
 Status: active
-Updated: 2026-10-21T19:41:40.884Z
-Next ids: c5 D1 R1 S1
+Updated: 2026-10-21T19:54:45.241Z
+Next ids: c5 D2 R1 S1
 
 ## Goal
 
@@ -23,6 +23,8 @@ Interphase bug pathway, interview: intent I1-I3 approved and recorded; frontier 
 Record the owner's round 1 answers in the decisions file and the record (seams, criteria, three Steps), run check_record, then ask any remaining frontier or go to the read-back.
 
 ## Decisions in force
+
+- D1 Interphase hand-off: build the approved spec as one MSP of two Steps: One MSP, native-layout, built from the FEATURE branch that pipeline feature-branch cuts.
 
 ## Open risks
 
