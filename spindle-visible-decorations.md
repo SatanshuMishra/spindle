@@ -1,6 +1,6 @@
 # spindle-visible-decorations: Restore the spindle desktop progress bar and rail connectors that empty-alt Svgs hid
 Status: parked
-Updated: 2026-10-21T22:18:09.784Z
+Updated: 2026-10-21T22:18:30.884Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -20,7 +20,7 @@ The fix is on main (SatanshuMishra/spindle#16) and the run is cleaned up, nothin
 
 ## Next step
 
-The owner restarts the desktop session and checks that the band's progress bar and the pane's rail connectors show; on a pass, tick c4 and close the thread; merge SatanshuMishra/spindle#17 and run claude plugin update spindle@spindle to land 0.2.4.
+The owner restarts the desktop session and checks that the band's progress bar and the pane's rail connectors show; on a pass, tick c4 and close the thread.
 
 Needs: R1.
 
