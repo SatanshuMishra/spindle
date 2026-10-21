@@ -1,6 +1,6 @@
 # spindle-visible-decorations: Restore the spindle desktop progress bar and rail connectors that empty-alt Svgs hid
 Status: active
-Updated: 2026-10-21T21:57:22.237Z
+Updated: 2026-10-21T21:57:25.213Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -9,9 +9,9 @@ The desktop band's progress bar and the pane's rail connectors and lanes remaind
 
 ## Done when
 
-- [ ] c1 No desktop band or pane Svg has an empty alt, and a test fails if one does
-- [ ] c2 The spindle bar holds its own height independent of the in-bar pill
-- [ ] c3 claude plugin test plugins/spindle and scripts/check.sh pass
+- [x] c1 No desktop band or pane Svg has an empty alt, and a test fails if one does evidence: alt-meaning.test.tsx guard 'every desktop Svg in the <run> run has a non-empty alt at every width' passes for six runs at widths 40-160 at 206357c, and failed for all six at 14c2562 (mitosis gate pass)
+- [x] c2 The spindle bar holds its own height independent of the in-bar pill evidence: band.test.tsx 'the desktop bar holds its height without the pill' passes at 201ef95: texture and pill both in flow at 16px, filled part overflow hidden, at fireplace and Spec
+- [x] c3 claude plugin test plugins/spindle and scripts/check.sh pass evidence: claude plugin test plugins/spindle 182 pass 0 fail and scripts/check.sh exit 0 at 201ef95
 - [ ] c4 The owner's desktop hand check shows the bar and the rail connectors
 
 ## Where things stand
@@ -20,9 +20,9 @@ MSP visible-decorations committed at 206357c on mitosis/visible-decorations (wor
 
 ## Next step
 
-Collect round 1 findings into <home>/review/round-1/visible-decorations.findings.json, then run pipeline candidates, the validator if needed, record and verdict.
+Run SHIP=1 ~/.mitosis/spindle/spindle-visible-decorations/run.zsh --resume, then open, assign and comment the MSP pull request.
 
-Needs: D1.
+Needs: D2.
 
 ## Decisions in force
 
