@@ -1,6 +1,6 @@
 # spindle-native-layout: Rebuild spindle's desktop band and pane on native flex, with simpler tooltips
 Status: active
-Updated: 2026-10-21T20:41:33.465Z
+Updated: 2026-10-21T20:41:35.679Z
 Next ids: c5 D3 R3 S1
 
 ## Goal
@@ -20,7 +20,7 @@ MSP native-layout at c50fb77 on mitosis/native-layout (worktree ~/.mitosis/runs/
 
 ## Next step
 
-When the amend-1 build reports, read its last JSON line, merge its branch into mitosis/native-layout in the MSP worktree, rerun pipeline obligations with criteria plus 5.2, then review round 2 (code-reviewer; conformance-auditor on 5.2).
+When both round 2 reviewers report, collect their arrays into <home>/review/round-2/native-layout.findings.json, then candidates, validator, record and verdict as in round 1.
 
 Needs: D2.
 
