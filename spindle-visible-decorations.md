@@ -1,6 +1,6 @@
 # spindle-visible-decorations: Restore the spindle desktop progress bar and rail connectors that empty-alt Svgs hid
 Status: parked
-Updated: 2026-10-21T22:37:58.269Z
+Updated: 2026-10-21T22:51:28.447Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -12,7 +12,7 @@ The desktop band's progress bar and the pane's rail connectors and lanes remaind
 - [x] c1 No desktop band or pane Svg has an empty alt, and a test fails if one does evidence: alt-meaning.test.tsx guard 'every desktop Svg in the <run> run has a non-empty alt at every width' passes for six runs at widths 40-160 at 206357c, and failed for all six at 14c2562 (mitosis gate pass)
 - [x] c2 The spindle bar holds its own height independent of the in-bar pill evidence: band.test.tsx 'the desktop bar holds its height without the pill' passes at 201ef95: texture and pill both in flow at 16px, filled part overflow hidden, at fireplace and Spec
 - [x] c3 claude plugin test plugins/spindle and scripts/check.sh pass evidence: claude plugin test plugins/spindle 182 pass 0 fail and scripts/check.sh exit 0 at 201ef95
-- [ ] c4 The owner's desktop hand check shows the bar and the rail connectors
+- [x] c4 The owner's desktop hand check shows the bar and the rail connectors evidence: the owner's desktop hand check on spindle 0.2.5 (SatanshuMishra/spindle#18, main f714bfc) passed: the bar texture fills the bar with rounded ends and the rail connectors are visible
 
 ## Where things stand
 
@@ -20,9 +20,7 @@ The owner's first hand check of 0.2.4 showed the bar texture and rail connectors
 
 ## Next step
 
-The owner restarts the desktop session on spindle 0.2.5 and checks that the bar texture fills the bar's height with rounded ends and that the rail connectors are visible; on a pass, tick c4 and close the thread.
-
-Needs: R1.
+None: the thread is done.
 
 ## Decisions in force
 
@@ -31,7 +29,6 @@ Needs: R1.
 
 ## Open risks
 
-- R1 The cause (the desktop does not draw an Svg with an empty alt) is inferred from the owner's screenshots, not confirmed against the desktop renderer, which is not in the local app bundle. Bears on c4.
 
 ## Settled, do not reopen
 
