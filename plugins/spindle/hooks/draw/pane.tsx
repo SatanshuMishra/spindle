@@ -5,7 +5,8 @@ import type { Activity, MspRow, MspStatus, Outcome, Role, RoundRow, RunView, Wor
 import { LANE_NAME } from '../run/state'
 import { NO_RUN, activityNow, currentActivity, elapsed, modelName } from '../run/summary'
 import { ROLE_COLOR, colorOf, costumeOf, crab } from './crew'
-import { hint } from './hint'
+import { cardSlot, cardTrigger } from './hint'
+import type { Card } from './hint'
 import {
   ACCENT,
   CELL_PX,
@@ -19,7 +20,6 @@ import {
   chipWidthOf,
   columnsOf,
   fitText,
-  fluidSvg,
   stageIndex,
   stageInfo,
   statusMark,
@@ -36,38 +36,32 @@ const viewState = atom({ plugin: 'spindle', key: 'view' } as const, null)
 const selectedState = atom({ plugin: 'spindle', key: 'selectedMsp' } as const, null)
 
 const TITLE = 'Pipeline Insights'
-const COST_HINT = "Cost of this session's model calls"
-const TIME_HINT = 'Time since the run started'
 const PROOF_HINT = ['Acceptance test failed without the work (red)', 'and passed with it (green)']
 const VERDICT_LEGEND = 'Red: blocker · yellow: advisory · grey: other candidate'
 const SHOW_ALL = 'Show all'
 const MAIN_THREAD = 'run by the main thread'
-const RAIL_H = 44
-const RAIL_LABEL_PX = 10.5
 const RAIL_NAMES_COLUMNS = 60
+const RAIL_MARK = 24
+const STRIP_W = 1600
+const LINK_H = 2
+const LANE_BAR_H = 4
+const TRACK = 'rgba(128,128,120,.24)'
+const VERDICT_ROOM = 200
 const AVATAR_W = 44
 const AVATAR_H = 36
-const AVATAR_COLUMNS = Math.ceil(AVATAR_W / CELL_PX)
 const MARK_PX = 14
-const MARK_COLUMNS = Math.ceil(MARK_PX / CELL_PX)
-const BUTTON_CHROME = 2
-const HOTKEY_COLUMNS = 2
-const MIN_ACTIVITY_COLUMNS = 6
-const LANE_BAR_H = 6
 const PROOF_PX = 10.5
 const PROOF_WORD_W = Math.ceil(textWidth('proof', PROOF_PX)) + 4
 const PROOF_W = PROOF_WORD_W + 26
 const PROOF_H = 14
 const CREW_CRAB_PX = 18
 const WORKER_CRAB_PX = 32
-const WORKER_CRAB_COLUMNS = WORKER_CRAB_PX / CELL_PX
 const CONTEXT_W = 48
 const CONTEXT_H = 4
 const PIP = 8
 const PIP_STEP = 10
 const VERDICT_CHIP_H = 18
 const MAX_HOTKEYS = 9
-const FOOTNOTE_SHARE = 12 / 13
 
 const ROLE_NAME: Readonly<Record<WorkerRole, string>> = {
   captain: 'Captain',
@@ -117,13 +111,6 @@ const VERDICT_COLOR: Readonly<Record<Outcome, string>> = {
 
 type PaneElements = Pick<Elements['terminal'], 'Box' | 'Text' | 'Button'>
 
-function cut(text: string, columns: number): string {
-  if (columnsOf(text) <= columns) return text
-  const chars = [...text]
-  const kept = chars.findIndex((_, i) => columnsOf(chars.slice(0, i + 1).join('') + '…') > columns)
-  return chars.slice(0, kept === -1 ? chars.length : kept).join('') + '…'
-}
-
 const laneWordOf = (view: RunView) => (view.lane === null ? null : `${LANE_NAME[view.lane]} lane`)
 
 const stageName = (view: RunView) => (view.isFinished ? 'Done' : (stageInfo(view.stage)?.name ?? '?'))
@@ -134,9 +121,6 @@ const isCrew = (worker: WorkerRow) => worker.role !== 'captain'
 
 const liveCrewOf = (view: RunView) => view.workers.filter(worker => worker.isLive && isCrew(worker))
 
-const agentsHint = (view: RunView) =>
-  `Workers running now · ${view.workers.filter(isCrew).length} this run`
-
 const mspsAt = (view: RunView, stage: StageInfo) => view.msps.filter(msp => msp.stage === stage.id).length
 
 export const stageSummary = (view: RunView) => {
@@ -145,16 +129,6 @@ export const stageSummary = (view: RunView) => {
 }
 
 const currentIndexOf = (view: RunView) => (view.isFinished ? STAGE_TABLE.length : stageIndex(view.stage))
-
-function railLines(view: RunView): readonly string[] {
-  const current = currentIndexOf(view)
-  return STAGE_TABLE.map((stage, i) => {
-    const count = mspsAt(view, stage)
-    const state = current === -1 ? '' : i < current ? 'done' : i === current ? 'now' : ''
-    const msps = count === 0 ? '' : `${count} ${count === 1 ? 'MSP' : 'MSPs'}`
-    return [stage.name, state, msps].filter(part => part !== '').join(' · ')
-  })
-}
 
 const mspStatusText = (msp: MspRow) => {
   const word = MSP_STATUS[msp.status].word
@@ -228,39 +202,30 @@ const verdictWords = (worker: WorkerRow) => `Round ${worker.round ?? '?'}`
 
 const workerKey = (worker: WorkerRow, i: number) => `worker-${worker.msp ?? 'run'}-${i}`
 
-function railSvg(W: number, view: RunView, isEveryName: boolean): string {
-  const count = STAGE_TABLE.length
-  const half = (i: number) => textWidth(STAGE_TABLE[i]?.name ?? '', RAIL_LABEL_PX) / 2 + 1
-  const left = Math.max(12, half(0))
-  const right = W - Math.max(12, half(count - 1))
-  const step = (right - left) / (count - 1)
+type RailMark = 'done' | 'now' | 'to come'
+
+const railMarkOf = (view: RunView, i: number): RailMark => {
   const current = currentIndexOf(view)
-  const nodes = STAGE_TABLE.map((stage, i) => {
-    const x = left + i * step
-    const status: Mark = current === -1 ? 'pending' : i < current ? 'done' : i === current ? 'running' : 'pending'
-    const mark =
-      status === 'done'
-        ? `<circle cx="${x}" cy="12" r="7" fill="${DONE}"/><path d="M${x - 3.2} 12l2.2 2.2 4.2-4.6" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`
-        : status === 'running'
-          ? `<circle class="sv-live" cx="${x}" cy="12" r="10" fill="${stage.color}" opacity=".25"/><circle cx="${x}" cy="12" r="6" fill="${stage.color}"/>`
-          : `<circle cx="${x}" cy="12" r="5" class="sv-k sv-mstroke" stroke-width="1.2"/>`
-    const labelX = Math.min(W - half(i), Math.max(half(i), x))
-    const label =
-      isEveryName || status === 'running'
-        ? `<text ${status === 'running' ? `fill="${stage.color}" font-weight="600"` : `class="${status === 'pending' ? 'sv-m' : 'sv-t'}"`} x="${labelX}" y="36" text-anchor="middle" font-family="${FONT}" font-size="${RAIL_LABEL_PX}">${xml(stage.name)}</text>`
-        : ''
-    return `${mark}${label}`
-  })
-  const doneX = left + Math.max(0, Math.min(current, count - 1)) * step
-  return svg(
-    W,
-    RAIL_H,
-    `<rect class="sv-k" x="${left}" y="11" width="${right - left}" height="2" rx="1"/><rect x="${left}" y="11" width="${Math.max(0, doneX - left)}" height="2" rx="1" fill="${DONE}"/>${nodes.join('')}`,
-    [stageSummary(view), ...railLines(view)],
-  )
+  return current === -1 || i > current ? 'to come' : i < current ? 'done' : 'now'
 }
 
-function avatarSvg(msp: MspRow, i: number, lines: readonly string[], isSelected: boolean): string {
+function railMarkSvg(stage: StageInfo, mark: RailMark): string {
+  const c = RAIL_MARK / 2
+  const body =
+    mark === 'done'
+      ? `<circle cx="${c}" cy="${c}" r="7" fill="${DONE}"/><path d="M${c - 3.2} ${c}l2.2 2.2 4.2-4.6" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`
+      : mark === 'now'
+        ? `<circle class="sv-live" cx="${c}" cy="${c}" r="10" fill="${stage.color}" opacity=".25"/><circle cx="${c}" cy="${c}" r="6" fill="${stage.color}"/>`
+        : `<circle cx="${c}" cy="${c}" r="5" class="sv-k sv-mstroke" stroke-width="1.2"/>`
+  return svg(RAIL_MARK, RAIL_MARK, body)
+}
+
+const stripSvg = (H: number, color: string, y = 0, h = H) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${STRIP_W}" height="${H}" viewBox="0 0 ${STRIP_W} ${H}"><rect y="${y}" width="${STRIP_W}" height="${h}" fill="${color}"/></svg>`
+
+const linkSvg = (color: string) => stripSvg(RAIL_MARK, color, RAIL_MARK / 2 - LINK_H / 2, LINK_H)
+
+function avatarSvg(msp: MspRow, i: number, isSelected: boolean): string {
   const { mark } = MSP_STATUS[msp.status]
   const isWorking = currentActivity(msp)?.isRunning ?? false
   return svg(
@@ -268,23 +233,12 @@ function avatarSvg(msp: MspRow, i: number, lines: readonly string[], isSelected:
     AVATAR_H,
     `${isSelected ? `<rect data-selected="true" x="6" y="0" width="${AVATAR_W - 6}" height="${AVATAR_H}" rx="7" fill="none" stroke="${laneColorOf(i)}" stroke-width="2"/>` : ''}<rect x="0" y="0" width="3" height="${AVATAR_H}" rx="1.5" fill="${laneColorOf(i)}"/>
 ${crab(8, 1, 'builder', laneColorOf(i), mark === 'pending', isWorking, 1.1)}`,
-    lines,
   )
 }
 
 function markSvg(msp: MspRow, i: number): string {
   const half = MARK_PX / 2
   return svg(MARK_PX, MARK_PX, statusMark(half, half, MSP_STATUS[msp.status].mark, laneColorOf(i)))
-}
-
-function laneBarSvg(msp: MspRow, i: number): string {
-  const fill = MSP_STATUS[msp.status].mark === 'failed' ? FAIL : laneColorOf(i)
-  const share = (lanesDoneShare(msp) * 100).toFixed(2)
-  return fluidSvg(
-    LANE_BAR_H,
-    `<rect class="sv-k" x="0" y="1" width="100%" height="4" rx="2"/>
-<rect x="0" y="1" width="${share}%" height="4" rx="2" fill="${fill}"/>`,
-  )
 }
 
 function proofSvg(msp: MspRow): string {
@@ -299,7 +253,6 @@ function proofSvg(msp: MspRow): string {
     PROOF_W,
     PROOF_H,
     `<text class="sv-m" x="0" y="10" font-family="${FONT}" font-size="${PROOF_PX}">proof</text>${red}<path d="M${x + 10} 7h6" class="sv-mstroke" stroke-width="1.2"/>${green}`,
-    [...PROOF_HINT, proofVerdict(msp)],
   )
 }
 
@@ -313,7 +266,6 @@ function contextSvg(worker: WorkerRow): string {
     CONTEXT_H,
     `<rect class="sv-k" x="0" y="0" width="${CONTEXT_W}" height="${CONTEXT_H}" rx="2"/>
 <rect x="0" y="0" width="${Math.round((CONTEXT_W * contextPercent(worker)) / 100)}" height="${CONTEXT_H}" rx="2" class="sv-mfill"/>`,
-    [contextHint(worker), ...(worker.model === null ? [] : [modelName(worker.model)])],
   )
 }
 
@@ -357,7 +309,7 @@ function verdictLayout(maxW: number, round: RoundRow): VerdictLayout {
   }
 }
 
-function verdictSvg(layout: VerdictLayout, round: RoundRow, tipLines: readonly string[]): string {
+function verdictSvg(layout: VerdictLayout, round: RoundRow): string {
   const { W, H, chip } = layout
   const pips = layout.pips.map(({ x, y }, i) => {
     const kind = i < round.blockers ? 'blocker' : i < round.blockers + round.advisories ? 'advisory' : 'other'
@@ -370,7 +322,6 @@ function verdictSvg(layout: VerdictLayout, round: RoundRow, tipLines: readonly s
     H,
     `${pips}<rect x="${chip.x}" y="${chip.y}" width="${chip.w}" height="${VERDICT_CHIP_H}" rx="9" fill="${VERDICT_COLOR[round.outcome]}"/>
 <text x="${chip.x + chip.w / 2}" y="${chip.y + 12.5}" text-anchor="middle" font-family="${FONT}" font-size="11" font-weight="600" fill="#fff">${xml(chip.word)}</text>`,
-    tipLines,
   )
 }
 
@@ -395,23 +346,17 @@ async function clearSelection($: EngineInterface): Promise<void> {
 
 const hotkeyOf = (i: number) => (i < MAX_HOTKEYS ? { hotkey: String(i + 1) } : {})
 
-type ButtonWords = { name: string; activity: string }
-
-function buttonWords(msp: MspRow, i: number, columns: number, now: number): ButtonWords {
-  const room = columns - AVATAR_COLUMNS - 1 - MARK_COLUMNS - 1 - BUTTON_CHROME - (i < MAX_HOTKEYS ? HOTKEY_COLUMNS : 0)
-  const name = cut(msp.label, Math.max(4, room))
-  const left = room - columnsOf(name) - 1
-  return { name, activity: left >= MIN_ACTIVITY_COLUMNS ? cut(activityText(msp, now), left) : '' }
-}
-
-function desktopMspButton($: EngineInterface, ui: PaneElements, msp: MspRow, i: number, words: ButtonWords, isSelected: boolean) {
+function desktopMspButton($: EngineInterface, ui: PaneElements, msp: MspRow, i: number, now: number, isSelected: boolean) {
   const { Button, Text } = ui
   const parts = [
     ...(i < MAX_HOTKEYS ? [<Text dimColor mono size="caption">{String(i + 1)}</Text>, ' '] : []),
     <Text weight="semibold" wrap="truncate-end" {...(isSelected ? { color: ACCENT } : {})}>
-      {words.name}
+      {msp.label}
     </Text>,
-    ...(words.activity === '' ? [] : [' ', <Text dimColor={!isSelected} size="footnote" wrap="truncate-end">{words.activity}</Text>]),
+    ' ',
+    <Text dimColor={!isSelected} size="footnote" wrap="truncate-end">
+      {activityText(msp, now)}
+    </Text>,
   ]
   return (
     <Button
@@ -480,70 +425,125 @@ type Room = { columns: number; now: number }
 
 type DesktopElements = PaneElements & Pick<Elements['desktop'], 'Svg'>
 
+function rail(ui: DesktopElements, view: RunView, isEveryName: boolean): RenderElement {
+  const { Box, Text, Svg } = ui
+  const current = currentIndexOf(view)
+  const parts = STAGE_TABLE.flatMap((stage, i) => {
+    const mark = railMarkOf(view, i)
+    const isNow = mark === 'now'
+    const name = isEveryName || isNow ? (
+      <Text size="caption" wrap="truncate-end" {...(isNow ? { color: stage.color, weight: 'semibold' as const } : { dimColor: true })}>
+        {stage.name}
+      </Text>
+    ) : null
+    const link = (
+      <Box key={`rail-link-${i}`} flexGrow={1} minWidth={0} overflow="hidden">
+        <Svg source={linkSvg(i < current ? DONE : TRACK)} alt={`${stage.name} to ${STAGE_TABLE[i + 1]?.name ?? ''}`} width={STRIP_W} height={RAIL_MARK} />
+      </Box>
+    )
+    return [
+      <Box key={`rail-stage-${i}`} flexDirection="column" alignItems="center" flexShrink={0}>
+        <Svg source={railMarkSvg(stage, mark)} alt={`${stage.name}: ${mark}`} width={RAIL_MARK} height={RAIL_MARK} />
+        {name}
+      </Box>,
+      ...(i < STAGE_TABLE.length - 1 ? [link] : []),
+    ]
+  })
+  return (
+    <Box key="pane-rail" flexDirection="row" alignItems="flex-start">
+      {parts}
+    </Box>
+  )
+}
+
+function lanesBar(ui: DesktopElements, msp: MspRow, i: number): RenderElement {
+  const { Box, Svg } = ui
+  const share = lanesDoneShare(msp)
+  const fill = MSP_STATUS[msp.status].mark === 'failed' ? FAIL : laneColorOf(i)
+  return (
+    <Box key={`msp-bar-${msp.label}`} flexDirection="row" flexGrow={1} minWidth={0}>
+      <Box key={`msp-bar-done-${msp.label}`} width={0} flexGrow={share} overflow="hidden" backgroundColor={fill}>
+        <Svg source={stripSvg(LANE_BAR_H, fill)} alt={`${msp.label}: ${lanesWords(msp)}`} width={STRIP_W} height={LANE_BAR_H} />
+      </Box>
+      <Box key={`msp-bar-rest-${msp.label}`} width={0} flexGrow={1 - share} overflow="hidden" backgroundColor={TRACK}>
+        <Svg source={stripSvg(LANE_BAR_H, TRACK)} alt={`${msp.label}: lanes still to build`} width={STRIP_W} height={LANE_BAR_H} />
+      </Box>
+    </Box>
+  )
+}
+
 function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, selected: string | null, room: Room) {
   const { Box, Text, Svg } = ui
   const { columns, now } = room
   const time = elapsed(view.startedAt, now)
   const lane = laneWordOf(view)
-  const slugColumns = Math.max(4, columns - (lane === null ? 0 : Math.ceil(chipWidthOf(lane) / CELL_PX) + 1))
-  const slug = cut(view.slug, slugColumns)
-  const railW = Math.max(CELL_PX, Math.min(900, (columns - 2) * CELL_PX))
   const live = liveCrewOf(view)
   const crewRole = ROLE_LOOK[live[0]?.role ?? 'captain']
-  const tile = (key: string, name: string, value: RenderElement, lines: readonly string[], edge: 'start' | 'end' = 'start') =>
-    hint(
-      ui,
-      key,
-      <Box flexDirection="column" flexGrow={1} minWidth={0} borderStyle="round" borderDimColor paddingX={1}>
-        <Text dimColor size="caption">
-          {name}
-        </Text>
-        {value}
-      </Box>,
-      lines,
-      { size: 'grow', edge },
-    )
-  const mspRow = (msp: MspRow, i: number) => {
-    const words = buttonWords(msp, i, columns, now)
-    const lines = [mspLabel(msp, now), msp.branch, mspStatusText(msp), lanesWords(msp)]
-    return (
-      <Box key={`msp-row-${msp.label}`} flexDirection="row" alignItems="center" gap="sm">
-        <Svg key={`msp-avatar-${msp.label}`} source={avatarSvg(msp, i, lines, msp.label === selected)} alt={`${msp.label} crab`} width={AVATAR_W} height={AVATAR_H} isInteractive />
-        <Box key={`msp-main-${msp.label}`} flexDirection="column" flexGrow={1} flexShrink={1} minWidth={0}>
-          <Box key={`msp-line-${msp.label}`} flexDirection="row" alignItems="center" gap="sm">
-            <Box key={`msp-press-${msp.label}`} flexGrow={1} flexShrink={1} minWidth={0}>
-              {desktopMspButton($, ui, msp, i, words, msp.label === selected)}
-            </Box>
-            <Svg key={`msp-mark-${msp.label}`} source={markSvg(msp, i)} alt={`${msp.label}: ${MSP_STATUS[msp.status].word}`} width={MARK_PX} height={MARK_PX} />
+  const tile = (key: string, name: string, value: RenderElement) => (
+    <Box key={key} flexDirection="column" flexGrow={1} flexShrink={1} minWidth={0} borderStyle="round" borderDimColor paddingX={1}>
+      <Text dimColor size="caption">
+        {name}
+      </Text>
+      {value}
+    </Box>
+  )
+  const mspCards = view.msps.flatMap((msp, i): Card[] => [
+    { scope: `pane-msp-${i}`, lines: [mspLabel(msp, now), msp.branch, mspStatusText(msp), lanesWords(msp)] },
+    ...(msp.proof === null ? [] : [{ scope: `pane-proof-${i}`, lines: [...PROOF_HINT, proofVerdict(msp)] }]),
+  ])
+  const mspRow = (msp: MspRow, i: number) => (
+    <Box key={`msp-row-${msp.label}`} flexDirection="row" alignItems="center" gap="sm">
+      {cardTrigger(
+        ui,
+        `pane-msp-${i}`,
+        <Svg key={`msp-avatar-${msp.label}`} source={avatarSvg(msp, i, msp.label === selected)} alt={`${msp.label} crab`} width={AVATAR_W} height={AVATAR_H} />,
+      )}
+      <Box key={`msp-main-${msp.label}`} flexDirection="column" flexGrow={1} flexShrink={1} minWidth={0}>
+        <Box key={`msp-line-${msp.label}`} flexDirection="row" alignItems="center" gap="sm">
+          <Box key={`msp-press-${msp.label}`} flexGrow={1} flexShrink={1} minWidth={0}>
+            {desktopMspButton($, ui, msp, i, now, msp.label === selected)}
           </Box>
-          <Box key={`msp-lanes-${msp.label}`} flexDirection="row" alignItems="center" gap="sm">
-            <Box key={`msp-bar-${msp.label}`} flexGrow={1} flexShrink={1} minWidth={0}>
-              <Svg source={laneBarSvg(msp, i)} alt={`${msp.label}: ${lanesWords(msp)}`} height={LANE_BAR_H} />
-            </Box>
-            {msp.proof === null ? null : (
-              <Svg key={`msp-proof-${msp.label}`} source={proofSvg(msp)} alt={proofWords(msp)} width={PROOF_W} height={PROOF_H} isInteractive />
-            )}
-          </Box>
+          <Svg key={`msp-mark-${msp.label}`} source={markSvg(msp, i)} alt={`${msp.label}: ${MSP_STATUS[msp.status].word}`} width={MARK_PX} height={MARK_PX} />
+        </Box>
+        <Box key={`msp-lanes-${msp.label}`} flexDirection="row" alignItems="center" gap="sm">
+          {lanesBar(ui, msp, i)}
+          {msp.proof === null
+            ? null
+            : cardTrigger(
+                ui,
+                `pane-proof-${i}`,
+                <Svg key={`msp-proof-${msp.label}`} source={proofSvg(msp)} alt={proofWords(msp)} width={PROOF_W} height={PROOF_H} />,
+              )}
         </Box>
       </Box>
-    )
-  }
+    </Box>
+  )
   const listed = listedWorkers(view, selected)
   const rightColumns = Math.max(
     0,
     ...listed.map(worker => columnsOf(rightText(worker, now))),
     ...listed.map(worker => (worker.contextShare === null ? 0 : CONTEXT_W / CELL_PX)),
   )
-  const wordsColumns = Math.max(4, columns - WORKER_CRAB_COLUMNS - 1 - rightColumns - 1)
+  const workerCards = listed.flatMap((worker, i): Card[] => {
+    const round = isVerdictRow(view, worker) ? roundOf(view, worker) : undefined
+    return [
+      { scope: `pane-words-${i}`, lines: [round === undefined ? worker.words : verdictWords(worker)] },
+      ...(round === undefined
+        ? []
+        : [{ scope: `pane-verdict-${i}`, lines: [worker.words, ...(roundActivityOf(view, worker)?.summary ?? []), VERDICT_LEGEND] }]),
+      ...(worker.contextShare === null
+        ? []
+        : [{ scope: `pane-context-${i}`, lines: [contextHint(worker), ...(worker.model === null ? [] : [modelName(worker.model)])] }]),
+    ]
+  })
   const workerRow = (worker: WorkerRow, i: number) => {
     const key = workerKey(worker, i)
     const role = ROLE_LOOK[worker.role]
     const round = isVerdictRow(view, worker) ? roundOf(view, worker) : undefined
     const kind = round === undefined ? undefined : firstKindOf(view, worker)
     const words = round === undefined ? worker.words : verdictWords(worker)
-    const isCut = columnsOf(words) * FOOTNOTE_SHARE > wordsColumns
     const right = rightText(worker, now)
-    const layout = round === undefined ? undefined : verdictLayout(wordsColumns * CELL_PX, round)
+    const layout = round === undefined ? undefined : verdictLayout(VERDICT_ROOM, round)
     return (
       <Box key={key} flexDirection="row" alignItems="center" gap="sm">
         <Svg
@@ -557,25 +557,21 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
           <Text weight="semibold" wrap="truncate-end">
             {ROLE_NAME[worker.role]}
           </Text>
-          {hint(
+          {cardTrigger(
             ui,
-            `${key}-words-hint`,
+            `pane-words-${i}`,
             <Text dimColor size="footnote" wrap="truncate-end">
               {words}
             </Text>,
-            isCut ? [words] : [],
-            { side: 'below', size: 'shrink' },
+            'shrink',
           )}
-          {round === undefined || layout === undefined ? null : (
-            <Svg
-              key={`${key}-verdict`}
-              source={verdictSvg(layout, round, [worker.words, ...(roundActivityOf(view, worker)?.summary ?? []), VERDICT_LEGEND])}
-              alt={worker.words}
-              width={layout.W}
-              height={layout.H}
-              isInteractive
-            />
-          )}
+          {round === undefined || layout === undefined
+            ? null
+            : cardTrigger(
+                ui,
+                `pane-verdict-${i}`,
+                <Svg key={`${key}-verdict`} source={verdictSvg(layout, round)} alt={worker.words} width={layout.W} height={layout.H} />,
+              )}
           {kind === undefined ? null : (
             <Text size="footnote" wrap="truncate-end">
               {kind}
@@ -588,9 +584,9 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
               {right}
             </Text>
           )}
-          {worker.contextShare === null ? null : (
-            <Svg source={contextSvg(worker)} alt={contextHint(worker)} width={CONTEXT_W} height={CONTEXT_H} isInteractive />
-          )}
+          {worker.contextShare === null
+            ? null
+            : cardTrigger(ui, `pane-context-${i}`, <Svg source={contextSvg(worker)} alt={contextHint(worker)} width={CONTEXT_W} height={CONTEXT_H} />)}
         </Box>
       </Box>
     )
@@ -611,6 +607,7 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
       workerRow(worker, i),
     ]
   })
+  const cards: readonly Card[] = [{ scope: 'pane-slug', lines: [view.slug] }, ...mspCards, ...workerCards]
   return (
     <Box flexDirection="column" gap="md">
       <Box key="pane-title" flexDirection="column">
@@ -618,20 +615,19 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
           {TITLE}
         </Text>
         <Box key="pane-thread" flexDirection="row" alignItems="center" gap="sm">
-          {hint(
+          {cardTrigger(
             ui,
-            'pane-slug-hint',
+            'pane-slug',
             <Text dimColor wrap="truncate-end">
-              {slug}
+              {view.slug}
             </Text>,
-            [view.slug],
-            { side: 'below', size: 'shrink' },
+            'shrink',
           )}
           {lane === null ? null : <Svg key="pane-lane" source={chipSvg(lane)} alt={lane} width={chipWidthOf(lane)} height={CHIP_H} />}
         </Box>
       </Box>
       <Box key="pane-tiles" flexDirection="row" gap="sm">
-        {tile('tile-cost', 'Cost', <Text weight="semibold" tabular wrap="truncate-end">{costText(view)}</Text>, [COST_HINT])}
+        {tile('tile-cost', 'Cost', <Text weight="semibold" tabular wrap="truncate-end">{costText(view)}</Text>)}
         {tile(
           'tile-agents',
           'Agents',
@@ -641,18 +637,10 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
               {String(live.length)}
             </Text>
           </Box>,
-          [agentsHint(view)],
         )}
-        {tile('tile-time', 'Time', <Text weight="semibold" tabular wrap="truncate-end">{time}</Text>, [TIME_HINT], 'end')}
+        {tile('tile-time', 'Time', <Text weight="semibold" tabular wrap="truncate-end">{time}</Text>)}
       </Box>
-      <Svg
-        key="pane-rail"
-        source={railSvg(railW, view, columns >= RAIL_NAMES_COLUMNS)}
-        alt={stageSummary(view)}
-        width={railW}
-        height={RAIL_H}
-        isInteractive
-      />
+      {rail(ui, view, columns >= RAIL_NAMES_COLUMNS)}
       <Box key="pane-msps" flexDirection="column" gap="xs">
         <Text dimColor>{`MSPs · ${view.msps.length}`}</Text>
         {view.msps.map(mspRow)}
@@ -664,6 +652,7 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
         ) : null}
         {workerRows}
       </Box>
+      {cardSlot(ui, 'pane-cards', cards, { top: 0, left: 0 })}
     </Box>
   )
 }

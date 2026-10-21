@@ -11,6 +11,7 @@ export type Fixture = { files: Readonly<Record<string, FixtureFile>> }
 export type FixtureEntry = { name: string; kind: 'file' | 'dir'; size: number; mtimeMs: number; isLink: false }
 export type Recorded = { op: 'fs.write' | 'process.run' | 'process.spawn' | 'store.set'; detail: unknown }
 export type Spawned = { agentId: string; model: string }
+export type CopyAnswer = { isCopied: true } | { isCopied: false; reason: string }
 
 const missing = (path: string) => new Error(`ENOENT: no such file or directory, '${path}'`)
 
@@ -48,6 +49,7 @@ export function harness(on: On, initial: Fixture | null, options: HarnessOptions
     panes: readonly UiPane[]
     toasts: readonly string[]
     copies: readonly string[]
+    copyAnswer: CopyAnswer
     writes: readonly Recorded[]
     bash: readonly { match: string; exitCode: number }[]
     tools: Readonly<Record<string, unknown>>
@@ -62,6 +64,7 @@ export function harness(on: On, initial: Fixture | null, options: HarnessOptions
     panes: [],
     toasts: [],
     copies: [],
+    copyAnswer: { isCopied: true },
     writes: [],
     bash: [],
     tools: {},
@@ -119,7 +122,7 @@ export function harness(on: On, initial: Fixture | null, options: HarnessOptions
   })
   on('ui.copy', (_$, e) => {
     change({ copies: [...world.copies, e.text] })
-    return { value: { isCopied: true as const } }
+    return { value: world.copyAnswer } as never
   })
 
   on('fs.write', (_$, e) => {
@@ -166,6 +169,7 @@ export function harness(on: On, initial: Fixture | null, options: HarnessOptions
     closed: () => world.closed,
     toasts: () => world.toasts,
     copies: () => world.copies,
+    answerCopy: (copyAnswer: CopyAnswer) => change({ copyAnswer }),
     writes: () => world.writes,
     answerBash: (match: string, exitCode: number) => change({ bash: [...world.bash, { match, exitCode }] }),
     answerTool: (tool: string, result: unknown) => change({ tools: { ...world.tools, [tool]: result } }),

@@ -29,7 +29,7 @@ const spawn = ($: Engine, subagentType: string, description: string) =>
 const mountBand = ($: Engine, surface: 'desktop' | 'terminal', bodyColumns = 100) =>
   $.ui.mount({ plugin: 'spindle', surface, component: 'AbovePrompt', props: bandProps(bodyColumns) })
 
-type Drawn = { type?: string; props?: Record<string, unknown>; children?: readonly unknown[] }
+type Drawn = { type?: string; props?: Record<string, unknown>; hover?: { scope?: string; display?: string }; children?: readonly unknown[] }
 type Placed = { node: Drawn; isInCard: boolean }
 
 const isDrawn = (value: unknown): value is Drawn => typeof value === 'object' && value !== null && 'type' in value
@@ -88,25 +88,51 @@ const hasButton = (seen: Seen, key: string) => seen.buttons.some(button => butto
 
 const slugOf = (seen: Seen) => seen.buttons.find(button => button.key === 'spindle-slug')?.drawn
 
-const columnsDrawn = (seen: Seen) => {
-  const parts = [
-    ...seen.texts.map(text => [...text].length),
-    ...seen.buttons.map(button => [...button.drawn].length),
-    ...seen.svgs.map(svg => Math.ceil(svg.width / 8)),
-  ]
-  return parts.reduce((sum, part) => sum + part, 0) + parts.length - 1
-}
-
 const emptyCardsOf = (tree: unknown) => placedOf(tree).filter(one => isCard(one.node) && (one.node.children ?? []).length === 0)
 
 const COUNT_BUTTON = { key: 'spindle-crew' }
 
 const DISMISS_BUTTON = { key: 'spindle-dismiss', drawn: '✕' }
 
-const isUnbrokenUpTo = (widths: readonly number[], last: number) =>
-  widths.length > 0 && widths[widths.length - 1] === last && widths.every((width, i) => i === 0 || width === (widths[i - 1] ?? 0) + 1)
+const WIDTHS = Array.from({ length: 161 }, (_, i) => 40 + i)
 
-const WIDTHS = Array.from({ length: 121 }, (_, i) => 40 + i)
+const nodesOf = (value: unknown): Drawn[] =>
+  Array.isArray(value) ? value.flatMap(nodesOf) : isDrawn(value) ? [value, ...(value.children ?? []).flatMap(nodesOf)] : []
+
+const keyOf = (node: Drawn) => String(node.props?.key ?? '')
+
+const byKey = (tree: unknown, key: string) => nodesOf(tree).find(node => keyOf(node) === key)
+
+const childrenOf = (node: Drawn | undefined) => (node?.children ?? []).filter(isDrawn)
+
+const scopeOf = (node: Drawn) => node.hover?.scope
+
+const svgSource = (node: Drawn | undefined) => String(node?.props?.source ?? '')
+
+const isTexture = (node: Drawn) => node.type === 'Svg' && svgSource(node).includes('data-part="bar"')
+
+const isPill = (node: Drawn) => node.type === 'Svg' && svgSource(node).includes('data-part="pill"')
+
+const slotsOf = (tree: unknown) =>
+  nodesOf(tree).filter(node => node.type === 'Box' && node.props?.position === 'absolute' && nodesOf(node.children).some(isCard))
+
+const triggersOf = (tree: unknown) => nodesOf(tree).filter(node => node.type === 'Box' && !isCard(node) && scopeOf(node) !== undefined)
+
+const triggerHolding = (tree: unknown, holds: (node: Drawn) => boolean) => triggersOf(tree).find(trigger => nodesOf(trigger.children).some(holds))
+
+const cardTextsOf = (tree: unknown, scope: string) =>
+  nodesOf(tree)
+    .filter(node => isCard(node) && scopeOf(node) === scope)
+    .flatMap(card => nodesOf(card.children).filter(node => node.type === 'Text').map(textOf))
+
+const PROGRESS_SCOPE_OF = (tree: unknown) => scopeOf(triggerHolding(tree, node => keyOf(node) === 'spindle-bar' || isPill(node)) ?? {}) ?? ''
+
+async function drawnAt($: Engine, surface: 'desktop' | 'terminal', bodyColumns: number): Promise<unknown> {
+  const band = await mountBand($, surface, bodyColumns)
+  const tree = await band.drawn()
+  await band.unmount()
+  return tree
+}
 
 async function fireRun($: Engine, on: On, withValidator = false) {
   const world = harness(on, fireplace, { now: NOW })
@@ -152,39 +178,29 @@ test('the band at 160 columns shows every part', async ($, on) => {
   expect(slugOf(seen)).toBe(FIRE_SLUG)
   expect(hasChip(seen, 'Full')).toBe(true)
   expect(barOf(seen)).toBeDefined()
+  expect(pillOf(seen)?.source).toContain('>Review · R5</text>')
   expect(seen.texts).toContain(FIRE_TIME)
   expect(crabOf(seen)).toBeDefined()
   expect(hasButton(seen, 'spindle-crew')).toBe(true)
   expect(hasButton(seen, 'spindle-dismiss')).toBe(true)
 })
 
-test('the band shows the slug whole or as an icon, and keeps the bar while it fits', { timeoutMs: 60_000 }, async ($, on) => {
+test('the desktop slug truncates natively and the lane chip always shows', { timeoutMs: 60_000 }, async ($, on) => {
   await fireRun($, on)
 
-  const atWidth = new Map<number, Seen>()
-  for (const width of WIDTHS) atWidth.set(width, await seenAt($, 'desktop', width))
-
-  const slugWidths = WIDTHS.filter(width => slugOf(atWidth.get(width) as Seen) === FIRE_SLUG)
-  const barWidths = WIDTHS.filter(width => barOf(atWidth.get(width) as Seen) !== undefined)
   for (const width of WIDTHS) {
-    const seen = atWidth.get(width) as Seen
-    expect([...seen.texts, ...seen.cardTexts].some(text => text.includes('…'))).toBe(false)
-    const slug = slugOf(seen)
-    if (slug !== undefined) expect(slug).toBe(FIRE_SLUG)
-    expect(seen.texts).toContain(FIRE_TIME)
-    expect(crabOf(seen)).toBeDefined()
-    expect(hasButton(seen, 'spindle-crew')).toBe(true)
-    expect(hasButton(seen, 'spindle-dismiss')).toBe(true)
+    const tree = await drawnAt($, 'desktop', width)
+    const seen = seenOf(tree)
+    expect(slugOf(seen)).toBe('mac-video-audio-and-recorder-ui')
+    const room = nodesOf(tree).find(node => node.type === 'Box' && childrenOf(node).some(child => keyOf(child) === 'spindle-slug'))
+    expect(room?.props?.flexShrink).toBe(1)
+    expect(room?.props?.minWidth).toBe(0)
+    const slugText = nodesOf(byKey(tree, 'spindle-slug')?.children).find(node => node.type === 'Text')
+    expect(slugText?.props?.wrap).toBe('truncate-end')
+    expect(textOf(slugText ?? {})).toBe('mac-video-audio-and-recorder-ui')
+    expect(hasButton(seen, 'spindle-name')).toBe(false)
+    expect(seen.svgs.some(svg => svg.alt === 'Full lane')).toBe(true)
   }
-  expect(isUnbrokenUpTo(slugWidths, 160)).toBe(true)
-  expect(isUnbrokenUpTo(barWidths, 160)).toBe(true)
-  const belowSlug = atWidth.get((slugWidths[0] ?? 0) - 1) as Seen
-  expect(hasButton(belowSlug, 'spindle-name')).toBe(true)
-  expect(barOf(belowSlug)).toBeDefined()
-  const narrowest = atWidth.get(40) as Seen
-  expect(hasButton(narrowest, 'spindle-name')).toBe(true)
-  expect(pillOf(narrowest)?.alt).toBe(`${FIRE_SLUG}: Review · R5`)
-  expect(barOf(narrowest)).toBeUndefined()
 })
 
 test('the terminal band follows the same rules', async ($, on) => {
@@ -208,45 +224,134 @@ test('the terminal band follows the same rules', async ($, on) => {
   expect(narrow).not.toContain('…')
 })
 
-test("the band's parts fit its width", { timeoutMs: 60_000 }, async ($, on) => {
-  const world = harness(on, fireplace, { now: NOW })
-  await world.start($)
-
-  for (const width of WIDTHS) {
-    const seen = await seenAt($, 'desktop', width)
-    expect(seen.texts).toContain(FIRE_TIME)
-    expect(columnsDrawn(seen)).toBeLessThanOrEqual(width)
-  }
-})
-
-test('the bar narrows with the band and never scales down', async ($, on) => {
+test('the desktop bar fills the band through flex', async ($, on) => {
   await fireRun($, on)
 
-  for (const width of [80, 120, 160]) {
-    const band = await mountBand($, 'desktop', width)
-    const holder = await band.find({ key: 'spindle-progress-hint' })
-    const bar = placedOf(holder).map(one => one.node).find(node => node.type === 'Svg')
-    expect(bar).toBeDefined()
-    expect(bar?.props?.width).toBeUndefined()
-    expect(bar?.props?.height).toBe(16)
-    const source = String(bar?.props?.source ?? '')
-    expect(source).toMatch(/^<svg[^>]* width="100%" height="16"/)
-    expect(source).not.toContain('viewBox')
-    expect(source).toContain('>Review · R5</text>')
-    expect(holder?.props.flexGrow).toBe(1)
-    expect(holder?.props.minWidth).toBe(0)
-    await band.unmount()
+  const textures: { source: string; width: unknown }[] = []
+  for (const width of [100, 200]) {
+    const tree = await drawnAt($, 'desktop', width)
+    const bar = byKey(tree, 'spindle-bar')
+    expect(bar?.type).toBe('Box')
+    expect(bar?.props?.flexGrow).toBe(1)
+    expect(bar?.props?.minWidth).toBe(0)
+    expect(bar?.props?.overflow).toBe('hidden')
+    const filled = childrenOf(bar).find(child => nodesOf(child).some(isPill))
+    const remainder = childrenOf(bar).at(-1)
+    expect(Math.abs(Number(filled?.props?.flexGrow) - 2.9 / 7)).toBeLessThan(1e-9)
+    expect(Math.abs(Number(filled?.props?.flexGrow) - 0.4143)).toBeLessThan(0.0001)
+    expect(filled?.props?.width).toBeUndefined()
+    expect(filled?.props?.overflow).toBe('hidden')
+    expect(remainder?.props?.width).toBe(0)
+    expect(Math.abs(Number(remainder?.props?.flexGrow) - 4.1 / 7)).toBeLessThan(1e-9)
+    expect(Math.abs(Number(remainder?.props?.flexGrow) - 0.5857)).toBeLessThan(0.0001)
+    const pill = childrenOf(filled).at(-1)
+    expect(pill !== undefined && isPill(pill)).toBe(true)
+    expect(svgSource(pill)).toContain('Review · R5')
+    const texture = nodesOf(filled?.children).find(isTexture)
+    expect(texture).toBeDefined()
+    const holder = childrenOf(filled).find(child => nodesOf(child).some(isTexture))
+    expect(holder?.props?.position).toBe('absolute')
+    textures.push({ source: svgSource(texture), width: texture?.props?.width })
   }
+  expect(textures[1]).toEqual(textures[0])
+})
+
+test('below 60 columns the band shows the pill alone', async ($, on) => {
+  await fireRun($, on)
+
+  const narrow = await drawnAt($, 'desktop', 59)
+  const pill = nodesOf(narrow).find(isPill)
+  expect(pill?.props?.alt).toBe('mac-video-audio-and-recorder-ui: Review · R5')
+  expect(byKey(narrow, 'spindle-bar')).toBeUndefined()
+  expect(nodesOf(narrow).some(isTexture)).toBe(false)
+
+  const wide = await drawnAt($, 'desktop', 60)
+  expect(byKey(wide, 'spindle-bar')?.type).toBe('Box')
+})
+
+test('at Spec the filled part still holds the whole pill', async ($, on) => {
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+
+  const tree = await drawnAt($, 'desktop', 100)
+  const filled = childrenOf(byKey(tree, 'spindle-bar')).find(child => nodesOf(child).some(isPill))
+  expect(filled?.props?.flexGrow).toBe(0)
+  expect(filled?.props?.width).toBeUndefined()
+  const pill = childrenOf(filled).at(-1)
+  expect(pill !== undefined && isPill(pill)).toBe(true)
+  expect(svgSource(pill)).toContain('>Spec</text>')
+  expect(pill?.props?.width).toBeGreaterThan(0)
+})
+
+test('no desktop band width or drawing follows bodyColumns', async ($, on) => {
+  await fireRun($, on)
+
+  const layoutOf = (tree: unknown) =>
+    nodesOf(tree).map(node => ({
+      type: node.type,
+      width: node.props?.width,
+      minWidth: node.props?.minWidth,
+      flexGrow: node.props?.flexGrow,
+      source: node.type === 'Svg' ? svgSource(node) : undefined,
+    }))
+  const at60 = layoutOf(await drawnAt($, 'desktop', 60))
+  expect(layoutOf(await drawnAt($, 'desktop', 100))).toEqual(at60)
+  expect(layoutOf(await drawnAt($, 'desktop', 200))).toEqual(at60)
+})
+
+test('the desktop band reveals its cards in one slot', async ($, on) => {
+  await fireRun($, on, true)
+
+  const tree = await drawnAt($, 'desktop', 160)
+  const slots = slotsOf(tree)
+  expect(slots.length).toBe(1)
+  const cards = nodesOf(tree).filter(isCard)
+  expect(nodesOf(slots[0]?.children).filter(isCard).length).toBe(cards.length)
+  expect(cards.length).toBe(3)
+  const progress = scopeOf(triggerHolding(tree, node => keyOf(node) === 'spindle-bar') ?? {})
+  const stage = scopeOf(triggerHolding(tree, node => node.type === 'Svg' && String(node.props?.alt).startsWith('Stage ')) ?? {})
+  const lane = scopeOf(triggerHolding(tree, node => node.type === 'Svg' && node.props?.alt === 'Full lane') ?? {})
+  expect([progress, stage, lane].every(scope => scope !== undefined)).toBe(true)
+  expect(cards.map(card => card.hover?.display)).toEqual(['flex', 'flex', 'flex'])
+  expect(cards.map(scopeOf).sort()).toEqual([progress, stage, lane].sort())
+  const texts = seenOf(tree).cardTexts
+  expect(texts).toContain('Full lane: interview, spec, build, review until green')
+  expect(cardTextsOf(tree, lane ?? '')).toEqual(['Full lane: interview, spec, build, review until green'])
+  for (const text of ['Time since the run started', 'Hide until an MSP moves to a new activity', 'Press to copy the name']) {
+    expect(texts).not.toContain(text)
+  }
+  for (const svg of nodesOf(tree).filter(node => node.type === 'Svg')) expect(svgSource(svg)).not.toContain('<title>')
+})
+
+test('copying the slug toasts the copy result', async ($, on) => {
+  const world = await fireRun($, on, true)
+
+  const band = await mountBand($, 'desktop', 160)
+  const before = seenOf(await band.drawn())
+  await band.press({ key: 'spindle-slug' })
+  expect(world.copies()).toEqual(['mac-video-audio-and-recorder-ui'])
+  expect(world.toasts()).toContain('Copied mac-video-audio-and-recorder-ui')
+  const after = seenOf(await band.drawn())
+  expect(after.cardTexts).toEqual(before.cardTexts)
+  expect(after.texts).toEqual(before.texts)
+
+  world.answerCopy({ isCopied: false, reason: 'no-clipboard' })
+  const earlier = world.toasts().length
+  await band.press({ key: 'spindle-slug' })
+  const added = world.toasts().slice(earlier)
+  expect(added).toContain("Couldn't copy the name here")
+  expect(added.some(toast => toast.startsWith('Copied'))).toBe(false)
+  expect(seenOf(await band.drawn()).cardTexts).toEqual(before.cardTexts)
 })
 
 test("the fireplace run's pill reads Review R5", async ($, on) => {
   const world = harness(on, fireplace, { now: NOW })
   await world.start($)
 
-  const band = await mountBand($, 'desktop', 160)
-  const seen = seenOf(await band.drawn())
-  expect(barOf(seen)?.alt).toBe('mac-video-audio-and-recorder-ui: Review · R5')
-  const card = seenOf(await band.find({ key: 'spindle-progress-hint' })).cardTexts
+  const tree = await drawnAt($, 'desktop', 160)
+  expect(barOf(seenOf(tree))?.alt).toBe('mac-video-audio-and-recorder-ui: Review · R5')
+  expect(pillOf(seenOf(tree))?.alt).toBe('Review · R5')
+  const card = cardTextsOf(tree, PROGRESS_SCOPE_OF(tree))
   expect(card).toEqual([
     'mic-recovery: Ship · pull request #329',
     'video-starts-like-a-camera: Round 5 · suite running · 7m',
@@ -277,34 +382,19 @@ test('integrate fills the bar', async ($, on) => {
   const world = harness(on, everyPull, { now: NOW })
   await world.start($)
 
-  const band = await mountBand($, 'desktop', 160)
-  const bar = seenOf(await band.find({ key: 'spindle-progress-hint' })).svgs[0]
-  expect(bar?.alt).toBe('rate-limit-api: Integrate')
-})
-
-test('band hover cards and the copy icon', async ($, on) => {
-  const world = await fireRun($, on, true)
-
-  const wide = await seenAt($, 'desktop', 160)
-  expect(wide.cardTexts).toContain('mac-video-audio-and-recorder-ui · Full lane')
-  expect(wide.cardTexts).toContain('Show the Pipeline pane · 1 working now')
-  expect(wide.cardTexts).toContain('Hide until an MSP moves to a new activity')
-
-  const narrow = await mountBand($, 'desktop', 60)
-  expect(seenOf(await narrow.find({ key: 'spindle-name-hint' })).cardTexts).toContain('mac-video-audio-and-recorder-ui · Full lane')
-  await narrow.press({ key: 'spindle-name' })
-
-  expect(world.copies()).toEqual(['mac-video-audio-and-recorder-ui'])
+  const tree = await drawnAt($, 'desktop', 160)
+  const bar = nodesOf(byKey(tree, 'spindle-bar')?.children).find(isTexture)
+  expect(bar?.props?.alt).toBe('rate-limit-api: Integrate')
 })
 
 test('the count button opens the pane', async ($, on) => {
   const world = await fireRun($, on, true)
 
   const band = await mountBand($, 'desktop', 160)
-  const card = seenOf(await band.find({ key: 'spindle-crew-card' }))
-  expect(crabOf(card)).toBeUndefined()
-  expect(card.buttons).toEqual([{ ...COUNT_BUTTON, drawn: '×1' }])
-  expect(card.labels).toEqual(['×1'])
+  const count = seenOf(await band.find({ key: 'spindle-crew' }))
+  expect(crabOf(count)).toBeUndefined()
+  expect(count.buttons).toEqual([{ ...COUNT_BUTTON, drawn: '×1' }])
+  expect(count.labels).toEqual(['×1'])
   await band.press({ key: 'spindle-crew' })
 
   expect(world.opened()).toContain('spindle-run')
@@ -357,7 +447,8 @@ test('desktop band shows slug, lane and Review R1', async ($, on) => {
   expect(slugOf(seen)).toBe('rate-limit-api')
   expect(hasChip(seen, 'Full')).toBe(true)
   const bar = seen.svgs.find(svg => svg.alt === 'rate-limit-api: Review · R1')
-  expect(bar?.source).toContain('Review · R1')
+  expect(bar?.source).toContain('data-part="bar"')
+  expect(pillOf(seen)?.source).toContain('>Review · R1</text>')
   expect(crabOf(seen)?.source).toContain('c-detective')
 })
 
@@ -448,9 +539,14 @@ test('no band Button draws words in place of its glyph', async ($, on) => {
       for (const label of seen.labels) expect([...String(label)].length <= 2 || label === FIRE_SLUG).toBe(true)
     }
   }
-  const narrow = await seenAt($, 'desktop', 60)
-  expect(narrow.buttons.find(button => button.key === 'spindle-name')?.drawn).toBe('◉')
-  expect(narrow.cardTexts).toContain('Press to copy the name')
+  for (const width of [40, 60, 160]) {
+    const desktop = await seenAt($, 'desktop', width)
+    expect(hasButton(desktop, 'spindle-name')).toBe(false)
+    expect(desktop.cardTexts).not.toContain('Press to copy the name')
+  }
+  const terminal = await seenAt($, 'terminal', 40)
+  expect(terminal.buttons.find(button => button.key === 'spindle-name')?.drawn).toBe('◉')
+  expect(terminal.cardTexts).toContain('Press to copy the name')
 })
 
 const allCards = (tree: unknown) => placedOf(tree).filter(one => isCard(one.node)).map(one => one.node)
@@ -459,17 +555,16 @@ test('every band hover card is opaque and wide enough for its words', async ($, 
   await fireRun($, on, true)
 
   for (const surface of ['desktop', 'terminal'] as const) {
-    const band = await mountBand($, surface, 160)
-    const cards = allCards(await band.drawn())
+    const cards = allCards(await drawnAt($, surface, 160))
     expect(cards.length).toBeGreaterThan(0)
     for (const card of cards) {
       expect(card.props?.backgroundColor).toBe('#2a2a29')
       const lines = (card.children ?? []).filter(isDrawn)
       for (const line of lines) expect(line.props?.color).toBe('#ffffff')
       const longest = Math.max(...lines.map(line => [...textOf(line)].length))
-      expect(Number(card.props?.width)).toBeGreaterThan(longest)
+      if (surface === 'desktop') expect(card.props?.width).toBeUndefined()
+      else expect(Number(card.props?.width)).toBeGreaterThan(longest)
     }
-    await band.unmount()
   }
 })
 
@@ -486,23 +581,14 @@ test('a hover card with nothing to say is not drawn', async ($, on) => {
   }
 })
 
-test('pressing the thread name copies it and its card says Copied for two seconds', async ($, on) => {
-  const world = await fireRun($, on, true)
-
-  const band = await mountBand($, 'desktop', 160)
-  await band.press({ key: 'spindle-slug' })
-  expect(world.copies()).toEqual([FIRE_SLUG])
-  expect(seenOf(await band.find({ key: 'spindle-slug-hint' })).cardTexts).toEqual(['Copied'])
-
-  await world.clock.advance(2100)
-  expect(seenOf(await band.find({ key: 'spindle-slug-hint' })).cardTexts).toEqual([`${FIRE_SLUG} · Full lane`, 'Press to copy the name'])
-})
-
 test('the crab carries no hover card', async ($, on) => {
   await fireRun($, on, true)
 
-  const band = await mountBand($, 'desktop', 160)
-  const crab = placedOf(await band.drawn()).find(one => one.node.type === 'Svg' && String(one.node.props?.alt).endsWith(' crab'))
+  const desktop = await drawnAt($, 'desktop', 160)
+  const crab = placedOf(desktop).find(one => one.node.type === 'Svg' && String(one.node.props?.alt).endsWith(' crab'))
   expect(crab?.isInCard).toBe(false)
-  expect(seenOf(await band.find({ key: 'spindle-crew-card' })).svgs).toEqual([])
+  expect(triggerHolding(desktop, node => node === crab?.node)).toBeUndefined()
+  const terminal = await mountBand($, 'terminal', 160)
+  expect(seenOf(await terminal.find({ key: 'spindle-crew-card' })).svgs).toEqual([])
+  await terminal.unmount()
 })

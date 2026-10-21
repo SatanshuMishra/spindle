@@ -52,3 +52,52 @@ export function hint(
     </Box>
   )
 }
+
+export type CardSizing = 'fixed' | 'shrink' | 'grow'
+
+export type Card = { scope: string; lines: readonly string[] }
+
+export type SlotPlace = { top?: number; left?: number; right?: number; bottom?: number }
+
+const sizingOf = (size: CardSizing) =>
+  size === 'grow' ? { flexGrow: 1, flexShrink: 1, minWidth: 0 } : size === 'shrink' ? { flexShrink: 1, minWidth: 0 } : { flexShrink: 0 }
+
+export function cardTrigger(
+  ui: Pick<HintElements, 'Box'>,
+  scope: string,
+  visible: RenderElement | readonly RenderElement[],
+  size: CardSizing = 'fixed',
+): RenderElement {
+  const { Box } = ui
+  return (
+    <Box key={scope} hover={{ scope }} flexDirection="row" alignItems="center" {...sizingOf(size)}>
+      {visible}
+    </Box>
+  )
+}
+
+export const tallestCard = (cards: readonly Card[]) => Math.max(0, ...cards.map(card => card.lines.length))
+
+export function cardSlot(ui: HintElements, key: string, cards: readonly Card[], place: SlotPlace): RenderElement {
+  const { Box, Text } = ui
+  return (
+    <Box key={key} position="absolute" {...place} flexDirection="column">
+      {cards
+        .filter(card => card.lines.length > 0)
+        .map(card => (
+          <Box
+            key={`${card.scope}-card`}
+            display="none"
+            hover={{ scope: card.scope, display: 'flex' }}
+            flexDirection="column"
+            backgroundColor={CARD_BACKGROUND}
+            paddingX={CARD_PAD}
+          >
+            {card.lines.map(line => (
+              <Text color={CARD_TEXT}>{line}</Text>
+            ))}
+          </Box>
+        ))}
+    </Box>
+  )
+}

@@ -2,7 +2,6 @@ import type { On } from 'claude-code'
 import { expect, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
-import { textWidth } from '../hooks/draw/text'
 import { FH, NOW, build, fireplace, fix, review, spec, withFile } from './fixtures/runs'
 import { harness } from './harness'
 
@@ -11,8 +10,8 @@ const FIRE_TIME = '15h 00m'
 const SPEC_TIME = '48m'
 const VIDEO = 'video-starts-like-a-camera'
 const MIN = 60_000
-const STAGES = ['Spec', 'Build', 'Review', 'Fix', 'Ship', 'Integrate', 'Clean-up']
 const PROOF_HINT = 'Acceptance test failed without the work (red)'
+const TIME_HINT = 'Time since the run started'
 const COST_HINT = "Cost of this session's model calls"
 
 const paneProps = (bodyColumns: number) =>
@@ -37,7 +36,7 @@ const mountPane = ($: Engine, surface: 'desktop' | 'terminal', bodyColumns = 100
 
 type Pane = Awaited<ReturnType<typeof mountPane>>
 
-type Drawn = { type?: string; props?: Record<string, unknown>; children?: readonly unknown[] }
+type Drawn = { type?: string; props?: Record<string, unknown>; hover?: { scope?: string; display?: string }; children?: readonly unknown[] }
 type Placed = { node: Drawn; isInCard: boolean }
 
 const isDrawn = (value: unknown): value is Drawn => typeof value === 'object' && value !== null && 'type' in value
@@ -115,14 +114,36 @@ const mspButtons = (seen: Seen) => seen.buttons.filter(button => button.key.star
 
 const roundIn = (row: Row) => Number(/^Round (\d+)/.exec(row.seen.texts.find(text => /^Round \d+/.test(text)) ?? '')?.[1] ?? NaN)
 
-const railOf = (seen: Seen) => seen.svgs.find(svg => svg.alt.startsWith('Stage '))
+const nodesOf = (value: unknown): Drawn[] =>
+  Array.isArray(value) ? value.flatMap(nodesOf) : isDrawn(value) ? [value, ...(value.children ?? []).flatMap(nodesOf)] : []
 
-const railLabels = (source: string) =>
-  [...source.matchAll(/<text[^>]*\sx="([\d.]+)"[^>]*font-size="([\d.]+)"[^>]*>([^<]*)<\/text>/g)].map(match => ({
-    x: Number(match[1]),
-    size: Number(match[2]),
-    name: match[3] ?? '',
-  }))
+const byKey = (tree: unknown, key: string) => nodesOf(tree).find(node => keyOf(node) === key)
+
+const childrenOf = (node: Drawn | undefined) => (node?.children ?? []).filter(isDrawn)
+
+const scopeOf = (node: Drawn) => node.hover?.scope
+
+const slotsOf = (tree: unknown) =>
+  nodesOf(tree).filter(node => node.type === 'Box' && node.props?.position === 'absolute' && nodesOf(node.children).some(isCard))
+
+const triggerHolding = (tree: unknown, holds: (node: Drawn) => boolean) =>
+  nodesOf(tree).find(node => node.type === 'Box' && !isCard(node) && scopeOf(node) !== undefined && nodesOf(node.children).some(holds))
+
+const cardTextsOf = (tree: unknown, scope: string | undefined) =>
+  nodesOf(tree)
+    .filter(node => isCard(node) && scopeOf(node) === scope)
+    .flatMap(card => nodesOf(card.children).filter(node => node.type === 'Text').map(textOf))
+
+const railOf = (tree: unknown) => byKey(tree, 'pane-rail')
+
+const railNames = (tree: unknown) => nodesOf(railOf(tree)).filter(node => node.type === 'Text').map(textOf)
+
+const railMarks = (tree: unknown) =>
+  childrenOf(railOf(tree))
+    .filter(child => child.props?.flexGrow !== 1)
+    .flatMap(child => childrenOf(child).filter(node => node.type === 'Svg'))
+
+const railLinks = (tree: unknown) => childrenOf(railOf(tree)).filter(child => child.props?.flexGrow === 1)
 
 const countOf = (source: string, pattern: RegExp) => [...source.matchAll(pattern)].length
 
@@ -181,7 +202,9 @@ test('the fireplace pane shows MSPs and live workers', async ($, on) => {
   expect(seen.texts.some(text => text.startsWith('~$'))).toBe(true)
   expect(seen.texts).toContain('2')
   expect(seen.texts).toContain(FIRE_TIME)
-  expect(railOf(seen)?.alt).toBe('Stage Review · 1 at Review, 1 at Fix, 2 at Ship')
+  expect(railOf(tree)?.props?.flexDirection).toBe('row')
+  const now = nodesOf(railOf(tree)).find(node => node.type === 'Text' && node.props?.weight === 'semibold')
+  expect(textOf(now ?? {})).toBe('Review')
   expect(mspButtons(seen).map(button => button.label)).toEqual([
     'mic-recovery · Ship · pull request #329',
     'video-starts-like-a-camera · Round 5 · suite running · 7m',
@@ -235,33 +258,121 @@ test('a 36-column pane keeps values whole', async ($, on) => {
   const world = harness(on, fireplace, { now: NOW })
   await world.start($)
 
-  const pane = await mountPane($, 'desktop', 36)
-  const seen = seenOf(await pane.drawn())
-  for (const svg of seen.allSvgs) expect(svg.width).toBeLessThanOrEqual(288)
+  const tree = await drawnAt($, 36)
+  const seen = seenOf(tree)
   expect(seen.texts).toContain('~$0.00')
   expect(seen.texts).toContain(FIRE_TIME)
-  const rail = railOf(seen)
-  expect(railLabels(rail?.source ?? '').map(label => label.name)).toEqual(['Review'])
-  const title = /<title>([^<]*)<\/title>/.exec(rail?.source ?? '')?.[1] ?? ''
-  for (const stage of STAGES) expect(title.split('\n').some(line => line.startsWith(stage))).toBe(true)
+  expect(seen.texts).toContain(FIRE_SLUG)
+  expect(railNames(tree)).toEqual(['Review'])
+  expect(railMarks(tree).map(mark => String(mark.props?.alt))).toEqual([
+    'Spec: done',
+    'Build: done',
+    'Review: now',
+    'Fix: to come',
+    'Ship: to come',
+    'Integrate: to come',
+    'Clean-up: to come',
+  ])
 })
 
-test('a 100-column rail names every stage', async ($, on) => {
-  const world = harness(on, fireplace, { now: NOW })
-  await world.start($)
+test('the desktop rail is built from Boxes and names every stage at 60 columns', async ($, on) => {
+  await fixRun($, on)
 
-  const rail = railOf(seenOf(await drawnAt($, 100)))
-  const labels = railLabels(rail?.source ?? '')
-  expect(labels.map(label => label.name)).toEqual(STAGES)
-  for (const label of labels) {
-    expect(label.x + textWidth(label.name, label.size) / 2).toBeLessThanOrEqual(rail?.width ?? 0)
-    expect(label.x - textWidth(label.name, label.size) / 2).toBeGreaterThanOrEqual(0)
+  for (const columns of [60, 40]) {
+    const tree = await drawnAt($, columns)
+    const rail = railOf(tree)
+    expect(rail?.type).toBe('Box')
+    expect(rail?.props?.flexDirection).toBe('row')
+    const marks = railMarks(tree)
+    expect(marks.length).toBe(7)
+    for (const mark of marks) expect(typeof mark.props?.width).toBe('number')
+    const links = railLinks(tree)
+    expect(links.length).toBe(6)
+    for (const link of links) expect(link.type).toBe('Box')
+    expect(nodesOf(rail).some(node => node.type === 'Svg' && String(node.props?.alt).startsWith('Stage '))).toBe(false)
+    if (columns === 60) expect(railNames(tree)).toEqual(['Spec', 'Build', 'Review', 'Fix', 'Ship', 'Integrate', 'Clean-up'])
+    else expect(railNames(tree)).toEqual(['Fix'])
   }
 })
 
-const titleOf = (source: string) => /<title>([^<]*)<\/title>/.exec(source)?.[1] ?? ''
+test('each MSP lanes bar is two Boxes split by share', async ($, on) => {
+  await fixRun($, on)
 
-test('marks carry tooltips and the tiles carry hover cards', async ($, on) => {
+  const tree = await drawnAt($, 100)
+  const rows = nodesOf(tree).filter(node => node.type === 'Box' && keyOf(node).startsWith('msp-row-'))
+  expect(rows.length).toBe(3)
+  const shares = rows.map(row => {
+    const label = keyOf(row).slice('msp-row-'.length)
+    const bar = byKey(row, `msp-bar-${label}`)
+    const [filled, rest] = childrenOf(bar)
+    expect(childrenOf(bar).length).toBe(2)
+    expect(filled?.props?.width).toBe(0)
+    expect(rest?.props?.width).toBe(0)
+    const done = Number(filled?.props?.flexGrow)
+    expect(Math.abs(done + Number(rest?.props?.flexGrow) - 1)).toBeLessThan(1e-9)
+    return { label, done }
+  })
+  expect(shares).toEqual([
+    { label: 'limiter-core', done: 2 / 2 },
+    { label: 'redis-store', done: 1 / 1 },
+    { label: 'headers-docs', done: 1 / 1 },
+  ])
+  for (const svg of nodesOf(tree).filter(node => node.type === 'Svg')) expect(String(svg.props?.source)).not.toContain('width="100%"')
+})
+
+test('no desktop pane width, drawing or label follows bodyColumns', async ($, on) => {
+  await fireRun($, on)
+
+  const layoutOf = (tree: unknown) => {
+    const labelled = [
+      ...nodesOf(tree).filter(node => node.type === 'Button' && keyOf(node).startsWith('msp-')),
+      ...nodesOf(byKey(tree, 'pane-thread')).slice(0, 1),
+    ]
+    return {
+      sizes: nodesOf(tree)
+        .filter(node => node.type === 'Box' || node.type === 'Svg')
+        .map(node => ({ type: node.type, width: node.props?.width, source: node.type === 'Svg' ? node.props?.source : undefined })),
+      words: labelled.flatMap(node => nodesOf(node.children).filter(one => one.type === 'Text').map(textOf)),
+    }
+  }
+  const narrow = await drawnAt($, 60)
+  const wide = await drawnAt($, 120)
+  expect(layoutOf(wide)).toEqual(layoutOf(narrow))
+  expect(layoutOf(narrow).words).toContain(FIRE_SLUG)
+  const wordsBoxes = nodesOf(narrow).filter(node => node.type === 'Box' && /^worker-.+-\d+-words$/.test(keyOf(node)))
+  expect(wordsBoxes.length).toBeGreaterThan(0)
+  for (const box of wordsBoxes) {
+    expect(box.props?.flexGrow).toBe(1)
+    expect(box.props?.minWidth).toBe(0)
+  }
+})
+
+test('the desktop pane reveals its cards in one slot and draws no SVG tooltips', async ($, on) => {
+  await fireRun($, on)
+
+  const tree = await drawnAt($, 100)
+  const slots = slotsOf(tree)
+  expect(slots.length).toBe(1)
+  const cards = nodesOf(tree).filter(isCard)
+  expect(cards.length).toBeGreaterThan(0)
+  expect(nodesOf(slots[0]?.children).filter(isCard).length).toBe(cards.length)
+  const texts = seenOf(tree).cardTexts
+  expect(texts).not.toContain(COST_HINT)
+  expect(texts).not.toContain(TIME_HINT)
+  expect(cards.some(card => nodesOf(card.children).some(node => node.type === 'Text' && textOf(node) === 'mac-video-audio-and-recorder-ui'))).toBe(true)
+  const scopes = new Set(cards.map(scopeOf))
+  for (const scope of scopes) {
+    expect(nodesOf(tree).some(node => node.type === 'Box' && !isCard(node) && scopeOf(node) === scope)).toBe(true)
+  }
+  for (const key of ['tile-cost', 'tile-agents', 'tile-time', 'pane-rail']) {
+    expect(nodesOf(byKey(tree, key)).some(node => scopeOf(node) !== undefined)).toBe(false)
+  }
+  const svgs = nodesOf(tree).filter(node => node.type === 'Svg')
+  expect(svgs.some(svg => svg.props?.isInteractive === true)).toBe(false)
+  for (const svg of svgs) expect(String(svg.props?.source)).not.toContain('<title>')
+})
+
+test('marks and the slug carry hover cards and the tiles carry none', async ($, on) => {
   answerContext(on, 400_000)
   const world = harness(on, review, { now: NOW })
   world.queueSpawn({ agentId: 'a1', model: 'claude-opus-5-5' })
@@ -270,17 +381,16 @@ test('marks carry tooltips and the tiles carry hover cards', async ($, on) => {
   await spawn($, 'code-reviewer', 'review limiter-core')
   await agentStep($, 'a1')
 
-  const pane = await mountPane($, 'desktop', 100)
-  const seen = seenOf(await pane.drawn())
+  const tree = await drawnAt($, 100)
+  const seen = seenOf(tree)
   const proof = seen.allSvgs.find(svg => svg.alt.startsWith('Proof: '))
-  expect(proof?.isInteractive).toBe(true)
+  expect(proof?.isInteractive).toBe(false)
   expect(proof?.source).toContain('>proof</text>')
-  expect(titleOf(proof?.source ?? '')).toContain(PROOF_HINT)
-  const avatar = seen.allSvgs.find(svg => svg.alt === 'limiter-core crab')
-  expect(avatar?.isInteractive).toBe(true)
-  expect(titleOf(avatar?.source ?? '').split('\n')).toContain('mitosis/limiter-core')
-  expect(seen.allSvgs.some(svg => titleOf(svg.source).startsWith('Context 40%'))).toBe(true)
-  expect(seen.cardTexts).toContain(COST_HINT)
+  expect(cardTextsOf(tree, scopeOf(triggerHolding(tree, node => String(node.props?.alt).startsWith('Proof: ')) ?? {}))).toContain(PROOF_HINT)
+  expect(cardTextsOf(tree, scopeOf(triggerHolding(tree, node => node.props?.alt === 'limiter-core crab') ?? {}))).toContain('mitosis/limiter-core')
+  expect(cardTextsOf(tree, scopeOf(triggerHolding(tree, node => String(node.props?.alt).startsWith('Context ')) ?? {}))).toContain('Context 40%')
+  expect(cardTextsOf(tree, scopeOf(triggerHolding(tree, node => node.type === 'Text' && textOf(node) === 'rate-limit-api') ?? {}))).toEqual(['rate-limit-api'])
+  expect(seen.cardTexts).not.toContain(COST_HINT)
 })
 
 test('press an MSP to see its workers', async ($, on) => {
@@ -372,7 +482,8 @@ test('desktop pane at Fix shows every section', async ($, on) => {
   const seen = seenOf(tree)
   expect(seen.texts).toContain('rate-limit-api')
   expect(seen.svgs.some(svg => svg.alt === 'Full lane')).toBe(true)
-  expect(railOf(seen)?.alt).toBe('Stage Fix · 1 at Fix, 2 at Ship')
+  expect(railNames(tree)).toContain('Fix')
+  expect(railMarks(tree).find(mark => mark.props?.alt === 'Fix: now')).toBeDefined()
   expect(mspButtons(seen).map(button => button.label.split(' · ')[0])).toEqual(['limiter-core', 'redis-store', 'headers-docs'])
   expect(rowsOf(tree).map(row => row.seen.texts[0])).toEqual(['Judge'])
 })
@@ -411,9 +522,11 @@ test('a finished Judge row says its blocker and advisory counts in words', async
   const tree = await pane.drawn()
   const judged = rowsOf(tree).find(row => row.seen.texts[0] === 'Judge' && roundIn(row) === 4)
   const verdict = judged?.seen.svgs.find(svg => svg.source.includes('data-pip'))
+  const card = cardTextsOf(tree, scopeOf(triggerHolding(tree, node => node.type === 'Svg' && node.props?.alt === verdict?.alt && String(node.props?.source).includes('data-pip')) ?? {}))
 
   expect(verdict?.alt).toContain('1 blocker, 1 advisory')
-  expect(titleOf(verdict?.source ?? '')).toContain('1 blocker, 1 advisory')
+  expect(card.some(line => line.includes('1 blocker, 1 advisory'))).toBe(true)
+  expect(card).toContain('Red: blocker · yellow: advisory · grey: other candidate')
 })
 
 const MANY_FINDINGS = {
@@ -529,8 +642,6 @@ test('every pane hover card is opaque', async ($, on) => {
   }
 })
 
-const cardsIn = async (pane: Pane, key: string) => allCards(await pane.find({ key }))
-
 test('no pane hover card opens over a button', async ($, on) => {
   await fireRun($, on)
 
@@ -539,22 +650,12 @@ test('no pane hover card opens over a button', async ($, on) => {
     for (const selection of [null, VIDEO]) {
       if (selection !== null) await press(pane, selection)
       const tree = await pane.drawn()
-      expect(allCards(await pane.find({ key: 'pane-msps' }))).toEqual([])
-      for (const key of ['pane-title', 'pane-tiles']) {
-        expect(placedOf(await pane.find({ key })).some(one => one.node.type === 'Button')).toBe(false)
-      }
-      for (const card of await cardsIn(pane, 'pane-title')) expect((card.children ?? []).filter(isDrawn).length).toBe(1)
-      const heading = placedOf(await pane.find({ key: 'working-heading' })).length
-      const workers = placedOf(await pane.find({ key: 'pane-workers' })).map(one => one.node)
-      workers.forEach((node, i) => {
-        if (!isCard(node)) return
-        expect(node.props?.top).toBeUndefined()
-        expect(node.props?.bottom).toBeDefined()
-        expect(i).toBeGreaterThan(heading)
-      })
-      expect(allCards(tree).length).toBe(
-        (await cardsIn(pane, 'pane-title')).length + (await cardsIn(pane, 'pane-tiles')).length + workers.filter(isCard).length,
-      )
+      for (const key of ['pane-title', 'pane-tiles', 'pane-rail', 'pane-msps', 'pane-workers']) expect(allCards(byKey(tree, key))).toEqual([])
+      const [slot] = slotsOf(tree)
+      expect(slot?.props?.top).toBe(0)
+      expect(slot?.props?.left).toBe(0)
+      expect(nodesOf(slot).some(node => node.type === 'Button')).toBe(false)
+      expect(allCards(slot).length).toBe(allCards(tree).length)
     }
     await pane.unmount()
   }
