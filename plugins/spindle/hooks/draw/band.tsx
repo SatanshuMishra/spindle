@@ -241,12 +241,17 @@ function progressBar(ui: DesktopElements, view: RunView): RenderElement {
   return (
     <Box key="spindle-bar" position="relative" flexDirection="row" flexGrow={1} minWidth={0} overflow="hidden" backgroundColor={TRACK}>
       <Box key="spindle-ticks" position="absolute" top={0} bottom={0} left={0} right={0} flexDirection="row">
+        <Box key="spindle-ticks-offset" flexShrink={0}>
+          <Svg source={svg(pillWidthOf(pill), BAR_H, '')} alt="" width={pillWidthOf(pill)} height={BAR_H} />
+        </Box>
         {ticks}
       </Box>
-      <Box key="spindle-bar-filled" position="relative" flexGrow={share} flexDirection="row" justifyContent="flex-end" overflow="hidden">
-        <Box key="spindle-texture" position="absolute" top={0} left={0}>
+      <Box key="spindle-bar-filled" position="relative" width={0} flexGrow={share}>
+        <Box key="spindle-texture" position="absolute" top={0} left={0} right={0} bottom={0} overflow="hidden">
           <Svg source={barSvg(view)} alt={`${view.slug}: ${pill}`} width={TEXTURE_W} height={BAR_H} />
         </Box>
+      </Box>
+      <Box key="spindle-pill-holder" flexShrink={0}>
         <Svg key="spindle-pill" source={pillSvg(view)} alt="" width={pillWidthOf(pill)} height={BAR_H} />
       </Box>
       <Box key="spindle-bar-rest" width={0} flexGrow={1 - share} />
