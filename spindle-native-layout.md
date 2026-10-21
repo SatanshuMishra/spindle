@@ -1,7 +1,7 @@
 # spindle-native-layout: Rebuild spindle's desktop band and pane on native flex, with simpler tooltips
 Status: active
-Updated: 2026-10-21T20:09:55.896Z
-Next ids: c5 D2 R1 S1
+Updated: 2026-10-21T20:11:14.887Z
+Next ids: c5 D2 R2 S1
 
 ## Goal
 
@@ -29,6 +29,8 @@ Needs: D1.
 - D1 Interphase hand-off: build the approved spec as one MSP of two Steps: One MSP, native-layout, built from the FEATURE branch that pipeline feature-branch cuts.
 
 ## Open risks
+
+- R1 The engine refuses CSS pixel strings for Box sizes (cells or percentages only), so the spec's px minWidth for the filled bar part cannot be built; conformance finding A1 (pill can shrink at Spec) needs a cell-free fix. Bears on c1.
 
 ## Settled, do not reopen
 
