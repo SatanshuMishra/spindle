@@ -1,6 +1,6 @@
 # spindle-native-layout: Rebuild spindle's desktop band and pane on native flex, with simpler tooltips
 Status: active
-Updated: 2026-10-21T19:35:54.547Z
+Updated: 2026-10-21T19:37:52.499Z
 Next ids: c5 D1 R1 S1
 
 ## Goal
@@ -16,11 +16,11 @@ Make the spindle band and Pipeline pane on the Claude desktop surface fill their
 
 ## Where things stand
 
-Not started.
+Interphase bug pathway, interview: intent round asked, awaiting the owner's answer. Readiness clear; receipts config already committed. Draft repro fails on main; a probe removing the bodyColumns-derived bar width and rail width made it pass, confirming the cause at the tree seam.
 
 ## Next step
 
-Run the lighthouse readiness gate, then invoke interphase (bug pathway) with the audit findings and "Interview me first."
+Record the owner's intent answers in docs/specs/spindle-native-layout.decisions.md, then ask the first frontier round (seams, tooltip set, copy fallback, breakpoints, design fidelity, pre-mortem).
 
 ## Decisions in force
 
