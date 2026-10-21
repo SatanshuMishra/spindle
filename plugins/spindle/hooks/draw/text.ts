@@ -5,6 +5,7 @@ export const FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',s
 export const ACCENT = '#8f8cf4'
 export const DONE = '#5fbf8f'
 export const FAIL = '#D0453F'
+export const TRACK = 'rgba(128,128,120,.24)'
 export const LANE_COLORS = ['#1D9E75', '#378ADD', '#BA7517', '#7F77DD', '#D85A30'] as const
 
 export type StageInfo = { id: Stage; name: string; color: string }

@@ -350,7 +350,7 @@ test("the fireplace run's pill reads Review R5", async ($, on) => {
 
   const tree = await drawnAt($, 'desktop', 160)
   expect(barOf(seenOf(tree))?.alt).toBe('mac-video-audio-and-recorder-ui: Review · R5')
-  expect(pillOf(seenOf(tree))?.alt).toBe('Review · R5')
+  expect(pillOf(seenOf(tree))?.alt).toBe('')
   const card = cardTextsOf(tree, PROGRESS_SCOPE_OF(tree))
   expect(card).toEqual([
     'mic-recovery: Ship · pull request #329',

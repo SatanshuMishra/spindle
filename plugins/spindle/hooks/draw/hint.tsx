@@ -4,10 +4,12 @@ import { columnsOf } from './text'
 
 export type HintElements = Pick<Elements['terminal'], 'Box' | 'Text'>
 
+export type CardSizing = 'fixed' | 'shrink' | 'grow'
+
 export type HintPlace = {
   side?: 'above' | 'below'
   edge?: 'start' | 'end'
-  size?: 'fixed' | 'shrink' | 'grow'
+  size?: CardSizing
 }
 
 export const CARD_BACKGROUND = '#2a2a29'
@@ -16,6 +18,9 @@ const CARD_PAD = 1
 const CARD_SPARE = 2
 
 const cardColumns = (lines: readonly string[]) => Math.max(0, ...lines.map(columnsOf)) + 2 * CARD_PAD + CARD_SPARE
+
+const sizingOf = (size: CardSizing) =>
+  size === 'grow' ? { flexGrow: 1, flexShrink: 1, minWidth: 0 } : size === 'shrink' ? { flexShrink: 1, minWidth: 0 } : { flexShrink: 0 }
 
 export function hint(
   ui: HintElements,
@@ -27,10 +32,8 @@ export function hint(
   const { Box, Text } = ui
   const vertical = side === 'above' ? { top: -lines.length } : { bottom: -lines.length }
   const horizontal = edge === 'start' ? { left: 0 } : { right: 0 }
-  const sizing =
-    size === 'grow' ? { flexGrow: 1, flexShrink: 1, minWidth: 0 } : size === 'shrink' ? { flexShrink: 1, minWidth: 0 } : { flexShrink: 0 }
   return (
-    <Box key={key} flexDirection="row" alignItems="center" gap="xs" {...sizing}>
+    <Box key={key} flexDirection="row" alignItems="center" gap="xs" {...sizingOf(size)}>
       {visible}
       {lines.length === 0 ? null : (
         <Box
@@ -53,14 +56,9 @@ export function hint(
   )
 }
 
-export type CardSizing = 'fixed' | 'shrink' | 'grow'
-
 export type Card = { scope: string; lines: readonly string[] }
 
-export type SlotPlace = { top?: number; left?: number; right?: number; bottom?: number }
-
-const sizingOf = (size: CardSizing) =>
-  size === 'grow' ? { flexGrow: 1, flexShrink: 1, minWidth: 0 } : size === 'shrink' ? { flexShrink: 1, minWidth: 0 } : { flexShrink: 0 }
+export type SlotPlace = { top: number; left: number }
 
 export function cardTrigger(
   ui: Pick<HintElements, 'Box'>,

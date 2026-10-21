@@ -9,7 +9,7 @@ import { CRAB_CSS, colorOf, costumeOf, crab } from './crew'
 import { cardSlot, cardTrigger, hint, tallestCard } from './hint'
 import type { Card } from './hint'
 import { stageSummary, togglePane } from './pane'
-import { ACCENT, CHIP_H, DONE, FONT, STAGE_TABLE, THEME_CSS, chipSvg, chipWidthOf, noise, stageIndex, stageInfo, svg, xml } from './text'
+import { ACCENT, CHIP_H, DONE, FONT, STAGE_TABLE, THEME_CSS, TRACK, chipSvg, chipWidthOf, noise, stageIndex, stageInfo, svg, xml } from './text'
 
 const viewState = atom({ plugin: 'spindle', key: 'view' } as const, null)
 const dismissedState = atom({ plugin: 'spindle', key: 'dismissedAt' } as const, null)
@@ -24,7 +24,6 @@ const CRAB_W = 24
 const CRAB_H = 22
 const BAR_SPARE_COLUMNS = 12
 const BAR_COLUMNS = 60
-const TRACK = 'rgba(128,128,120,.24)'
 const DOT_PX = 10
 const DOT = '●'
 const ICON = '◉'
@@ -235,7 +234,7 @@ function progressBar(ui: DesktopElements, view: RunView): RenderElement {
   const ticks = STAGE_TABLE.map((_, k) => (
     <Box key={`spindle-tick-${k}`} width={0} flexGrow={1} flexDirection="row" alignItems="center">
       {k > 0 && k / STAGE_TABLE.length > share + 0.01 ? (
-        <Svg source={TICK_SVG} alt="stage boundary" width={TICK_W} height={TICK_H} />
+        <Svg source={TICK_SVG} alt="" width={TICK_W} height={TICK_H} />
       ) : null}
     </Box>
   ))
@@ -248,7 +247,7 @@ function progressBar(ui: DesktopElements, view: RunView): RenderElement {
         <Box key="spindle-texture" position="absolute" top={0} left={0}>
           <Svg source={barSvg(view)} alt={`${view.slug}: ${pill}`} width={TEXTURE_W} height={BAR_H} />
         </Box>
-        <Svg key="spindle-pill" source={pillSvg(view)} alt={pill} width={pillWidthOf(pill)} height={BAR_H} />
+        <Svg key="spindle-pill" source={pillSvg(view)} alt="" width={pillWidthOf(pill)} height={BAR_H} />
       </Box>
       <Box key="spindle-bar-rest" width={0} flexGrow={1 - share} />
     </Box>

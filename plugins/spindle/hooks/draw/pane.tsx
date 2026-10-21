@@ -16,6 +16,7 @@ import {
   FONT,
   LANE_COLORS,
   STAGE_TABLE,
+  TRACK,
   chipSvg,
   chipWidthOf,
   columnsOf,
@@ -45,7 +46,6 @@ const RAIL_MARK = 24
 const STRIP_W = 1600
 const LINK_H = 2
 const LANE_BAR_H = 4
-const TRACK = 'rgba(128,128,120,.24)'
 const VERDICT_ROOM = 200
 const AVATAR_W = 44
 const AVATAR_H = 36
@@ -438,7 +438,7 @@ function rail(ui: DesktopElements, view: RunView, isEveryName: boolean): RenderE
     ) : null
     const link = (
       <Box key={`rail-link-${i}`} flexGrow={1} minWidth={0} overflow="hidden">
-        <Svg source={linkSvg(i < current ? DONE : TRACK)} alt={`${stage.name} to ${STAGE_TABLE[i + 1]?.name ?? ''}`} width={STRIP_W} height={RAIL_MARK} />
+        <Svg source={linkSvg(i < current ? DONE : TRACK)} alt="" width={STRIP_W} height={RAIL_MARK} />
       </Box>
     )
     return [
@@ -466,7 +466,7 @@ function lanesBar(ui: DesktopElements, msp: MspRow, i: number): RenderElement {
         <Svg source={stripSvg(LANE_BAR_H, fill)} alt={`${msp.label}: ${lanesWords(msp)}`} width={STRIP_W} height={LANE_BAR_H} />
       </Box>
       <Box key={`msp-bar-rest-${msp.label}`} width={0} flexGrow={1 - share} overflow="hidden" backgroundColor={TRACK}>
-        <Svg source={stripSvg(LANE_BAR_H, TRACK)} alt={`${msp.label}: lanes still to build`} width={STRIP_W} height={LANE_BAR_H} />
+        <Svg source={stripSvg(LANE_BAR_H, TRACK)} alt="" width={STRIP_W} height={LANE_BAR_H} />
       </Box>
     </Box>
   )
