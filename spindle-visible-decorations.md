@@ -1,6 +1,6 @@
 # spindle-visible-decorations: Restore the spindle desktop progress bar and rail connectors that empty-alt Svgs hid
 Status: parked
-Updated: 2026-10-21T22:18:30.884Z
+Updated: 2026-10-21T22:37:56.897Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -16,7 +16,7 @@ The desktop band's progress bar and the pane's rail connectors and lanes remaind
 
 ## Where things stand
 
-The fix is on main (SatanshuMishra/spindle#16) and the run is cleaned up, nothing kept. The installed spindle plugin was reinstalled from main and carries the fix, still labelled 0.2.3; the version bump SatanshuMishra/spindle#17 (0.2.4) is open, assigned to the owner.
+The owner's first hand check of 0.2.4 showed the bar texture and rail connectors as hairlines and the bar's ends square: the desktop shrinks a Svg wider than its box to the box width at its set height. SatanshuMishra/spindle#18 fixed it (strips preserveAspectRatio none, texture and a two-half rounded track cropped with slice) and is merged; the installed plugin is 0.2.5 and the fix worktree and local branch are removed.
 
 ## Next step
 
