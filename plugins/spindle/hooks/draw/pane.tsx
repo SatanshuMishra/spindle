@@ -221,7 +221,7 @@ function railMarkSvg(stage: StageInfo, mark: RailMark): string {
 }
 
 const stripSvg = (H: number, color: string, y = 0, h = H) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" width="${STRIP_W}" height="${H}" viewBox="0 0 ${STRIP_W} ${H}"><rect y="${y}" width="${STRIP_W}" height="${h}" fill="${color}"/></svg>`
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${STRIP_W}" height="${H}" viewBox="0 0 ${STRIP_W} ${H}" preserveAspectRatio="none"><rect y="${y}" width="${STRIP_W}" height="${h}" fill="${color}"/></svg>`
 
 const linkSvg = (color: string) => stripSvg(RAIL_MARK, color, RAIL_MARK / 2 - LINK_H / 2, LINK_H)
 

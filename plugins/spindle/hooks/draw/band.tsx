@@ -17,6 +17,8 @@ const dismissedState = atom({ plugin: 'spindle', key: 'dismissedAt' } as const, 
 const BAR_H = 16
 const CELL = 3
 const TEXTURE_W = 1600
+const CROP_FROM_START = 'xMinYMid slice'
+const CROP_FROM_END = 'xMaxYMid slice'
 const TEXTURE_DENSITY = 0.65
 const TICK_W = 2
 const TICK_H = 8
@@ -131,13 +133,20 @@ function barSvg(view: RunView): string {
         : '',
     ).join(''),
   ).join('')
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${TEXTURE_W}" height="${BAR_H}" viewBox="0 0 ${TEXTURE_W} ${BAR_H}"><style>
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${TEXTURE_W}" height="${BAR_H}" viewBox="0 0 ${TEXTURE_W} ${BAR_H}" preserveAspectRatio="${CROP_FROM_START}"><style>
 .t0,.t1,.t2,.t3{animation:tw ${view.isFinished ? 3.2 : 2.2}s ease-in-out infinite}
 .t1{animation-duration:2.8s;animation-delay:-.7s}.t2{animation-duration:1.9s;animation-delay:-1.3s}.t3{animation-duration:3.3s;animation-delay:-.4s}
 @keyframes tw{0%,100%{opacity:1}50%{opacity:${view.isFinished ? 0.8 : 0.3}}}
 @media (prefers-reduced-motion: reduce){.t0,.t1,.t2,.t3{animation:none}}
-</style><g data-part="bar" fill="${barColorOf(view)}">${dots}</g></svg>`
+</style><clipPath id="spindle-bar-start"><rect width="${TEXTURE_W + BAR_H}" height="${BAR_H}" rx="${BAR_H / 2}"/></clipPath><g data-part="bar" fill="${barColorOf(view)}" clip-path="url(#spindle-bar-start)">${dots}</g></svg>`
 }
+
+const trackHalfSvg = (crop: string, x: number) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${TEXTURE_W}" height="${BAR_H}" viewBox="0 0 ${TEXTURE_W} ${BAR_H}" preserveAspectRatio="${crop}"><rect data-part="track" x="${x}" width="${TEXTURE_W + BAR_H}" height="${BAR_H}" rx="${BAR_H / 2}" fill="${TRACK}"/></svg>`
+
+const TRACK_START_SVG = trackHalfSvg(CROP_FROM_START, 0)
+
+const TRACK_END_SVG = trackHalfSvg(CROP_FROM_END, -BAR_H)
 
 function pillSvg(view: RunView): string {
   const label = pillText(view)
@@ -239,17 +248,25 @@ function progressBar(ui: DesktopElements, view: RunView): RenderElement {
     </Box>
   ))
   return (
-    <Box key="spindle-bar" position="relative" flexDirection="row" flexGrow={1} minWidth={0} overflow="hidden" backgroundColor={TRACK}>
+    <Box key="spindle-bar" position="relative" flexDirection="row" flexGrow={1} minWidth={0} overflow="hidden">
+      <Box key="spindle-track" position="absolute" top={0} bottom={0} left={0} right={0} flexDirection="row">
+        <Box key="spindle-track-start" width={0} flexGrow={1} overflow="hidden">
+          <Svg source={TRACK_START_SVG} alt="progress track, left end" width={TEXTURE_W} height={BAR_H} />
+        </Box>
+        <Box key="spindle-track-end" width={0} flexGrow={1} overflow="hidden">
+          <Svg source={TRACK_END_SVG} alt="progress track, right end" width={TEXTURE_W} height={BAR_H} />
+        </Box>
+      </Box>
       <Box key="spindle-ticks" position="absolute" top={0} bottom={0} left={0} right={0} flexDirection="row">
         <Box key="spindle-ticks-offset" flexShrink={0}>
           <Svg source={svg(pillWidthOf(pill), BAR_H, '')} alt="space for the stage label" width={pillWidthOf(pill)} height={BAR_H} />
         </Box>
         {ticks}
       </Box>
-      <Box key="spindle-bar-filled" width={0} flexGrow={share} overflow="hidden">
+      <Box key="spindle-bar-filled" position="relative" width={0} flexGrow={share} overflow="hidden">
         <Svg source={barSvg(view)} alt={`${Math.round(share * 100)}% of the run done`} width={TEXTURE_W} height={BAR_H} />
       </Box>
-      <Box key="spindle-pill-holder" flexShrink={0}>
+      <Box key="spindle-pill-holder" position="relative" flexShrink={0}>
         <Svg key="spindle-pill" source={pillSvg(view)} alt={`${view.slug}: ${pill}`} width={pillWidthOf(pill)} height={BAR_H} />
       </Box>
       <Box key="spindle-bar-rest" width={0} flexGrow={1 - share} />

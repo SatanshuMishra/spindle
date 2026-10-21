@@ -690,3 +690,21 @@ test('no pane hover card opens over a button', async ($, on) => {
     await pane.unmount()
   }
 })
+
+for (const [name, run] of [['fireplace', fireRun], ['fix', fixRun]] as const) {
+  test(`the ${name} pane's connectors and lanes strips keep their thickness when their box is narrower than the drawing`, async ($, on) => {
+    await run($, on)
+
+    for (const width of [60, 100, 160]) {
+      const tree = await drawnAt($, width)
+      const strips = nodesOf(tree).filter(node => /^(rail-link-|msp-bar-(done|rest)-)/.test(keyOf(node)))
+      const svgs = strips.flatMap(strip => childrenOf(strip).filter(child => child.type === 'Svg'))
+      expect(strips.some(strip => keyOf(strip).startsWith('rail-link-'))).toBe(true)
+      expect(strips.some(strip => keyOf(strip).startsWith('msp-bar-done-'))).toBe(true)
+      expect(svgs.length).toBe(strips.length)
+      for (const svg of svgs) {
+        expect(String(svg.props?.source ?? '')).toContain('preserveAspectRatio="none"')
+      }
+    }
+  })
+}
