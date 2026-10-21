@@ -1,6 +1,6 @@
 # spindle-native-layout: Rebuild spindle's desktop band and pane on native flex, with simpler tooltips
 Status: active
-Updated: 2026-10-21T20:37:04.341Z
+Updated: 2026-10-21T20:37:23.838Z
 Next ids: c5 D3 R3 S1
 
 ## Goal
@@ -16,11 +16,11 @@ Make the spindle band and Pipeline pane on the Claude desktop surface fill their
 
 ## Where things stand
 
-MSP native-layout at 90ff5e8 on mitosis/native-layout (worktree ~/.mitosis/runs/spindle/spindle-native-layout/trees/native-layout). Round 1 verdict loop. C2, C3, C4, C5 fixed (receipt plugins/spindle/tests/alt-meaning.test.tsx; suite 171 pass; selecting check empty). C1 (bar fill overstates progress) diagnosed requirement-wrong: criterion 5.2's px minWidth is unbuildable. No security reviewer (no trust boundary); no smoke run (the desktop app cannot be driven).
+MSP native-layout at 90ff5e8 on mitosis/native-layout (worktree ~/.mitosis/runs/spindle/spindle-native-layout/trees/native-layout). Round 1 verdict loop. C2, C3, C4, C5 fixed (receipt plugins/spindle/tests/alt-meaning.test.tsx; suite 171 pass; selecting check empty). C1 (bar fill overstates progress) is under amendment 1 (spec amended and handed off, plan clean); its build is running, logging to <home>/amend-1-build.log. No security reviewer (no trust boundary); no smoke run (the desktop app cannot be driven).
 
 ## Next step
 
-Run <home>/amend-1.zsh --plan-only, then build it, merge its branch into mitosis/native-layout in the MSP worktree, rerun pipeline obligations with criteria plus 5.2, then review round 2 (code-reviewer; conformance-auditor on 5.2).
+When the amend-1 build reports, read its last JSON line, merge its branch into mitosis/native-layout in the MSP worktree, rerun pipeline obligations with criteria plus 5.2, then review round 2 (code-reviewer; conformance-auditor on 5.2).
 
 Needs: D2.
 
