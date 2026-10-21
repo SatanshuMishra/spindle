@@ -1,6 +1,6 @@
 # spindle-native-layout: Rebuild spindle's desktop band and pane on native flex, with simpler tooltips
 Status: active
-Updated: 2026-10-21T20:11:16.649Z
+Updated: 2026-10-21T20:22:49.309Z
 Next ids: c5 D2 R2 S1
 
 ## Goal
@@ -16,11 +16,11 @@ Make the spindle band and Pipeline pane on the Claude desktop surface fill their
 
 ## Where things stand
 
-MSP native-layout committed on mitosis/native-layout at 00a4a85 (gate 12 pass, 2 inert terminal checks); worktree ~/.mitosis/runs/spindle/spindle-native-layout/trees/native-layout. Review round 1 running: code-reviewer and conformance-auditor; no security reviewer (no trust boundary touched); no smoke run (the desktop app cannot be driven).
+MSP native-layout committed on mitosis/native-layout at 00a4a85 (gate 12 pass, 2 inert terminal checks); worktree ~/.mitosis/runs/spindle/spindle-native-layout/trees/native-layout. Round 1 verdict diagnose: blockers C1 (bar fill overstates progress, HIGH) and C2 (lanes remainder alt, MEDIUM); advisories C3, C4, C5. Diagnosis agents for both kinds running. No security reviewer (no trust boundary); no smoke run (the desktop app cannot be driven).
 
 ## Next step
 
-Collect both reviewers' JSON arrays into <home>/review/round-1/native-layout.findings.json, then pipeline candidates, validator if needed, record and verdict.
+Save each diagnosis as <home>/review/round-1/native-layout.<kind slug>.diagnosis.json, record with pipeline diagnosis, rerun pipeline verdict, then fix fixable kinds with receipt tests plus advisories C3-C5 in the worktree.
 
 Needs: D1.
 
