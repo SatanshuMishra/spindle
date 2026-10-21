@@ -1,7 +1,7 @@
 # spindle-native-layout: Rebuild spindle's desktop band and pane on native flex, with simpler tooltips
 Status: active
-Updated: 2026-10-21T20:36:59.853Z
-Next ids: c5 D3 R2 S1
+Updated: 2026-10-21T20:37:04.341Z
+Next ids: c5 D3 R3 S1
 
 ## Goal
 
@@ -20,9 +20,9 @@ MSP native-layout at 90ff5e8 on mitosis/native-layout (worktree ~/.mitosis/runs/
 
 ## Next step
 
-Amend the spec for C1 through interphase:bug as MSP native-layout-amend-1, record its hand-off, build it with <home>/amend-1.zsh into mitosis/native-layout, rerun obligations, then review round 2.
+Run <home>/amend-1.zsh --plan-only, then build it, merge its branch into mitosis/native-layout in the MSP worktree, rerun pipeline obligations with criteria plus 5.2, then review round 2 (code-reviewer; conformance-auditor on 5.2).
 
-Needs: D1, R1.
+Needs: D2.
 
 ## Decisions in force
 
@@ -31,7 +31,7 @@ Needs: D1, R1.
 
 ## Open risks
 
-- R1 The engine refuses CSS pixel strings for Box sizes and heights (cells or percentages only), so spec 5.2's px minWidth and the line 87 assumption cannot be built; the diagnosed fix (zero-width filled Box, pill as content minimum, absolute inset-0 texture clip) relies on the desktop applying flex automatic minimum size, provable only by 5.11. Bears on c1.
+- R2 The real desktop paint of the amended bar (pill whole at Spec, fill end before the next tick) is provable only by the owner's 5.11 hand check. Bears on c1.
 
 ## Settled, do not reopen
 
