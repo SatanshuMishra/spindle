@@ -64,3 +64,7 @@ The pane `/spindle` toggles, showing the whole run view.
 
 **Crew**:
 The crabs that stand for who is working: Captain, Scribe, Builder, Detective, Judge and Courier, each a costume on the same clay crab.
+
+**Card slot**:
+The one fixed place in the band or the run pane where a hover card appears; every element with a card reveals it there, so at most one shows.
+_Avoid_: tooltip, hint

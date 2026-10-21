@@ -5,6 +5,7 @@ export const FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',s
 export const ACCENT = '#8f8cf4'
 export const DONE = '#5fbf8f'
 export const FAIL = '#D0453F'
+export const TRACK = 'rgba(128,128,120,.24)'
 export const LANE_COLORS = ['#1D9E75', '#378ADD', '#BA7517', '#7F77DD', '#D85A30'] as const
 
 export type StageInfo = { id: Stage; name: string; color: string }
@@ -71,14 +72,8 @@ export function statusMark(x: number, y: number, status: Mark, color: string): s
   return `<circle cx="${x}" cy="${y}" r="5" fill="none" class="sv-mstroke" stroke-width="1.4"/>`
 }
 
-export const tip = (lines: readonly string[]) =>
-  lines.length === 0 ? '' : `<title>${xml(lines.join('\n'))}</title><rect width="100%" height="100%" fill="transparent"/>`
-
-export const svg = (W: number, H: number, body: string, tipLines: readonly string[] = []) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${tip(tipLines)}${THEME_CSS}${CRAB_CSS}${body}</svg>`
-
-export const fluidSvg = (H: number, body: string, tipLines: readonly string[] = []) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="${H}" overflow="hidden">${tip(tipLines)}${THEME_CSS}${body}</svg>`
+export const svg = (W: number, H: number, body: string) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${THEME_CSS}${CRAB_CSS}${body}</svg>`
 
 export const CHIP_H = 16
 const CHIP_PX = 10.5
