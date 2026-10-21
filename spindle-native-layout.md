@@ -1,7 +1,7 @@
 # spindle-native-layout: Rebuild spindle's desktop band and pane on native flex, with simpler tooltips
 Status: active
-Updated: 2026-10-21T20:31:05.264Z
-Next ids: c5 D2 R2 S1
+Updated: 2026-10-21T20:36:59.853Z
+Next ids: c5 D3 R2 S1
 
 ## Goal
 
@@ -27,6 +27,7 @@ Needs: D1, R1.
 ## Decisions in force
 
 - D1 Interphase hand-off: build the approved spec as one MSP of two Steps: One MSP, native-layout, built from the FEATURE branch that pipeline feature-branch cuts.
+- D2 Amendment 1 hand-off: build band-bar-fill as MSP native-layout-amend-1 into mitosis/native-layout: Pill as its own fixed piece with a pill-width tick offset. Spec 5.2 rows 1 and 3, D3, the pixel-length assumption and 5.11 amended; one Step band-bar-fill, MSP native-layout-amend-1, built by <home>/amend-1.zsh with --feature-branch mitosis/native-layout and --no-push, then merged into mitosis/native-layout.
 
 ## Open risks
 
