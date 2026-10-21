@@ -325,11 +325,15 @@ function pathTo(from: Drawn | undefined, holds: (node: Drawn) => boolean, above:
   return childrenOf(from).reduce<Drawn[] | null>((found, child) => found ?? pathTo(child, holds, [...above, from]), null)
 }
 
-const absoluteBetween = (bar: Drawn | undefined, holds: (node: Drawn) => boolean) =>
-  (pathTo(bar, holds) ?? [{ type: 'Box', props: { key: 'not found', position: 'absolute' } }])
-    .slice(1)
-    .filter(node => node.type === 'Box' && node.props?.position === 'absolute')
-    .map(keyOf)
+function absoluteBetween(bar: Drawn | undefined, holds: (node: Drawn) => boolean): string[] {
+  const path = pathTo(bar, holds)
+  return path === null
+    ? ['not found']
+    : path
+        .slice(1)
+        .filter(node => node.type === 'Box' && node.props?.position === 'absolute')
+        .map(keyOf)
+}
 
 const tickAltsOf = (tree: unknown) =>
   childrenOf(byKey(tree, 'spindle-ticks'))
