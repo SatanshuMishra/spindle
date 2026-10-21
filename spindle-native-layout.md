@@ -1,6 +1,6 @@
 # spindle-native-layout: Rebuild spindle's desktop band and pane on native flex, with simpler tooltips
 Status: active
-Updated: 2026-10-21T19:54:53.004Z
+Updated: 2026-10-21T19:55:32.424Z
 Next ids: c5 D2 R1 S1
 
 ## Goal
@@ -16,11 +16,11 @@ Make the spindle band and Pipeline pane on the Claude desktop surface fill their
 
 ## Where things stand
 
-Interphase bug pathway, interview: intent I1-I3 approved and recorded; frontier round 1 (Q1-Q11) asked, awaiting answers. Cause confirmed by probe at the tree seam.
+Spec handed off (read-back approved; spec reviewer's seven issues fixed). FEATURE branch fix/spindle-native-layout cut from main 343fbb9. Plan id 76092d037270 (1 Lane, 1 MSP native-layout). First mitosis build running; log at <home>/build-1.log.
 
 ## Next step
 
-Write the run home ~/.mitosis/spindle/spindle-native-layout (CHARTER.md, worker-rules.txt, dispatch.zsh, items.json, graph.json, run.zsh) and run run.zsh --plan-only, then the first build.
+When the build ends, read the last JSON line of <home>/build-1.log; then review round 1 of MSP native-layout (diff, obligations, suite, code-reviewer, conformance-auditor, smoke run note).
 
 Needs: D1.
 
