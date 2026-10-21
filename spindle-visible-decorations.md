@@ -1,7 +1,7 @@
 # spindle-visible-decorations: Restore the spindle desktop progress bar and rail connectors that empty-alt Svgs hid
 Status: active
-Updated: 2026-10-21T21:51:12.799Z
-Next ids: c5 D2 R2 S1
+Updated: 2026-10-21T21:57:22.237Z
+Next ids: c5 D3 R2 S1
 
 ## Goal
 
@@ -27,6 +27,7 @@ Needs: D1.
 ## Decisions in force
 
 - D1 Interphase hand-off: build the visible-decorations spec as one MSP of one Step: One MSP, visible-decorations, one Step fix-visible-decorations, built by run.zsh from the FEATURE branch fix/spindle-visible-decorations.
+- D2 Ship boundary: push mitosis/visible-decorations and open its pull request ready for review: Ship now: SHIP=1 run.zsh --resume without --proven-head (the head moved past the reviewed commit), open the pull request against fix/spindle-visible-decorations via GitHub MCP, assign it to the owner and post the saved comment.
 
 ## Open risks
 
