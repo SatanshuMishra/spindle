@@ -1,6 +1,6 @@
 # spindle-native-layout: Rebuild spindle's desktop band and pane on native flex, with simpler tooltips
 Status: active
-Updated: 2026-10-21T20:11:14.887Z
+Updated: 2026-10-21T20:11:16.649Z
 Next ids: c5 D2 R2 S1
 
 ## Goal
