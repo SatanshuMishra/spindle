@@ -1,7 +1,7 @@
 # spindle-visible-decorations: Restore the spindle desktop progress bar and rail connectors that empty-alt Svgs hid
 Status: active
-Updated: 2026-10-21T21:41:04.181Z
-Next ids: c5 D2 R1 S1
+Updated: 2026-10-21T21:41:05.944Z
+Next ids: c5 D2 R2 S1
 
 ## Goal
 
@@ -29,6 +29,8 @@ Needs: D1.
 - D1 Interphase hand-off: build the visible-decorations spec as one MSP of one Step: One MSP, visible-decorations, one Step fix-visible-decorations, built by run.zsh from the FEATURE branch fix/spindle-visible-decorations.
 
 ## Open risks
+
+- R1 The cause (the desktop does not draw an Svg with an empty alt) is inferred from the owner's screenshots, not confirmed against the desktop renderer, which is not in the local app bundle. Bears on c4.
 
 ## Settled, do not reopen
 
