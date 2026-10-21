@@ -1,6 +1,6 @@
 # spindle-native-layout: Rebuild spindle's desktop band and pane on native flex, with simpler tooltips
 Status: active
-Updated: 2026-10-21T20:44:05.687Z
+Updated: 2026-10-21T20:47:34.347Z
 Next ids: c5 D3 R3 S1
 
 ## Goal
@@ -9,10 +9,10 @@ Make the spindle band and Pipeline pane on the Claude desktop surface fill their
 
 ## Done when
 
-- [ ] c1 Desktop band and pane derive no pixel widths from bodyColumns; the bar, rail and rows fill their width through flex
-- [ ] c2 Only one tooltip mechanism remains, cards never cover neighbouring triggers, and no SVG title tooltips remain
-- [ ] c3 Copy feedback reflects $.ui.copy's result and the copiedState timer is gone
-- [ ] c4 claude plugin test plugins/spindle and scripts/check.sh pass
+- [x] c1 Desktop band and pane derive no pixel widths from bodyColumns; the bar, rail and rows fill their width through flex evidence: review round 2 green at c50fb77; conformance audit MET 5.1, 5.2, 5.4, 5.7, 5.8 (no desktop width follows bodyColumns; bar, rail and lanes bars are flex Boxes); real paint is the 5.11 owner check (R2)
+- [x] c2 Only one tooltip mechanism remains, cards never cover neighbouring triggers, and no SVG title tooltips remain evidence: conformance audit MET 5.5 and 5.9 at c50fb77: one card slot per site via hover scope, no isInteractive Svg, no <title> in any source
+- [x] c3 Copy feedback reflects $.ui.copy's result and the copiedState timer is gone evidence: conformance audit MET 5.6 at c50fb77: toast 'Copied <slug>' on isCopied true, 'Couldn't copy the name here' on false, no card change; copiedState removed from types
+- [x] c4 claude plugin test plugins/spindle and scripts/check.sh pass evidence: round 2 suite at c50fb77: claude plugin test plugins/spindle 171 pass 0 fail, scripts/check.sh exit 0 (<home>/review/round-2/native-layout.suite.txt)
 
 ## Where things stand
 
@@ -20,9 +20,9 @@ MSP native-layout at c50fb77 on mitosis/native-layout (worktree ~/.mitosis/runs/
 
 ## Next step
 
-When both round 2 reviewers report, collect their arrays into <home>/review/round-2/native-layout.findings.json, then candidates, validator, record and verdict as in round 1.
+Ship: pipeline comment and promote, record the ship boundary, SHIP=1 <home>/run.zsh --resume --proven-head native-layout=c50fb773fbd85662fb9f0b8f66205b28f37af93a, open the PR via GitHub MCP, assign it, post the comment, park the thread.
 
-Needs: D2.
+Needs: D1, D2, R2.
 
 ## Decisions in force
 
