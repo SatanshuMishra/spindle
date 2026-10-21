@@ -1,6 +1,6 @@
 # spindle-native-layout: Rebuild spindle's desktop band and pane on native flex, with simpler tooltips
 Status: active
-Updated: 2026-10-21T20:31:02.757Z
+Updated: 2026-10-21T20:31:05.264Z
 Next ids: c5 D2 R2 S1
 
 ## Goal
@@ -30,7 +30,7 @@ Needs: D1, R1.
 
 ## Open risks
 
-- R1 The engine refuses CSS pixel strings for Box sizes (cells or percentages only), so the spec's px minWidth for the filled bar part cannot be built; conformance finding A1 (pill can shrink at Spec) needs a cell-free fix. Bears on c1.
+- R1 The engine refuses CSS pixel strings for Box sizes and heights (cells or percentages only), so spec 5.2's px minWidth and the line 87 assumption cannot be built; the diagnosed fix (zero-width filled Box, pill as content minimum, absolute inset-0 texture clip) relies on the desktop applying flex automatic minimum size, provable only by 5.11. Bears on c1.
 
 ## Settled, do not reopen
 
