@@ -1,6 +1,6 @@
 # spindle-visible-decorations: Restore the spindle desktop progress bar and rail connectors that empty-alt Svgs hid
 Status: parked
-Updated: 2026-10-21T22:02:13.595Z
+Updated: 2026-10-21T22:07:51.389Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -16,7 +16,7 @@ The desktop band's progress bar and the pane's rail connectors and lanes remaind
 
 ## Where things stand
 
-SatanshuMishra/spindle#15 (mitosis/visible-decorations into fix/spindle-visible-decorations) is open, ready for review, assigned to the owner, with the review notes comment. Review round 1 green; advisory C2 fixed; ADR-0007 on the branch.
+SatanshuMishra/spindle#15 merged into fix/spindle-visible-decorations (origin at b8aac85); integration-ready reports ready. Integration's lighthouse run 1 is next, results in <home>/lighthouse/run-1.
 
 ## Next step
 
