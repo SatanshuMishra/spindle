@@ -1,6 +1,6 @@
 # spindle-native-layout: Rebuild spindle's desktop band and pane on native flex, with simpler tooltips
 Status: active
-Updated: 2026-10-21T20:37:23.838Z
+Updated: 2026-10-21T20:37:26.481Z
 Next ids: c5 D3 R3 S1
 
 ## Goal
@@ -39,5 +39,5 @@ Needs: D2.
 
 - Audit: this session's diagnosis, 2026-10-21 (cause: layout computed in the hook from bodyColumns x 8px; tooltips via two systems; copy result ignored)
 - API: Claude Code 2.1.300 plugin-authoring types claude-code.d.ts
-- Spec files: docs/specs/spindle-native-layout.{md,decisions.md,record.json,items.json,repro.test.tsx}
-- Run home <home> = ~/.mitosis/spindle/spindle-native-layout (CHARTER.md, run.zsh, rounds.md, review/); run dir ~/.mitosis/runs/spindle/spindle-native-layout
+- Spec files: docs/specs/spindle-native-layout.{md,decisions.md,record.json,items.json,amend-1.items.json,repro.test.tsx}
+- Run home <home> = ~/.mitosis/spindle/spindle-native-layout (CHARTER.md, run.zsh, amend-1.zsh, rounds.md, review/); run dirs ~/.mitosis/runs/spindle/spindle-native-layout and ~/.mitosis/runs/spindle/spindle-native-layout-amend-1
