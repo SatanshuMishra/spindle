@@ -295,29 +295,59 @@ test('the desktop rail is built from Boxes and names every stage at 60 columns',
   }
 })
 
-test('each MSP lanes bar is two Boxes split by share', async ($, on) => {
+test('a fully built MSP lanes bar is its done Box alone', async ($, on) => {
   await fixRun($, on)
 
   const tree = await drawnAt($, 100)
   const rows = nodesOf(tree).filter(node => node.type === 'Box' && keyOf(node).startsWith('msp-row-'))
   expect(rows.length).toBe(3)
-  const shares = rows.map(row => {
+  const bars = rows.map(row => {
     const label = keyOf(row).slice('msp-row-'.length)
-    const bar = byKey(row, `msp-bar-${label}`)
-    const [filled, rest] = childrenOf(bar)
-    expect(childrenOf(bar).length).toBe(2)
-    expect(filled?.props?.width).toBe(0)
-    expect(rest?.props?.width).toBe(0)
-    const done = Number(filled?.props?.flexGrow)
-    expect(Math.abs(done + Number(rest?.props?.flexGrow) - 1)).toBeLessThan(1e-9)
-    return { label, done }
+    const parts = childrenOf(byKey(row, `msp-bar-${label}`))
+    return { label, parts: parts.map(part => ({ key: keyOf(part), width: part.props?.width, flexGrow: part.props?.flexGrow })) }
   })
-  expect(shares).toEqual([
-    { label: 'limiter-core', done: 2 / 2 },
-    { label: 'redis-store', done: 1 / 1 },
-    { label: 'headers-docs', done: 1 / 1 },
+  expect(bars).toEqual([
+    { label: 'limiter-core', parts: [{ key: 'msp-bar-done-limiter-core', width: 0, flexGrow: 1 }] },
+    { label: 'redis-store', parts: [{ key: 'msp-bar-done-redis-store', width: 0, flexGrow: 1 }] },
+    { label: 'headers-docs', parts: [{ key: 'msp-bar-done-headers-docs', width: 0, flexGrow: 1 }] },
   ])
   for (const svg of nodesOf(tree).filter(node => node.type === 'Svg')) expect(String(svg.props?.source)).not.toContain('width="100%"')
+})
+
+test('each rail connector names the two stages it joins', async ($, on) => {
+  await fixRun($, on)
+
+  for (const columns of [60, 40]) {
+    const links = railLinks(await drawnAt($, columns))
+    expect(links.map(link => keyOf(link))).toEqual(['rail-link-0', 'rail-link-1', 'rail-link-2', 'rail-link-3', 'rail-link-4', 'rail-link-5'])
+    for (const link of links) expect(childrenOf(link).filter(node => node.type === 'Svg').length).toBe(1)
+    expect(links.flatMap(link => childrenOf(link).map(node => node.props?.alt))).toEqual([
+      'Spec to Build',
+      'Build to Review',
+      'Review to Fix',
+      'Fix to Ship',
+      'Ship to Integrate',
+      'Integrate to Clean-up',
+    ])
+  }
+})
+
+test('a lanes remainder is drawn only while lanes are left to build', async ($, on) => {
+  const world = harness(on, build, { now: NOW })
+  await world.start($)
+
+  const building = await drawnAt($, 100)
+  const limiter = byKey(building, 'msp-bar-limiter-core')
+  expect(childrenOf(limiter).map(keyOf)).toEqual(['msp-bar-done-limiter-core', 'msp-bar-rest-limiter-core'])
+  expect(childrenOf(byKey(limiter, 'msp-bar-rest-limiter-core')).find(node => node.type === 'Svg')?.props?.alt).toBe('limiter-core: lanes still to build')
+
+  world.use(fix)
+  await world.clock.advance(2000)
+  const fixing = await drawnAt($, 100)
+  for (const label of ['limiter-core', 'redis-store', 'headers-docs']) {
+    expect(childrenOf(byKey(fixing, `msp-bar-${label}`)).map(keyOf)).toEqual([`msp-bar-done-${label}`])
+    expect(byKey(fixing, `msp-bar-rest-${label}`)).toBeUndefined()
+  }
 })
 
 test('no desktop pane width, drawing or label follows bodyColumns', async ($, on) => {

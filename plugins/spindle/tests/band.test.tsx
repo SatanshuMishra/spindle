@@ -76,7 +76,7 @@ async function seenAt($: Engine, surface: 'desktop' | 'terminal', bodyColumns: n
   return seen
 }
 
-const barOf = (seen: Seen) => seen.svgs.find(svg => svg.alt.startsWith(`${FIRE_SLUG}: `) && svg.source.includes('data-part="bar"'))
+const barOf = (seen: Seen) => seen.svgs.find(svg => svg.source.includes('data-part="bar"'))
 
 const pillOf = (seen: Seen) => seen.svgs.find(svg => svg.source.includes('data-part="pill"'))
 
@@ -242,6 +242,8 @@ test('the desktop bar fills the band through flex', async ($, on) => {
     expect(filled?.type).toBe('Box')
     expect(keyOf(filled ?? {})).toBe('spindle-bar-filled')
     expect(filled?.props?.width).toBe(0)
+    expect(filled?.props?.overflow).toBe('hidden')
+    expect(filled?.props?.position).toBeUndefined()
     expect(Math.abs(Number(filled?.props?.flexGrow) - 2.9 / 7)).toBeLessThan(1e-9)
     expect(Math.abs(Number(filled?.props?.flexGrow) - 0.4143)).toBeLessThan(0.0001)
     expect(holder?.type).toBe('Box')
@@ -255,22 +257,17 @@ test('the desktop bar fills the band through flex', async ($, on) => {
     expect(remainder?.props?.width).toBe(0)
     expect(Math.abs(Number(remainder?.props?.flexGrow) - 4.1 / 7)).toBeLessThan(1e-9)
     expect(Math.abs(Number(remainder?.props?.flexGrow) - 0.5857)).toBeLessThan(0.0001)
-    const texturing = childrenOf(filled).find(child => nodesOf(child).some(isTexture))
-    expect(texturing?.type).toBe('Box')
-    expect(texturing?.props?.position).toBe('absolute')
-    expect(texturing?.props?.top).toBe(0)
-    expect(texturing?.props?.left).toBe(0)
-    expect(texturing?.props?.right).toBe(0)
-    expect(texturing?.props?.bottom).toBe(0)
-    expect(texturing?.props?.overflow).toBe('hidden')
-    const texture = childrenOf(texturing).find(isTexture)
+    expect(nodesOf(filled?.children).filter(node => node.type === 'Box')).toEqual([])
+    const [texture, ...beside] = childrenOf(filled)
+    expect(beside).toEqual([])
+    expect(texture?.type).toBe('Svg')
     expect(svgSource(texture)).toContain('data-part="bar"')
     textures.push({ source: svgSource(texture), width: texture?.props?.width })
     const [offset, ...marks] = childrenOf(ticks)
     expect(offset?.type).toBe('Box')
     expect(offset?.props?.flexShrink).toBe(0)
     const spacer = childrenOf(offset).find(child => child.type === 'Svg')
-    expect(spacer?.props?.alt).toBe('')
+    expect(spacer?.props?.alt).toBe('space for the stage label')
     expect(spacer?.props?.width).toBe(pill?.props?.width)
     expect(marks.length).toBe(7)
     for (const mark of marks) {
@@ -318,8 +315,91 @@ test('at Spec the filled part still holds the whole pill', async ($, on) => {
   expect(pill?.props?.width).toBeGreaterThan(0)
   const offset = childrenOf(byKey(tree, 'spindle-ticks'))[0]
   const spacer = childrenOf(offset).find(child => child.type === 'Svg')
-  expect(spacer?.props?.alt).toBe('')
+  expect(spacer?.props?.alt).toBe('space for the stage label')
   expect(spacer?.props?.width).toBe(pill?.props?.width)
+})
+
+function pathTo(from: Drawn | undefined, holds: (node: Drawn) => boolean, above: readonly Drawn[] = []): Drawn[] | null {
+  if (from === undefined) return null
+  if (holds(from)) return [...above]
+  return childrenOf(from).reduce<Drawn[] | null>((found, child) => found ?? pathTo(child, holds, [...above, from]), null)
+}
+
+function absoluteBetween(bar: Drawn | undefined, holds: (node: Drawn) => boolean): string[] {
+  const path = pathTo(bar, holds)
+  return path === null
+    ? ['not found']
+    : path
+        .slice(1)
+        .filter(node => node.type === 'Box' && node.props?.position === 'absolute')
+        .map(keyOf)
+}
+
+const tickAltsOf = (tree: unknown) =>
+  childrenOf(byKey(tree, 'spindle-ticks'))
+    .filter(child => keyOf(child).startsWith('spindle-tick-'))
+    .flatMap(child => childrenOf(child).filter(node => node.type === 'Svg'))
+    .map(svg => svg.props?.alt)
+
+test('the desktop bar holds its height without the pill', async ($, on) => {
+  const world = harness(on, fireplace, { now: NOW })
+  await world.start($)
+
+  const expectHeldBar = (tree: unknown, share: number) => {
+    const bar = byKey(tree, 'spindle-bar')
+    const filled = byKey(bar, 'spindle-bar-filled')
+    expect(filled?.type).toBe('Box')
+    expect(filled?.props?.width).toBe(0)
+    expect(Math.abs(Number(filled?.props?.flexGrow) - share)).toBeLessThan(1e-9)
+    expect(filled?.props?.overflow).toBe('hidden')
+    expect(filled?.props?.position).not.toBe('absolute')
+    const texture = nodesOf(bar).find(isTexture)
+    expect(texture?.props?.height).toBe(16)
+    expect(absoluteBetween(bar, isTexture)).toEqual([])
+    const pill = nodesOf(byKey(bar, 'spindle-pill-holder')).find(isPill)
+    expect(pill?.props?.height).toBe(16)
+    expect(absoluteBetween(bar, isPill)).toEqual([])
+    const pixelProps = nodesOf(bar)
+      .filter(node => node.type === 'Box')
+      .flatMap(node => Object.entries(node.props ?? {}).filter(([, value]) => typeof value === 'string' && value.endsWith('px')))
+    expect(pixelProps).toEqual([])
+  }
+
+  expectHeldBar(await drawnAt($, 'desktop', 100), 2.9 / 7)
+
+  world.use(spec)
+  await world.clock.advance(2000)
+  expectHeldBar(await drawnAt($, 'desktop', 100), 0)
+})
+
+test('each desktop band Svg says what it shows', async ($, on) => {
+  const world = harness(on, fireplace, { now: NOW })
+  await world.start($)
+
+  const tree = await drawnAt($, 'desktop', 100)
+  const bar = byKey(tree, 'spindle-bar')
+  expect(nodesOf(byKey(bar, 'spindle-pill-holder')).find(isPill)?.props?.alt).toBe('mac-video-audio-and-recorder-ui: Review · R5')
+  expect(nodesOf(bar).find(isTexture)?.props?.alt).toBe('41% of the run done')
+  expect(nodesOf(byKey(bar, 'spindle-ticks-offset')).find(node => node.type === 'Svg')?.props?.alt).toBe('space for the stage label')
+  expect(tickAltsOf(tree)).toEqual(['start of Fix', 'start of Ship', 'start of Integrate', 'start of Clean-up'])
+})
+
+test("at Spec the band's ticks and texture say what they show", async ($, on) => {
+  const world = harness(on, spec, { now: NOW })
+  await world.start($)
+
+  const tree = await drawnAt($, 'desktop', 100)
+  const bar = byKey(tree, 'spindle-bar')
+  expect(nodesOf(bar).find(isTexture)?.props?.alt).toBe('0% of the run done')
+  expect(tickAltsOf(tree)).toEqual([
+    'start of Build',
+    'start of Review',
+    'start of Fix',
+    'start of Ship',
+    'start of Integrate',
+    'start of Clean-up',
+  ])
+  expect(String(nodesOf(byKey(bar, 'spindle-pill-holder')).find(isPill)?.props?.alt)).toMatch(/: Spec$/)
 })
 
 test('no desktop band width or drawing follows bodyColumns', async ($, on) => {
@@ -331,7 +411,9 @@ test('no desktop band width or drawing follows bodyColumns', async ($, on) => {
       width: node.props?.width,
       minWidth: node.props?.minWidth,
       flexGrow: node.props?.flexGrow,
+      height: node.props?.height,
       source: node.type === 'Svg' ? svgSource(node) : undefined,
+      alt: node.props?.alt,
     }))
   const at60 = layoutOf(await drawnAt($, 'desktop', 60))
   expect(layoutOf(await drawnAt($, 'desktop', 100))).toEqual(at60)
@@ -388,8 +470,8 @@ test("the fireplace run's pill reads Review R5", async ($, on) => {
   await world.start($)
 
   const tree = await drawnAt($, 'desktop', 160)
-  expect(barOf(seenOf(tree))?.alt).toBe('mac-video-audio-and-recorder-ui: Review · R5')
-  expect(pillOf(seenOf(tree))?.alt).toBe('')
+  expect(pillOf(seenOf(tree))?.alt).toBe('mac-video-audio-and-recorder-ui: Review · R5')
+  expect(barOf(seenOf(tree))?.alt).toBe('41% of the run done')
   const card = cardTextsOf(tree, PROGRESS_SCOPE_OF(tree))
   expect(card).toEqual([
     'mic-recovery: Ship · pull request #329',
@@ -422,8 +504,8 @@ test('integrate fills the bar', async ($, on) => {
   await world.start($)
 
   const tree = await drawnAt($, 'desktop', 160)
-  const bar = nodesOf(byKey(tree, 'spindle-bar')?.children).find(isTexture)
-  expect(bar?.props?.alt).toBe('rate-limit-api: Integrate')
+  const pill = nodesOf(byKey(tree, 'spindle-bar')?.children).find(isPill)
+  expect(pill?.props?.alt).toBe('rate-limit-api: Integrate')
 })
 
 test('the count button opens the pane', async ($, on) => {
@@ -485,9 +567,10 @@ test('desktop band shows slug, lane and Review R1', async ($, on) => {
   const seen = await seenAt($, 'desktop', 100)
   expect(slugOf(seen)).toBe('rate-limit-api')
   expect(hasChip(seen, 'Full')).toBe(true)
-  const bar = seen.svgs.find(svg => svg.alt === 'rate-limit-api: Review · R1')
-  expect(bar?.source).toContain('data-part="bar"')
-  expect(pillOf(seen)?.source).toContain('>Review · R1</text>')
+  const pill = seen.svgs.find(svg => svg.alt === 'rate-limit-api: Review · R1')
+  expect(pill?.source).toContain('data-part="pill"')
+  expect(pill?.source).toContain('>Review · R1</text>')
+  expect(barOf(seen)?.source).toContain('data-part="bar"')
   expect(crabOf(seen)?.source).toContain('c-detective')
 })
 

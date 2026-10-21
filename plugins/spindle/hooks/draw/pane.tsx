@@ -436,17 +436,17 @@ function rail(ui: DesktopElements, view: RunView, isEveryName: boolean): RenderE
         {stage.name}
       </Text>
     ) : null
-    const link = (
+    const links = STAGE_TABLE.slice(i + 1, i + 2).map(next => (
       <Box key={`rail-link-${i}`} flexGrow={1} minWidth={0} overflow="hidden">
-        <Svg source={linkSvg(i < current ? DONE : TRACK)} alt="" width={STRIP_W} height={RAIL_MARK} />
+        <Svg source={linkSvg(i < current ? DONE : TRACK)} alt={`${stage.name} to ${next.name}`} width={STRIP_W} height={RAIL_MARK} />
       </Box>
-    )
+    ))
     return [
       <Box key={`rail-stage-${i}`} flexDirection="column" alignItems="center" flexShrink={0}>
         <Svg source={railMarkSvg(stage, mark)} alt={`${stage.name}: ${mark}`} width={RAIL_MARK} height={RAIL_MARK} />
         {name}
       </Box>,
-      ...(i < STAGE_TABLE.length - 1 ? [link] : []),
+      ...links,
     ]
   })
   return (
@@ -465,9 +465,11 @@ function lanesBar(ui: DesktopElements, msp: MspRow, i: number): RenderElement {
       <Box key={`msp-bar-done-${msp.label}`} width={0} flexGrow={share} overflow="hidden" backgroundColor={fill}>
         <Svg source={stripSvg(LANE_BAR_H, fill)} alt={`${msp.label}: ${lanesWords(msp)}`} width={STRIP_W} height={LANE_BAR_H} />
       </Box>
-      <Box key={`msp-bar-rest-${msp.label}`} width={0} flexGrow={1 - share} overflow="hidden" backgroundColor={TRACK}>
-        <Svg source={stripSvg(LANE_BAR_H, TRACK)} alt="" width={STRIP_W} height={LANE_BAR_H} />
-      </Box>
+      {share < 1 ? (
+        <Box key={`msp-bar-rest-${msp.label}`} width={0} flexGrow={1 - share} overflow="hidden" backgroundColor={TRACK}>
+          <Svg source={stripSvg(LANE_BAR_H, TRACK)} alt={`${msp.label}: lanes still to build`} width={STRIP_W} height={LANE_BAR_H} />
+        </Box>
+      ) : null}
     </Box>
   )
 }
