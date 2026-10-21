@@ -1,6 +1,6 @@
 # spindle-native-layout: Rebuild spindle's desktop band and pane on native flex, with simpler tooltips
 Status: active
-Updated: 2026-10-21T19:54:45.241Z
+Updated: 2026-10-21T19:54:53.004Z
 Next ids: c5 D2 R1 S1
 
 ## Goal
@@ -20,7 +20,9 @@ Interphase bug pathway, interview: intent I1-I3 approved and recorded; frontier 
 
 ## Next step
 
-Record the owner's round 1 answers in the decisions file and the record (seams, criteria, three Steps), run check_record, then ask any remaining frontier or go to the read-back.
+Write the run home ~/.mitosis/spindle/spindle-native-layout (CHARTER.md, worker-rules.txt, dispatch.zsh, items.json, graph.json, run.zsh) and run run.zsh --plan-only, then the first build.
+
+Needs: D1.
 
 ## Decisions in force
 
