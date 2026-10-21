@@ -1,6 +1,6 @@
 # spindle-visible-decorations: Restore the spindle desktop progress bar and rail connectors that empty-alt Svgs hid
 Status: parked
-Updated: 2026-10-21T22:11:19.165Z
+Updated: 2026-10-21T22:11:20.632Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -20,7 +20,7 @@ The FEATURE pull request SatanshuMishra/spindle#16 (fix/spindle-visible-decorati
 
 ## Next step
 
-The owner merges SatanshuMishra/spindle#15, then starts Integration by saying the MSP pull requests merged.
+The owner merges SatanshuMishra/spindle#16, then starts Clean-up by saying the FEATURE pull request merged; after that, a 0.2.4 version bump and reinstall for the desktop hand check.
 
 Needs: R1.
 
