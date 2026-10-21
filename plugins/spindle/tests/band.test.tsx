@@ -235,15 +235,16 @@ test('the desktop bar fills the band through flex', async ($, on) => {
     expect(bar?.props?.flexGrow).toBe(1)
     expect(bar?.props?.minWidth).toBe(0)
     expect(bar?.props?.overflow).toBe('hidden')
-    const [ticks, filled, holder, remainder, ...extra] = childrenOf(bar)
+    const [track, ticks, filled, holder, remainder, ...extra] = childrenOf(bar)
     expect(extra).toEqual([])
+    expect(keyOf(track ?? {})).toBe('spindle-track')
     expect(keyOf(ticks ?? {})).toBe('spindle-ticks')
     expect(ticks?.props?.position).toBe('absolute')
     expect(filled?.type).toBe('Box')
     expect(keyOf(filled ?? {})).toBe('spindle-bar-filled')
     expect(filled?.props?.width).toBe(0)
     expect(filled?.props?.overflow).toBe('hidden')
-    expect(filled?.props?.position).toBeUndefined()
+    expect(filled?.props?.position).toBe('relative')
     expect(Math.abs(Number(filled?.props?.flexGrow) - 2.9 / 7)).toBeLessThan(1e-9)
     expect(Math.abs(Number(filled?.props?.flexGrow) - 0.4143)).toBeLessThan(0.0001)
     expect(holder?.type).toBe('Box')
@@ -281,6 +282,43 @@ test('the desktop bar fills the band through flex', async ($, on) => {
     expect(pixelProps).toEqual([])
   }
   expect(textures[1]).toEqual(textures[0])
+})
+
+test('the desktop texture keeps its full height when its box is narrower than the drawing', async ($, on) => {
+  await fireRun($, on)
+
+  for (const width of [100, 160, 200]) {
+    const tree = await drawnAt($, 'desktop', width)
+    const texture = childrenOf(byKey(tree, 'spindle-bar-filled')).find(isTexture)
+    expect(svgSource(texture)).toContain('preserveAspectRatio="xMinYMid slice"')
+    expect(svgSource(texture)).toMatch(/<clipPath id="spindle-bar-start"><rect [^>]*rx="8"\/><\/clipPath>/)
+    expect(svgSource(texture)).toContain('clip-path="url(#spindle-bar-start)"')
+  }
+})
+
+test('the desktop bar draws a track with rounded ends behind the fill and the pill', async ($, on) => {
+  await fireRun($, on)
+
+  for (const width of [100, 160, 200]) {
+    const tree = await drawnAt($, 'desktop', width)
+    const bar = byKey(tree, 'spindle-bar')
+    expect(bar?.props?.backgroundColor).toBeUndefined()
+    const track = byKey(tree, 'spindle-track')
+    expect(childrenOf(bar)[0]).toBe(track)
+    expect(track?.props).toMatchObject({ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, flexDirection: 'row' })
+    const halves = childrenOf(track)
+    expect(halves.map(keyOf)).toEqual(['spindle-track-start', 'spindle-track-end'])
+    for (const half of halves) {
+      expect(half.props).toMatchObject({ width: 0, flexGrow: 1, overflow: 'hidden' })
+    }
+    const [start, end] = halves.map(half => childrenOf(half).find(child => child.type === 'Svg'))
+    expect(svgSource(start)).toContain('preserveAspectRatio="xMinYMid slice"')
+    expect(svgSource(start)).toMatch(/<rect data-part="track" x="0" [^>]*rx="8"/)
+    expect(svgSource(end)).toContain('preserveAspectRatio="xMaxYMid slice"')
+    expect(svgSource(end)).toMatch(/<rect data-part="track" x="-16" [^>]*rx="8"/)
+    expect(byKey(tree, 'spindle-bar-filled')?.props?.position).toBe('relative')
+    expect(byKey(tree, 'spindle-pill-holder')?.props?.position).toBe('relative')
+  }
 })
 
 test('below 60 columns the band shows the pill alone', async ($, on) => {
