@@ -12,7 +12,7 @@
       "name": "spindle",
       "source": "./plugins/spindle",
       "description": "Mod: a band above the prompt, a run pane and toasts for the request pipeline's lane, stage, MSPs, agents and verdicts.",
-      "version": "0.2.3",
+      "version": "0.2.4",
       "category": "mod"
     }
   ]
