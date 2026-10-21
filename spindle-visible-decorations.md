@@ -1,6 +1,6 @@
 # spindle-visible-decorations: Restore the spindle desktop progress bar and rail connectors that empty-alt Svgs hid
 Status: active
-Updated: 2026-10-21T21:57:25.213Z
+Updated: 2026-10-21T22:02:12.550Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -16,7 +16,7 @@ The desktop band's progress bar and the pane's rail connectors and lanes remaind
 
 ## Where things stand
 
-MSP visible-decorations committed at 206357c on mitosis/visible-decorations (worktree <run dir>/trees/visible-decorations); gate 11 pass, 9 inert (the unchanged 5.4 checks). Review round 1 is running: code-reviewer and conformance-auditor, briefs in <home>/review/round-1/. No security reviewer (no trust boundary); no smoke run (the desktop app cannot be driven).
+SatanshuMishra/spindle#15 (mitosis/visible-decorations into fix/spindle-visible-decorations) is open, ready for review, assigned to the owner, with the review notes comment. Review round 1 green; advisory C2 fixed; ADR-0007 on the branch.
 
 ## Next step
 
