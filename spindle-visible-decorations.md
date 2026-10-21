@@ -1,7 +1,7 @@
 # spindle-visible-decorations: Restore the spindle desktop progress bar and rail connectors that empty-alt Svgs hid
 Status: active
-Updated: 2026-10-21T21:28:19.198Z
-Next ids: c5 D1 R1 S1
+Updated: 2026-10-21T21:40:50.528Z
+Next ids: c5 D2 R1 S1
 
 ## Goal
 
@@ -23,6 +23,8 @@ Not started.
 Run interphase:bug autonomously on the regression, then build it with mitosis from the FEATURE branch.
 
 ## Decisions in force
+
+- D1 Interphase hand-off: build the visible-decorations spec as one MSP of one Step: One MSP, visible-decorations, one Step fix-visible-decorations, built by run.zsh from the FEATURE branch fix/spindle-visible-decorations.
 
 ## Open risks
 
