@@ -1,6 +1,6 @@
 # spindle-native-layout: Rebuild spindle's desktop band and pane on native flex, with simpler tooltips
 Status: active
-Updated: 2026-10-21T20:42:46.214Z
+Updated: 2026-10-21T20:44:05.687Z
 Next ids: c5 D3 R3 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Make the spindle band and Pipeline pane on the Claude desktop surface fill their
 
 ## Where things stand
 
-MSP native-layout at c50fb77 on mitosis/native-layout (worktree ~/.mitosis/runs/spindle/spindle-native-layout/trees/native-layout); suite 171 pass, check.sh green. Round 1 C2-C5 fixed directly (receipt plugins/spindle/tests/alt-meaning.test.tsx); C1 fixed by amendment 1 (gate 2 pass), merged. Review round 2: conformance-auditor reported no findings (5.1-5.10 met, 5.11 owner hand check); code-reviewer running. Briefs and outputs in <home>/review/round-2/. No security reviewer (no trust boundary); no smoke run (the desktop app cannot be driven).
+MSP native-layout at c50fb77 on mitosis/native-layout (worktree ~/.mitosis/runs/spindle/spindle-native-layout/trees/native-layout); suite 171 pass, check.sh green. Round 1 C2-C5 fixed directly (receipt plugins/spindle/tests/alt-meaning.test.tsx); C1 fixed by amendment 1 (gate 2 pass), merged. Review round 2: both reviewers reported no findings (5.1-5.10 met, 5.11 owner hand check); validator re-checking carried blockers P1 (C1) and P2 (C2). Briefs and outputs in <home>/review/round-2/. No security reviewer (no trust boundary); no smoke run (the desktop app cannot be driven).
 
 ## Next step
 
