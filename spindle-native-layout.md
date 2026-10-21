@@ -1,6 +1,6 @@
 # spindle-native-layout: Rebuild spindle's desktop band and pane on native flex, with simpler tooltips
 Status: active
-Updated: 2026-10-21T20:47:59.124Z
+Updated: 2026-10-21T20:48:01.107Z
 Next ids: c5 D4 R3 S1
 
 ## Goal
@@ -20,7 +20,7 @@ MSP native-layout at c50fb77 on mitosis/native-layout (worktree ~/.mitosis/runs/
 
 ## Next step
 
-Ship: pipeline comment and promote, record the ship boundary, SHIP=1 <home>/run.zsh --resume --proven-head native-layout=c50fb773fbd85662fb9f0b8f66205b28f37af93a, open the PR via GitHub MCP, assign it, post the comment, park the thread.
+Run SHIP=1 <home>/run.zsh --resume --proven-head native-layout=c50fb773fbd85662fb9f0b8f66205b28f37af93a, read its JSON result, open the pull request via GitHub MCP create_pull_request with mitosis's title and body, assign it, post <home>/review/native-layout.comment.md, then park the thread.
 
 Needs: D1, D2, R2.
 
