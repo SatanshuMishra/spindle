@@ -1,6 +1,6 @@
 # spindle-visible-decorations: Restore the spindle desktop progress bar and rail connectors that empty-alt Svgs hid
 Status: parked
-Updated: 2026-10-21T22:18:05.114Z
+Updated: 2026-10-21T22:18:08.159Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -39,5 +39,5 @@ Needs: R1.
 
 - Cause: commit 90ff5e8 gave five decorative Svgs alt="" (band.tsx ticks, tick spacer, in-bar pill; pane.tsx rail connectors, lanes remainder); the desktop does not draw them and the bar's only in-flow height was the pill
 - Prior run: spindle-native-layout (done), SatanshuMishra/spindle#12 and #13
-- Spec files: docs/specs/spindle-visible-decorations.{md,decisions.md,record.json,items.json,repro.test.tsx} in the owner's checkout; ADR docs/adr/0007-every-desktop-svg-has-an-alt.md (untracked, ships with the PR)
-- Run home <home> = ~/.mitosis/spindle/spindle-visible-decorations (CHARTER.md, run.zsh, rounds.md, review/); run dir ~/.mitosis/runs/spindle/spindle-visible-decorations; FEATURE branch fix/spindle-visible-decorations
+- ADR docs/adr/0007-every-desktop-svg-has-an-alt.md on main: every desktop Svg has a non-empty alt
+- Run report ~/.mitosis/spindle/reports/spindle-visible-decorations.json
