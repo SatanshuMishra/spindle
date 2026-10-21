@@ -231,10 +231,10 @@ function progressBar(ui: DesktopElements, view: RunView): RenderElement {
   const { Box, Svg } = ui
   const share = progressOf(view)
   const pill = pillText(view)
-  const ticks = STAGE_TABLE.map((_, k) => (
+  const ticks = STAGE_TABLE.map((stage, k) => (
     <Box key={`spindle-tick-${k}`} width={0} flexGrow={1} flexDirection="row" alignItems="center">
       {k > 0 && k / STAGE_TABLE.length > share + 0.01 ? (
-        <Svg source={TICK_SVG} alt="" width={TICK_W} height={TICK_H} />
+        <Svg source={TICK_SVG} alt={`start of ${stage.name}`} width={TICK_W} height={TICK_H} />
       ) : null}
     </Box>
   ))
@@ -242,17 +242,15 @@ function progressBar(ui: DesktopElements, view: RunView): RenderElement {
     <Box key="spindle-bar" position="relative" flexDirection="row" flexGrow={1} minWidth={0} overflow="hidden" backgroundColor={TRACK}>
       <Box key="spindle-ticks" position="absolute" top={0} bottom={0} left={0} right={0} flexDirection="row">
         <Box key="spindle-ticks-offset" flexShrink={0}>
-          <Svg source={svg(pillWidthOf(pill), BAR_H, '')} alt="" width={pillWidthOf(pill)} height={BAR_H} />
+          <Svg source={svg(pillWidthOf(pill), BAR_H, '')} alt="space for the stage label" width={pillWidthOf(pill)} height={BAR_H} />
         </Box>
         {ticks}
       </Box>
-      <Box key="spindle-bar-filled" position="relative" width={0} flexGrow={share}>
-        <Box key="spindle-texture" position="absolute" top={0} left={0} right={0} bottom={0} overflow="hidden">
-          <Svg source={barSvg(view)} alt={`${view.slug}: ${pill}`} width={TEXTURE_W} height={BAR_H} />
-        </Box>
+      <Box key="spindle-bar-filled" width={0} flexGrow={share} overflow="hidden">
+        <Svg source={barSvg(view)} alt={`${Math.round(share * 100)}% of the run done`} width={TEXTURE_W} height={BAR_H} />
       </Box>
       <Box key="spindle-pill-holder" flexShrink={0}>
-        <Svg key="spindle-pill" source={pillSvg(view)} alt="" width={pillWidthOf(pill)} height={BAR_H} />
+        <Svg key="spindle-pill" source={pillSvg(view)} alt={`${view.slug}: ${pill}`} width={pillWidthOf(pill)} height={BAR_H} />
       </Box>
       <Box key="spindle-bar-rest" width={0} flexGrow={1 - share} />
     </Box>
