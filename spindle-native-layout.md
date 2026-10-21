@@ -1,6 +1,6 @@
 # spindle-native-layout: Rebuild spindle's desktop band and pane on native flex, with simpler tooltips
 Status: active
-Updated: 2026-10-21T20:22:50.882Z
+Updated: 2026-10-21T20:31:02.757Z
 Next ids: c5 D2 R2 S1
 
 ## Goal
@@ -16,13 +16,13 @@ Make the spindle band and Pipeline pane on the Claude desktop surface fill their
 
 ## Where things stand
 
-MSP native-layout committed on mitosis/native-layout at 00a4a85 (gate 12 pass, 2 inert terminal checks); worktree ~/.mitosis/runs/spindle/spindle-native-layout/trees/native-layout. Round 1 verdict diagnose: blockers C1 (bar fill overstates progress, HIGH) and C2 (lanes remainder alt, MEDIUM); advisories C3, C4, C5. Diagnosis agents for both kinds running. No security reviewer (no trust boundary); no smoke run (the desktop app cannot be driven).
+MSP native-layout at 90ff5e8 on mitosis/native-layout (worktree ~/.mitosis/runs/spindle/spindle-native-layout/trees/native-layout). Round 1 verdict loop. C2, C3, C4, C5 fixed (receipt plugins/spindle/tests/alt-meaning.test.tsx; suite 171 pass; selecting check empty). C1 (bar fill overstates progress) diagnosed requirement-wrong: criterion 5.2's px minWidth is unbuildable. No security reviewer (no trust boundary); no smoke run (the desktop app cannot be driven).
 
 ## Next step
 
-Save each diagnosis as <home>/review/round-1/native-layout.<kind slug>.diagnosis.json, record with pipeline diagnosis, rerun pipeline verdict, then fix fixable kinds with receipt tests plus advisories C3-C5 in the worktree.
+Amend the spec for C1 through interphase:bug as MSP native-layout-amend-1, record its hand-off, build it with <home>/amend-1.zsh into mitosis/native-layout, rerun obligations, then review round 2.
 
-Needs: D1.
+Needs: D1, R1.
 
 ## Decisions in force
 
