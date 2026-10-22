@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: active
-Updated: 2026-10-22T02:28:27.347Z
+Updated: 2026-10-22T02:28:29.371Z
 Next ids: c6 D2 R2 S1
 
 ## Goal
@@ -21,7 +21,9 @@ FEATURE branch feat/spindle-finish-states is pushed at 1666367, a merge of mitos
 
 ## Next step
 
-Fix the spec review's issues in the record and spec, rerun the checks, promote the glossary terms and an ADR, verify the guard and hand off.
+Run ~/.mitosis/spindle/spindle-finish-states/run.zsh --plan-only, then the first build, then review each MSP.
+
+Needs: D1, R1.
 
 ## Decisions in force
 
