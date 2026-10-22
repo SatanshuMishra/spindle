@@ -15,6 +15,24 @@ _Avoid_: run folder, workspace
 **Run directory**:
 The folder `~/.mitosis/runs/<repo>/<slug>/` where mitosis keeps a run's plan, state and lane output.
 
+**Run record**:
+The folder `~/.mitosis/<repo>/records/<slug>/` holding the copies of a run's files that pipeline clean keeps before it deletes the run home; clean-up never deletes it.
+_Avoid_: archive, history
+
+**Lifecycle state**:
+Where a run is in its life: running, shipped, reopened, cleaned, or one of the final states closed-done, closed-draft, stopped-critical and superseded.
+_Avoid_: status (a verdict or an MSP's), phase
+
+**Final status**:
+The lifecycle state a run ended in, as its thread's ledger status records it.
+
+**Follow-up run**:
+A run that starts after its parent run was cleaned up, to fix what the parent shipped; it has its own slug and thread and names its parent.
+_Avoid_: hotfix, rerun
+
+**Reopened**:
+A shipped run, not yet cleaned up, that takes a new round of work under its own slug, thread and run home.
+
 **Session file**:
 The file `~/.mitosis/sessions/<session id>.json` that names the run homes a Claude Code session drives and its latest anchor.
 
@@ -23,7 +41,7 @@ The one value that says what a run is doing now: its lane, stage, round, MSPs, r
 _Avoid_: model, snapshot
 
 **Lane**:
-How much interview, spec, build and review the pipeline gives a request: full or standard.
+How much interview, spec, build and review the pipeline gives a request: full, standard or direct (a hand fix after its parent run was cleaned up).
 
 **Stage**:
 Where a run is in the order Spec, Build, Review, Fix, Ship, Integrate, Clean-up, with Done after Clean-up: the earliest stage any MSP without a pull request is at, and Ship once every MSP is green, blocked or has a pull request.
