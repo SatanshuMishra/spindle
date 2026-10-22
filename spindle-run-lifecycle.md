@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: active
-Updated: 2026-10-22T02:01:12.959Z
+Updated: 2026-10-22T02:03:52.858Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -12,7 +12,7 @@ Diagnose and fix why the spindle bar and panel vanish when pipeline clean-up run
 - [x] c1 The replay test built from the recorded events fails on today's code and passes after the fix, asserting the panel stays filled after clean-up and spindle follows the follow-up evidence: mitosis gate 12 of 12 red without the work and green with it, including the 1bb57b78 replay in plugins/spindle/tests/run-lifecycle.test.ts; review green at round 2
 - [ ] c2 The ledger shows the old thread's final status linked to its follow-up
 - [ ] c3 The next real run stays visible through clean-up and follows one deliberate follow-up fix
-- [ ] c4 A lifecycle table lists every run state, the event that moves it and the component that emits it
+- [x] c4 A lifecycle table lists every run state, the event that moves it and the component that emits it evidence: docs/run-lifecycle.md lists every run state with the event that enters it and its emitter, plus the events still to be emitted; reviewed green at round 2 and open as https://github.com/SatanshuMishra/spindle/pull/22
 
 ## Where things stand
 
