@@ -1,4 +1,4 @@
-import type { Activity, AgentRow, MspRow, RoundRow, RunView, WorkerRow } from '../../types'
+import type { Activity, AgentRow, MspRow, PullRow, RoundRow, RunView, WorkerRow } from '../../types'
 
 export const NO_RUN = 'No pipeline run in this session.'
 
@@ -58,6 +58,10 @@ const workerLine = (worker: WorkerRow) =>
 const roundLine = (round: RoundRow) =>
   `round ${round.n} ${round.msp} candidates ${round.candidates ?? '?'} blockers ${round.blockers} advisories ${round.advisories} outcome ${round.outcome}`
 
+const pullLine = (pull: PullRow) => `pull #${pull.number} ${pull.head}`
+
+export const unplannedPulls = (view: RunView): readonly PullRow[] => (view.msps.length === 0 ? view.pulls : [])
+
 const agentLine = (agent: AgentRow) =>
   `agent ${agent.id} ${agent.role} ${agent.type} ${modelName(agent.model)} ${agent.isRunning ? 'running' : 'done'}`
 
@@ -65,8 +69,11 @@ export function summary(view: RunView | null, now: number): string {
   if (view === null) return NO_RUN
   return [
     `run ${view.slug} repo ${view.repo ?? '?'}`,
+    ...(view.follows === null ? [] : [`follows ${view.follows}`]),
     `lane ${view.lane ?? 'unknown'}`,
     `stage ${view.stage} round ${view.round} finished ${view.isFinished ? 'yes' : 'no'}`,
+    `lifecycle ${view.lifecycle}`,
+    ...unplannedPulls(view).map(pullLine),
     `elapsed ${elapsed(view.startedAt, now)}`,
     ...view.msps.map(mspLine),
     ...view.msps.map(msp => nowLine(msp, now)),

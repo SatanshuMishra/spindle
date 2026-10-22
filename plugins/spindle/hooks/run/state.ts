@@ -23,4 +23,6 @@ export function parseJson(text: string): unknown {
   }
 }
 
-export const LANE_NAME: Readonly<Record<Lane, string>> = { full: 'Full', standard: 'Standard' }
+export const LANES: readonly Lane[] = ['full', 'standard', 'direct']
+
+export const LANE_NAME: Readonly<Record<Lane, string>> = { full: 'Full', standard: 'Standard', direct: 'Direct' }
