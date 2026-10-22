@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: parked
-Updated: 2026-10-22T04:05:22.694Z
+Updated: 2026-10-22T04:05:25.702Z
 Next ids: c6 D3 R2 S1
 
 ## Goal
@@ -21,7 +21,7 @@ Integration done: pull requests 23 and 24 are merged into feat/spindle-finish-st
 
 ## Next step
 
-Run lighthouse:test on feat/spindle-finish-states against main with results in ~/.mitosis/spindle/spindle-finish-states/lighthouse/run-1, and handle its verdict.
+The owner merges pull request 25 first, then pull request 26, and starts Clean-up by saying the FEATURE pull request merged.
 
 Needs: D2.
 
