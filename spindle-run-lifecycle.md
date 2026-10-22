@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: active
-Updated: 2026-10-22T00:47:25.919Z
+Updated: 2026-10-22T00:47:28.658Z
 Next ids: c5 D1 R1 S1
 
 ## Goal
@@ -20,7 +20,7 @@ interphase:bug interview in progress (slug spindle-run-lifecycle): intent I1 to 
 
 ## Next step
 
-Record the owner's intent answer in docs/specs/spindle-run-lifecycle.decisions.md, then ask frontier round 1: permanent record shape, follow-up rule, ledger link, seams, and Job 2's questions.
+Record the owner's round 1 answers in docs/specs/spindle-run-lifecycle.decisions.md and the record, then ask round 2 (pipeline-spec details, pre-mortem, scope).
 
 ## Decisions in force
 
