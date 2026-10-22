@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
-Status: active
-Updated: 2026-10-22T02:03:52.858Z
+Status: parked
+Updated: 2026-10-22T02:03:55.091Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Two MSPs on FEATURE branch fix/spindle-run-lifecycle. Both MSPs green at round 2
 
 ## Next step
 
-Run SHIP=1 ~/.mitosis/spindle/spindle-run-lifecycle/run.zsh --resume with the two --proven-head values D2 names, then open both MSP pull requests with create_pull_request, assign them and post each saved comment.
+The owner starts Integration by saying the MSP pull requests 21 and 22 merged; c2 and c3 also wait on the logbook spec (logbook-thread-follows) and the pipeline spec (pipeline-run-record) being built by sessions in those repositories, logbook first.
 
 Needs: D2.
 
