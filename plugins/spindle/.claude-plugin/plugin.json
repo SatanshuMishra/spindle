@@ -1,6 +1,6 @@
 {
   "name": "spindle",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "A band above the prompt, a run pane and toasts showing what a request-pipeline run is doing: its lane, stage, MSPs, agents and verdicts.",
   "author": {
     "name": "SatanshuMishra",
