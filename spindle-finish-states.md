@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: active
-Updated: 2026-10-22T03:35:53.087Z
+Updated: 2026-10-22T03:35:54.537Z
 Next ids: c6 D2 R2 S1
 
 ## Goal
@@ -21,7 +21,7 @@ FEATURE branch feat/spindle-finish-states is pushed at 1666367, a merge of mitos
 
 ## Next step
 
-Collect the round 2 reviewers' arrays into review/round-2/<msp>.findings.json, then run candidates, the validator, record and verdict for each MSP.
+Record the finish-mockup round 2 validator verdicts and run pipeline verdict; fix any confirmed advisories, then ship both MSPs.
 
 Needs: D1, R1.
 
