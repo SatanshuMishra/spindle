@@ -63,6 +63,28 @@ has_reduced_motion_rule() {
   '
 }
 
+finished_rail_problems() {
+  PAGE=$page node --input-type=module - <<'EOF'
+import { readFileSync } from 'node:fs'
+import vm from 'node:vm'
+const html = readFileSync(process.env.PAGE, 'utf8')
+const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(match => match[1]).join('\n;\n')
+const context = { document: { querySelectorAll: () => [], querySelector: () => null }, addEventListener: () => {} }
+vm.createContext(context)
+vm.runInContext(`${scripts}
+;globalThis.finishedFrames = Object.entries(FRAMES).filter(([, frame]) => frame.finish).map(([state, { run, finish }]) => ({ state, word: finish.word, pane: paneHtml(400, run, finish), stages: STAGES.length, done: DONE }))`, context)
+for (const { state, word, pane, stages, done } of context.finishedFrames) {
+  const rail = pane.split('<svg ').find(part => /aria-label="Stage /.test(part.slice(0, part.indexOf('>'))))
+  if (rail === undefined) { console.log(`${state}: no stage rail`); continue }
+  const name = rail.match(/aria-label="Stage ([^"]*)"/)[1]
+  const isFullyDone = rail.split(`fill="${done}"/><path`).length - 1 === stages
+  if (name !== word) console.log(`${state}: stage named ${name}, not its finish word ${word}`)
+  if (/r="10"/.test(rail) || /font-weight="600"/.test(rail)) console.log(`${state}: a current-stage marker on an ended run`)
+  if (isFullyDone !== (word === 'Done' || word === 'Cleaned')) console.log(`${state}: rail fully done is ${isFullyDone}`)
+}
+EOF
+}
+
 states=(${(f)"$(lifecycle_states)"} unknown)
 if (( ${#states} < 2 )); then
   print -u2 "check-mockup: no states in the Lifecycle states table of $lifecycle"
@@ -79,6 +101,13 @@ done
 
 if ! has_reduced_motion_rule; then
   print -u2 "check-mockup: $page has no @media (prefers-reduced-motion: reduce) rule setting animation:none"
+  exit 1
+fi
+
+rail_problems=$(finished_rail_problems)
+if [[ -n $rail_problems ]]; then
+  print -u2 -r -- "check-mockup: a finished frame's stage rail is not honest in $page"
+  print -u2 -r -- $rail_problems
   exit 1
 fi
 

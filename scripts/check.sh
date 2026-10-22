@@ -15,6 +15,9 @@ claude plugin test plugins/spindle
 echo "check: zsh scripts/check-mockup.sh"
 zsh scripts/check-mockup.sh
 
+echo "check: zsh scripts/check-staging-guard.sh"
+zsh scripts/check-staging-guard.sh
+
 if [ -d plugins/spindle/.claude-plugin/types ]; then
   echo "check: tsc -p plugins/spindle"
   tsc -p plugins/spindle
