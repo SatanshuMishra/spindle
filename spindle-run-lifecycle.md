@@ -1,7 +1,7 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: active
-Updated: 2026-10-22T00:50:20.547Z
-Next ids: c5 D1 R1 S1
+Updated: 2026-10-22T01:12:44.451Z
+Next ids: c5 D2 R1 S1
 
 ## Goal
 
@@ -23,6 +23,8 @@ interphase:bug interview in progress (slug spindle-run-lifecycle): intent I1 to 
 Record the owner's round 2 answers, design the criteria and Steps in the record, then hold the read-back.
 
 ## Decisions in force
+
+- D1 Interphase hand-off: spindle-run-lifecycle spec approved for build: Build as one MSP, run-lifecycle, on the FEATURE branch; the pipeline and logbook specs are written while it builds; Job 2 follows once its pull request opens.
 
 ## Open risks
 
