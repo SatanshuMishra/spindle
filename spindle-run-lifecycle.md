@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: active
-Updated: 2026-10-22T00:37:13.183Z
+Updated: 2026-10-22T00:37:16.862Z
 Next ids: c5 D1 R1 S1
 
 ## Goal
@@ -34,3 +34,5 @@ Record the owner's intent answer in docs/specs/spindle-run-lifecycle.decisions.m
 - Events: ~/.mitosis/spindle/events/spindle-native-layout.jsonl and spindle-visible-decorations.jsonl
 - Session file: ~/.mitosis/sessions/1bb57b78-2c63-4710-ada0-0698dfc00a63.json
 - Hand-over note: ~/Library/Application Support/Work Claude/side-session-notes/local_63d28fe9-95f7-415c-b78d-1ef6cb24f3f7/spindle-lifecycle-handover.md
+- Interphase files: docs/specs/spindle-run-lifecycle.decisions.md and .record.json in the spindle checkout
+- Probe replay: /var/folders/tz/b798spt96sjfyy924nf0cw4c0000gn/T/interphase-probe-_w7ed32t/plugins/spindle/tests/probe-lifecycle.test.ts
