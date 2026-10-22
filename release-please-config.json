@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/v17.11.2/schemas/config.json",
+  "bootstrap-sha": "f714bfc155f182563f2556f1ea60e90458bbc445",
+  "packages": {
+    ".": {
+      "release-type": "simple",
+      "package-name": "spindle",
+      "component": "spindle",
+      "include-component-in-tag": true,
+      "bump-minor-pre-major": true,
+      "changelog-path": "CHANGELOG.md",
+      "extra-files": [
+        {"type": "json", "path": ".claude-plugin/marketplace.json", "jsonpath": "$.plugins[0].version"},
+        {"type": "json", "path": "plugins/spindle/.claude-plugin/plugin.json", "jsonpath": "$.version"}
+      ]
+    }
+  }
+}
