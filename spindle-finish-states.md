@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: active
-Updated: 2026-10-22T03:14:57.155Z
+Updated: 2026-10-22T03:15:15.762Z
 Next ids: c6 D2 R2 S1
 
 ## Goal
@@ -42,6 +42,5 @@ Needs: D1, R1.
 - Reader it builds on: mitosis/run-record-reader (spindle pull request 21)
 - Design source: ~/Documents/DevLabs/spindle-design
 - Job 2 spec files: docs/specs/spindle-finish-states.{md,decisions.md,record.json,items.json} in the spindle checkout
-- Run home: ~/.mitosis/spindle/spindle-finish-states (charter, run.zsh, build-1.log); run directory ~/.mitosis/runs/spindle/spindle-finish-states (lane logs)
-
+- Run home: ~/.mitosis/spindle/spindle-finish-states (charter, run.zsh, rounds.md, build logs); run directory ~/.mitosis/runs/spindle/spindle-finish-states (lane logs)
 - Review files: ~/.mitosis/spindle/spindle-finish-states/review (obligations, assumptions, proofs; round-1/ holds diffs, suite output, briefs, findings and candidates per MSP)
