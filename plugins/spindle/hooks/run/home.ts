@@ -27,6 +27,7 @@ export type RunFiles = {
   state: FileText
   laneNames: readonly string[]
   ledger: FileText
+  follows: FileText
 }
 
 type Wanted = { path: string; mtimeMs: number }
@@ -109,6 +110,7 @@ export async function readRunFiles(
         state: ABSENT,
         laneNames: [],
         ledger: ABSENT,
+        follows: ABSENT,
       },
       cache: {},
     }
@@ -130,7 +132,8 @@ export async function readRunFiles(
   const planFile = fileIn(runEntries, runDir, 'plan.json')
   const stateFile = fileIn(runEntries, runDir, 'state.json')
   const ledgerFile = fileIn(ledgerEntries, parentOf(ledger), nameOf(ledger))
-  const wanted = [planFile, stateFile, ledgerFile, ...roundFiles].filter((one): one is Wanted => one !== null)
+  const followsFile = fileIn(homeEntries, home, 'follows.json')
+  const wanted = [planFile, stateFile, ledgerFile, followsFile, ...roundFiles].filter((one): one is Wanted => one !== null)
   const fetched = await fetchChanged($, wanted, cache)
   const textOf = (file: Wanted | null): FileText =>
     file === null ? ABSENT : (fetched.find(one => one.path === file.path)?.text ?? ABSENT)
@@ -160,6 +163,7 @@ export async function readRunFiles(
       state: textOf(stateFile),
       laneNames: (laneEntries ?? []).filter(entry => entry.kind === 'file').map(entry => entry.name),
       ledger: textOf(ledgerFile),
+      follows: textOf(followsFile),
     },
     cache: cacheOf(fetched),
   }

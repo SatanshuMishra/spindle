@@ -3,7 +3,7 @@ import type { Elements, EngineInterface, RenderElement, RenderInput } from 'clau
 
 import type { Activity, MspRow, MspStatus, Outcome, Role, RoundRow, RunView, WorkerRole, WorkerRow } from '../../types'
 import { LANE_NAME } from '../run/state'
-import { NO_RUN, activityNow, currentActivity, elapsed, modelName } from '../run/summary'
+import { NO_RUN, activityNow, currentActivity, elapsed, modelName, unplannedPulls } from '../run/summary'
 import { ROLE_COLOR, colorOf, costumeOf, crab } from './crew'
 import { cardSlot, cardTrigger } from './hint'
 import type { Card } from './hint'
@@ -627,6 +627,14 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
       <Box key="pane-msps" flexDirection="column" gap="xs">
         <Text dimColor>{`MSPs · ${view.msps.length}`}</Text>
         {view.msps.map(mspRow)}
+        {unplannedPulls(view).map(pull => (
+          <Box key={`pull-row-${pull.number}`} flexDirection="row" alignItems="center" gap="sm">
+            <Text weight="semibold">{`Pull request #${pull.number}`}</Text>
+            <Text dimColor wrap="truncate-end">
+              {pull.head}
+            </Text>
+          </Box>
+        ))}
       </Box>
       <Box key="pane-workers" flexDirection="column" gap="xs">
         {workingHeading(ui, selected, listed.length)}
@@ -676,6 +684,9 @@ function terminalPane($: EngineInterface, ui: PaneElements, view: RunView, selec
           {terminalMspButton($, ui, msp, i, now)}
           <Text dimColor>{mspExtra(msp)}</Text>
         </Box>
+      ))}
+      {unplannedPulls(view).map(pull => (
+        <Text key={`pull-row-${pull.number}`}>{`Pull request #${pull.number}  ${pull.head}`}</Text>
       ))}
       {workingHeading(ui, selected, listed.length)}
       {listed.map((worker, i) => (

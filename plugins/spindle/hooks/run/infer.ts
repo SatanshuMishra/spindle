@@ -1,7 +1,11 @@
 import type {
   Activity,
+  EventFacts,
   FileFacts,
+  FollowsLink,
+  HomeFacts,
   LaneFact,
+  Lifecycle,
   MspRow,
   MspStatus,
   Outcome,
@@ -9,13 +13,16 @@ import type {
   RoundFiles,
   RoundRow,
   RoundState,
+  RunEnd,
   RunIdentity,
   RunView,
   Signals,
   Stage,
+  VerdictEvent,
 } from '../../types'
 import type { FileText, ReviewRound, RunFiles } from './home'
-import { isObject, parseJson } from './state'
+import type { RunLocation } from './session'
+import { LANES, isObject, parseJson } from './state'
 import type { Json } from './state'
 import { currentActivity, plural } from './summary'
 import { workersOf } from './workers'
@@ -115,6 +122,11 @@ function verdictShape(value: unknown): Verdict | null {
   if (!Array.isArray(value.blockers) || !Array.isArray(value.advisories)) return null
   const outcome = OUTCOMES.find(one => one === value.outcome) ?? 'unknown'
   return { outcome, blockers: value.blockers.map(kindOf), advisories: value.advisories.map(kindOf) }
+}
+
+function followsShape(value: unknown): FollowsLink | null {
+  if (!isObject(value) || typeof value.parent !== 'string' || value.parent === '') return null
+  return { parent: value.parent, lane: LANES.find(lane => lane === value.lane) ?? null }
 }
 
 function findingsShape(value: unknown): readonly string[] | null {
@@ -378,7 +390,7 @@ function laneFactOf(lane: PlanLane & { n: number; hasOut: boolean }, label: stri
   return lane.hasOut ? { n: lane.n, msp: label, tier: lane.tier, state: 'building' } : null
 }
 
-export function inferFacts(files: RunFiles): FileFacts {
+export function inferFacts(files: RunFiles): HomeFacts {
   const { location } = files
   const plan = parsed(files.plan, planShape)
   const state = parsed(files.state, stateShape)
@@ -500,6 +512,110 @@ export function inferFacts(files: RunFiles): FileFacts {
     buildingLanes: building.length,
     buildingTier: building[0]?.tier ?? '',
     oldestMtimeMs: fileTimes.length > 0 ? Math.min(...fileTimes) : null,
+    follows: followsLinkOf(files.follows),
+  }
+}
+
+function followsLinkOf(file: FileText): FollowsLink | null {
+  const follows = parsed(file, followsShape)
+  return follows.kind === 'ok' ? follows.value : null
+}
+
+const EVENT_STATUS: Readonly<Record<Outcome, MspStatus>> = {
+  green: 'green',
+  blocked: 'blocked',
+  loop: 'fixing',
+  diagnose: 'fixing',
+  'hard-failure': 'failed',
+  unknown: 'unknown',
+}
+
+const EVENT_STAGE: Readonly<Record<Outcome, Stage | 'unknown'>> = {
+  green: 'ship',
+  blocked: 'ship',
+  loop: 'fix',
+  diagnose: 'fix',
+  'hard-failure': 'unknown',
+  unknown: 'unknown',
+}
+
+const EVENT_ROUND_STATE: Readonly<Record<Outcome, RoundState>> = {
+  green: 'green',
+  blocked: 'blocked',
+  loop: 'loop',
+  diagnose: 'diagnosing',
+  'hard-failure': 'hard-failure',
+  unknown: 'status unknown',
+}
+
+function eventRoundActivity(verdict: VerdictEvent): RoundActivity {
+  const state = EVENT_ROUND_STATE[verdict.outcome]
+  const counts = `${plural(verdict.blockers, 'blocker')}, ${plural(verdict.advisories, 'advisory')}`
+  return {
+    kind: 'round',
+    round: verdict.round,
+    name: `Round ${verdict.round}`,
+    words: `Round ${verdict.round} · ${state}`,
+    state,
+    isRunning: false,
+    startedAt: null,
+    summary: [capitalised(state), counts],
+    kinds: [],
+    counts,
+  }
+}
+
+const lastOf = <T>(items: readonly T[]): T | undefined => items[items.length - 1]
+
+function eventMsp(label: string, latest: VerdictEvent): MspRow {
+  return {
+    label,
+    branch: `mitosis/${label}`,
+    shipBranch: null,
+    status: EVENT_STATUS[latest.outcome],
+    lanesDone: 0,
+    lanesTotal: 0,
+    tier: '',
+    round: latest.round,
+    pr: '',
+    proof: null,
+    activities: [eventRoundActivity(latest)],
+    current: 0,
+    stage: EVENT_STAGE[latest.outcome],
+  }
+}
+
+export function eventRunFacts(location: RunLocation, events: EventFacts): HomeFacts {
+  const labels = [...new Set(events.verdicts.map(verdict => verdict.msp))]
+  const msps = labels.flatMap(label => {
+    const latest = lastOf(events.verdicts.filter(verdict => verdict.msp === label))
+    return latest === undefined ? [] : [eventMsp(label, latest)]
+  })
+  const keys = [...new Set(events.verdicts.map(verdict => `${verdict.round}/${verdict.msp}`))]
+  const rounds = keys.flatMap((key): RoundRow[] => {
+    const latest = lastOf(events.verdicts.filter(verdict => `${verdict.round}/${verdict.msp}` === key))
+    return latest === undefined
+      ? []
+      : [{ n: latest.round, msp: latest.msp, candidates: null, blockers: latest.blockers, advisories: latest.advisories, outcome: latest.outcome }]
+  })
+  return {
+    slug: location.slug,
+    repo: location.repo,
+    home: location.home,
+    runDir: location.runDir,
+    hasPlan: 'ok',
+    isStateBad: false,
+    hasLighthouse: false,
+    highestRound: Math.max(0, ...events.verdicts.map(verdict => verdict.round)),
+    msps,
+    rounds,
+    roundFiles: [],
+    lanes: [],
+    worktrees: [],
+    buildingLanes: 0,
+    buildingTier: '',
+    oldestMtimeMs: events.startedAt,
+    follows: null,
   }
 }
 
@@ -513,11 +629,28 @@ function mspStage(msps: readonly MspRow[]): Stage | 'unknown' {
   return STAGES[Math.min(...stages)] ?? 'unknown'
 }
 
+const laterOf = (one: Stage | null, other: Stage | null): Stage | null =>
+  one === null ? other : other === null ? one : STAGES[Math.max(STAGES.indexOf(one), STAGES.indexOf(other))] ?? one
+
+const followsOf = (files: FileFacts): string | null => files.follows?.parent ?? files.events.follows
+
+function recordedStage(files: FileFacts, signals: Signals): Stage | null {
+  if (files.source === 'home') return null
+  const recorded = lastOf(files.events.stages) ?? (files.source === 'record' ? 'clean' : null)
+  return laterOf(recorded, signals.callStage)
+}
+
+const laneOf = (files: FileFacts, signals: Signals) => signals.lane ?? files.follows?.lane ?? files.events.lane
+
 function stageOf(files: FileFacts, msps: readonly MspRow[], signals: Signals): Stage | 'unknown' {
+  if (files.source === 'events' && files.events.log === 'unreadable') return signals.callStage ?? 'unknown'
+  const recorded = recordedStage(files, signals)
+  if (recorded !== null) return recorded
   const call = signals.callStage
   if (call === 'clean') return 'clean'
   if (call === 'integrate' || files.hasLighthouse) return 'integrate'
   if (files.home === null) return call === null ? 'unknown' : isAtLeast(call, 'build') ? 'build' : call
+  if (followsOf(files) !== null && laneOf(files, signals) === 'direct' && files.hasPlan === 'absent') return signals.pulls.length > 0 ? 'ship' : 'build'
   if (files.hasPlan === 'bad') return 'unknown'
   if (files.hasPlan === 'absent') return isAtLeast(call, 'build') ? 'build' : 'spec'
   if (files.isStateBad) return 'unknown'
@@ -554,19 +687,48 @@ export const isSameRun = (one: RunIdentity, other: RunIdentity) => one.slug === 
 export const isRunStarted = (files: FileFacts | null, signals: Signals) =>
   signals.callStage !== null || (files?.home ?? null) !== null
 
-export function buildView(files: FileFacts | null, signals: Signals): RunView | null {
+const STOPPED = 'abandoned: stopped at'
+const SUPERSEDED = 'abandoned: superseded by'
+
+function endedAs(end: RunEnd): Lifecycle {
+  const status = end.status ?? 'done'
+  if (status.startsWith(SUPERSEDED)) return 'superseded'
+  if (status.startsWith(STOPPED)) return 'stopped-critical'
+  if (status.startsWith('abandoned')) return 'unknown'
+  return end.isDraft ? 'closed-draft' : 'closed-done'
+}
+
+function lifecycleOf(files: FileFacts, msps: readonly MspRow[], signals: Signals): Lifecycle {
+  const { events } = files
+  if (events.log === 'unreadable') return 'unknown'
+  if (events.end !== null) return endedAs(events.end)
+  if (files.source !== 'home' && (events.isCleanDone || files.source === 'record')) return 'cleaned'
+  if (events.isWorkAfterShip) return 'reopened'
+  const isShipped = msps.length > 0 ? msps.every(msp => msp.pr !== '') : signals.pulls.length > 0
+  return isShipped ? 'shipped' : 'running'
+}
+
+const isRecordFinished = (files: FileFacts) =>
+  files.source === 'record' || (files.source === 'events' && (files.events.end !== null || files.events.isCleanDone))
+
+const ownSignals = (files: FileFacts | null, signals: Signals): Signals =>
+  files !== null && signals.finishedRun != null && isSameRun(signals.finishedRun, files) ? signals.finishedRun.signals : signals
+
+export function buildView(files: FileFacts | null, live: Signals): RunView | null {
+  const signals = ownSignals(files, live)
   if (files === null || !isRunStarted(files, signals)) return null
-  if (signals.finishedRun != null && isSameRun(signals.finishedRun, files)) return null
   const msps = files.msps.map(msp => withPull(msp, signals))
   const stage = stageOf(files, msps, signals)
   return {
     slug: files.slug,
     repo: files.repo,
     home: files.home,
+    follows: followsOf(files),
     stage,
     round: roundOf(stage, msps, files.highestRound),
-    isFinished: signals.isCleanDone,
-    lane: signals.lane,
+    isFinished: signals.isCleanDone || isRecordFinished(files),
+    lifecycle: lifecycleOf(files, msps, signals),
+    lane: laneOf(files, signals),
     startedAt: earliestOf([files.oldestMtimeMs, signals.firstCallAt]),
     msps,
     rounds: files.rounds,
@@ -576,5 +738,6 @@ export function buildView(files: FileFacts | null, signals: Signals): RunView | 
     buildingTier: files.buildingTier,
     costUsd: signals.costUsd,
     isPullRequestRunning: signals.isPullRequestRunning,
+    pulls: signals.pulls,
   }
 }

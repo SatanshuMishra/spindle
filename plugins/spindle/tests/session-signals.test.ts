@@ -72,7 +72,7 @@ test('create_pull_request call marks its MSP PR open', async ($, on) => {
   expect(line).toContain('pr #41')
 })
 
-test('a done run stops reading', async ($, on) => {
+test('a done run reads only its session file and event log', async ($, on) => {
   const world = harness(on, integrate, { now: NOW })
   world.answerBash('pipeline clean', 0)
   await world.start($)
@@ -83,7 +83,12 @@ test('a done run stops reading', async ($, on) => {
 
   await world.clock.advance(10000)
 
-  expect(world.reads().length).toBe(readsAtDone)
+  expect(
+    world
+      .reads()
+      .slice(readsAtDone)
+      .filter(path => path !== '/home/owner/.mitosis/sessions/sess-fixture.json' && path !== '/home/owner/.mitosis/api/events/rate-limit-api.jsonl'),
+  ).toEqual([])
 })
 
 test('a second thread with no run home yet is named by its thread', async ($, on) => {
@@ -118,7 +123,7 @@ test('a new pipeline call after Done shows the next run', async ($, on) => {
   expect(world.toasts().slice(toastsAtDone).filter(text => text.includes('rate-limit-api'))).toEqual([])
 })
 
-test('a new pipeline call after Done hides the finished run', async ($, on) => {
+test('a new pipeline call after Done keeps the finished run until another run is named', async ($, on) => {
   const world = harness(on, integrate, { now: NOW })
   world.answerBash('pipeline clean', 0)
   await world.start($)
@@ -131,8 +136,29 @@ test('a new pipeline call after Done hides the finished run', async ($, on) => {
   await skill($, 'interphase:bug', 'Fix the quota header. Work autonomously.')
   await world.clock.advance(2000)
 
-  expect(await status($)).toEqual(['No pipeline run in this session.'])
+  const lines = await status($)
+  expect(lines).toContain('run rate-limit-api repo api')
+  expect(lines).toContain('stage clean round 0 finished yes')
   expect(world.toasts().slice(toastsAtDone)).toEqual([])
+})
+
+test('the next run named after a call after Done takes that call', async ($, on) => {
+  const world = harness(on, integrate, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($)
+  await bash($, 'pipeline clean --repo /home/owner/work/api --slug rate-limit-api')
+  await world.clock.advance(2000)
+  await skill($, 'interphase:bug', 'Fix the quota header. Work autonomously.')
+  await world.clock.advance(2000)
+  expect(await status($)).toContain('stage clean round 0 finished yes')
+
+  world.use(secondRun)
+  await world.clock.advance(2000)
+
+  const lines = await status($)
+  expect(lines).toContain('run quota-api repo api')
+  expect(lines).toContain('lane standard')
+  expect(lines).toContain('stage spec round 0 finished no')
 })
 
 test('interview suffix sets the full lane', async ($, on) => {

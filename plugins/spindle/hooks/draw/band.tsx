@@ -40,6 +40,7 @@ const LANE_SCOPE = 'spindle-band-lane'
 const LANE_MEANING: Readonly<Record<Lane, string>> = {
   full: 'Full lane: interview, spec, build, review until green',
   standard: 'Standard lane: brief, one build, one review round',
+  direct: 'Direct lane: a hand fix after its parent run was cleaned up',
 }
 
 type Worker = { role: Role; startedAt: number }

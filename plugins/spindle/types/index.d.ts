@@ -64,7 +64,9 @@ export type LaneFact = {
   state: 'building' | 'done' | 'failed'
 }
 
-export type FileFacts = {
+export type FollowsLink = { parent: string; lane: Lane | null }
+
+export type HomeFacts = {
   slug: string
   repo: string | null
   home: string | null
@@ -81,9 +83,43 @@ export type FileFacts = {
   buildingLanes: number
   buildingTier: string
   oldestMtimeMs: number | null
+  follows: FollowsLink | null
 }
 
-export type Lane = 'full' | 'standard'
+export type VerdictEvent = { msp: string; round: number; outcome: Outcome; blockers: number; advisories: number }
+
+export type RunEnd = { status: string | null; isDraft: boolean }
+
+export type EventLog = 'absent' | 'unreadable' | 'read'
+
+export type EventFacts = {
+  log: EventLog
+  lane: Lane | null
+  follows: string | null
+  startedAt: number | null
+  stages: readonly Stage[]
+  verdicts: readonly VerdictEvent[]
+  isWorkAfterShip: boolean
+  isCleanDone: boolean
+  end: RunEnd | null
+}
+
+export type FactSource = 'home' | 'record' | 'events'
+
+export type FileFacts = HomeFacts & { source: FactSource; events: EventFacts }
+
+export type Lane = 'full' | 'standard' | 'direct'
+
+export type Lifecycle =
+  | 'unknown'
+  | 'running'
+  | 'shipped'
+  | 'reopened'
+  | 'cleaned'
+  | 'closed-done'
+  | 'closed-draft'
+  | 'stopped-critical'
+  | 'superseded'
 
 export type Role = 'captain' | 'scribe' | 'builder' | 'detective' | 'judge' | 'courier' | 'plain'
 
@@ -117,6 +153,8 @@ export type PullRow = { head: string; number: string }
 
 export type RunIdentity = { readonly slug: string; readonly home: string | null }
 
+export type FinishedRun = RunIdentity & { readonly signals: Signals }
+
 export type Signals = {
   lane: Lane | null
   callStage: Stage | null
@@ -126,16 +164,18 @@ export type Signals = {
   isPullRequestRunning: boolean
   pulls: PullRow[]
   costUsd: number
-  finishedRun?: RunIdentity | null
+  finishedRun?: FinishedRun | null
 }
 
 export type RunView = {
   slug: string
   repo: string | null
   home: string | null
+  follows: string | null
   stage: Stage | 'unknown'
   round: number
   isFinished: boolean
+  lifecycle: Lifecycle
   lane: Lane | null
   startedAt: number | null
   msps: MspRow[]
@@ -146,6 +186,7 @@ export type RunView = {
   buildingTier: string
   costUsd: number
   isPullRequestRunning: boolean
+  pulls: PullRow[]
 }
 
 declare module 'claude-code' {
