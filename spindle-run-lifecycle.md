@@ -1,7 +1,7 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: active
-Updated: 2026-10-22T01:32:16.722Z
-Next ids: c5 D2 R1 S1
+Updated: 2026-10-22T01:32:30.117Z
+Next ids: c5 D2 R2 S1
 
 ## Goal
 
@@ -29,6 +29,8 @@ Needs: D1.
 - D1 Interphase hand-off: spindle-run-lifecycle spec approved for build: Build as one MSP, run-lifecycle, on the FEATURE branch; the pipeline and logbook specs are written while it builds; Job 2 follows once its pull request opens.
 
 ## Open risks
+
+- R1 No event moves a reopened run back to shipped: pipeline check-run writes stage.start build and ship only once each, so the pipeline spec must add a ship start after a reopened round if the validator confirms C1.
 
 ## Settled, do not reopen
 
