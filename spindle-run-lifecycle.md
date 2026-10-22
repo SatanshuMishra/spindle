@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: active
-Updated: 2026-10-22T01:56:50.700Z
+Updated: 2026-10-22T02:00:35.954Z
 Next ids: c5 D2 R2 S1
 
 ## Goal
@@ -9,18 +9,18 @@ Diagnose and fix why the spindle bar and panel vanish when pipeline clean-up run
 
 ## Done when
 
-- [ ] c1 The replay test built from the recorded events fails on today's code and passes after the fix, asserting the panel stays filled after clean-up and spindle follows the follow-up
+- [x] c1 The replay test built from the recorded events fails on today's code and passes after the fix, asserting the panel stays filled after clean-up and spindle follows the follow-up evidence: mitosis gate 12 of 12 red without the work and green with it, including the 1bb57b78 replay in plugins/spindle/tests/run-lifecycle.test.ts; review green at round 2
 - [ ] c2 The ledger shows the old thread's final status linked to its follow-up
 - [ ] c3 The next real run stays visible through clean-up and follows one deliberate follow-up fix
 - [ ] c4 A lifecycle table lists every run state, the event that moves it and the component that emits it
 
 ## Where things stand
 
-Two MSPs on FEATURE branch fix/spindle-run-lifecycle. lifecycle-table: green at round 2, head 297ecfa, ready to ship. run-record-reader: round 1 blockers C1, C2, C3 and advisories C4, C5 fixed at 0213fcc over red receipts at 36e903d; suite 210 pass and every diagnosis selecting check finds nothing; round 2 validator running on carried P1 to P3 and one LOW advisory (a finished run with no record and no event log vanishes once its home is deleted). No security reviewer (read-only local file parsing). Causes proven: (a) poll.ts:43 drops the view once clean-up deletes the run home; (b) session.ts:39 keeps the shipped run when the follow-up makes no run home, and poll.ts:53 freezes a finished view. The pipeline and logbook specs are written in their repositories and need a session launched in each, logbook first.
+Two MSPs on FEATURE branch fix/spindle-run-lifecycle. Both MSPs green at round 2 (lifecycle-table head 297ecfa; run-record-reader reviewed head 0213fcc, then the glossary and ADR 0008 commit 0bde27c, so mitosis gates it again at ship). Ship next. No security reviewer (read-only local file parsing). Causes proven: (a) poll.ts:43 drops the view once clean-up deletes the run home; (b) session.ts:39 keeps the shipped run when the follow-up makes no run home, and poll.ts:53 freezes a finished view. The pipeline and logbook specs are written in their repositories and need a session launched in each, logbook first.
 
 ## Next step
 
-Run run-record-reader round 2 (code-reviewer, then validator); once it is green, ship both MSPs with SHIP=1 after recording the ship decision.
+Record the ship decision, run pipeline comment and promote, run SHIP=1 run.zsh --resume, and open both MSP pull requests.
 
 Needs: D1.
 
