@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: parked
-Updated: 2026-10-22T18:57:12.547Z
+Updated: 2026-10-22T18:57:13.783Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -20,9 +20,7 @@ Merged and cleaned: FEATURE pull request 25 is in main, and pipeline clean remov
 
 ## Next step
 
-The owner starts Clean-up by saying the FEATURE pull request 25 merged; c2 and c3 still wait on the logbook spec (logbook-thread-follows) and the pipeline spec (pipeline-run-record) being built by sessions in those repositories, logbook first.
-
-Needs: D2.
+Close this thread done once the logbook session builds logbook-thread-follows (ticks c2) and the pipeline session builds pipeline-run-record and a real run proves c3; build logbook first.
 
 ## Decisions in force
 
