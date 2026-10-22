@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: parked
-Updated: 2026-10-22T18:57:04.850Z
+Updated: 2026-10-22T18:57:12.547Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -40,9 +40,8 @@ Needs: D2.
 - Events: ~/.mitosis/spindle/events/spindle-native-layout.jsonl and spindle-visible-decorations.jsonl
 - Session file: ~/.mitosis/sessions/1bb57b78-2c63-4710-ada0-0698dfc00a63.json
 - Hand-over note: ~/Library/Application Support/Work Claude/side-session-notes/local_63d28fe9-95f7-415c-b78d-1ef6cb24f3f7/spindle-lifecycle-handover.md
-- Interphase files: docs/specs/spindle-run-lifecycle.decisions.md and .record.json in the spindle checkout
-- Probe replay: /var/folders/tz/b798spt96sjfyy924nf0cw4c0000gn/T/interphase-probe-_w7ed32t/plugins/spindle/tests/probe-lifecycle.test.ts
-- Glossary: GLOSSARY.md in the spindle checkout
-- Run home: ~/.mitosis/spindle/spindle-run-lifecycle (charter, run.zsh, rounds.md, review/, MSP assumptions)
+- Lifecycle table: docs/run-lifecycle.md in main
+- Glossary and decisions: GLOSSARY.md and docs/adr/0008 in main
+- Run report: ~/.mitosis/spindle/reports/spindle-run-lifecycle.json (stages, waits, bottleneck)
 - Pipeline spec: ~/Documents/DevLabs/pipeline/docs/specs/pipeline-run-record.md (run record, clean.done, run.end status and draft, follow-up registration, brief msp line)
 - Logbook spec: ~/Documents/DevLabs/logbook/docs/specs/logbook-thread-follows.md (open_thread follows, Followed by on the parent)
