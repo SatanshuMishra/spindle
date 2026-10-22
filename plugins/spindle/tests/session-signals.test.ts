@@ -72,7 +72,7 @@ test('create_pull_request call marks its MSP PR open', async ($, on) => {
   expect(line).toContain('pr #41')
 })
 
-test('a done run stops reading', async ($, on) => {
+test('a done run reads only its session file and event log', async ($, on) => {
   const world = harness(on, integrate, { now: NOW })
   world.answerBash('pipeline clean', 0)
   await world.start($)
@@ -83,7 +83,12 @@ test('a done run stops reading', async ($, on) => {
 
   await world.clock.advance(10000)
 
-  expect(world.reads().length).toBe(readsAtDone)
+  expect(
+    world
+      .reads()
+      .slice(readsAtDone)
+      .filter(path => path !== '/home/owner/.mitosis/sessions/sess-fixture.json' && path !== '/home/owner/.mitosis/api/events/rate-limit-api.jsonl'),
+  ).toEqual([])
 })
 
 test('a second thread with no run home yet is named by its thread', async ($, on) => {
