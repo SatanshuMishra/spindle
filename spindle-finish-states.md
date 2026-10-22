@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: active
-Updated: 2026-10-22T02:28:29.371Z
+Updated: 2026-10-22T02:29:29.798Z
 Next ids: c6 D2 R2 S1
 
 ## Goal
@@ -17,11 +17,11 @@ Job 2 main part: mock up and build the band and run pane for every final lifecyc
 
 ## Where things stand
 
-FEATURE branch feat/spindle-finish-states is pushed at 1666367, a merge of mitosis/run-record-reader and mitosis/lifecycle-table, because Job 1's FEATURE branch holds none of their code until pull requests 21 and 22 merge; the run home's feature.json records it and pipeline feature-branch adopted it. The interphase spec is written (7 Steps, 11 criteria, 5.11 screenshots unproven) and its one spec review returned 13 issues. The event data records no worker's MSP; the pipeline's msp: brief line, mitosis lane.start and lane.end, and a mitosis per-lane agent log are what must emit it.
+FEATURE branch feat/spindle-finish-states is pushed at 1666367, a merge of mitosis/run-record-reader and mitosis/lifecycle-table, because Job 1's FEATURE branch holds none of their code until pull requests 21 and 22 merge; the run home's feature.json records it and pipeline feature-branch adopted it. The spec is handed off (7 Steps, 11 criteria, 5.11 screenshots unproven, review issues fixed). The event data records no worker's MSP; the pipeline's msp: brief line, mitosis lane.start and lane.end, and a mitosis per-lane agent log are what must emit it. The first build wrote nothing: both Workers failed with "Failed to authenticate: OAuth session expired and could not be refreshed" from the claude CLI, which only the owner can sign in again.
 
 ## Next step
 
-Run ~/.mitosis/spindle/spindle-finish-states/run.zsh --plan-only, then the first build, then review each MSP.
+Once the owner signs the claude CLI in again (claude -p answers), run ~/.mitosis/spindle/spindle-finish-states/run.zsh --resume once, then review each MSP.
 
 Needs: D1, R1.
 
