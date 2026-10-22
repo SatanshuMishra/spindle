@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: active
-Updated: 2026-10-22T02:05:25.662Z
+Updated: 2026-10-22T02:24:33.127Z
 Next ids: c6 D1 R2 S1
 
 ## Goal
@@ -17,11 +17,11 @@ Job 2 main part: mock up and build the band and run pane for every final lifecyc
 
 ## Where things stand
 
-FEATURE branch feat/spindle-finish-states is pushed at 1666367, a merge of mitosis/run-record-reader and mitosis/lifecycle-table, because Job 1's FEATURE branch holds none of their code until pull requests 21 and 22 merge; the run home's feature.json records it and pipeline feature-branch adopted it.
+FEATURE branch feat/spindle-finish-states is pushed at 1666367, a merge of mitosis/run-record-reader and mitosis/lifecycle-table, because Job 1's FEATURE branch holds none of their code until pull requests 21 and 22 merge; the run home's feature.json records it and pipeline feature-branch adopted it. The interphase spec is written (7 Steps, 11 criteria, 5.11 screenshots unproven) and its one spec review returned 13 issues. The event data records no worker's MSP; the pipeline's msp: brief line, mitosis lane.start and lane.end, and a mitosis per-lane agent log are what must emit it.
 
 ## Next step
 
-Run interphase:feature autonomously from decisions Q9 to Q13 and Q18 in docs/specs/spindle-run-lifecycle.decisions.md.
+Fix the spec review's issues in the record and spec, rerun the checks, promote the glossary terms and an ADR, verify the guard and hand off.
 
 ## Decisions in force
 
