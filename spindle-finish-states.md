@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: active
-Updated: 2026-10-22T03:53:14.167Z
+Updated: 2026-10-22T03:53:19.847Z
 Next ids: c6 D3 R2 S1
 
 ## Goal
@@ -9,11 +9,11 @@ Job 2 main part: mock up and build the band and run pane for every final lifecyc
 
 ## Done when
 
-- [ ] c1 Every lifecycle state in docs/run-lifecycle.md has a band and run pane frame in docs/mockups/finish-states.html
-- [ ] c2 A clean success (closed-done, no draft, green lighthouse) plays a crab celebration once that settles and respects reduced motion; every other final state shows a plain, honest finish
-- [ ] c3 Past runs stay browsable from a Past runs list in the run pane, read-only from the run records
-- [ ] c4 Working now shows a Working and a Done section for the selected MSP, attributing lane workers and main-thread agents to their MSP
-- [ ] c5 Screenshots of the running panel in each final state are compared against the mock-up, or the comparison is listed as unproven
+- [x] c1 Every lifecycle state in docs/run-lifecycle.md has a band and run pane frame in docs/mockups/finish-states.html evidence: scripts/check-mockup.sh passes on mitosis/finish-mockup (9 states each have a band and run pane frame), and the mitosis gate showed it failing with the work reverted; pull request 24
+- [x] c2 A clean success (closed-done, no draft, green lighthouse) plays a crab celebration once that settles and respects reduced motion; every other final state shows a plain, honest finish evidence: finish-facts acceptance tests (celebrated only for closed-done with a green lighthouse verdict, plain for draft, blocked, unreadable or missing verdicts, once-only and settle tests) fail reverted and pass with the work in the mitosis gate, 46 of 46; pull request 23
+- [x] c3 Past runs stay browsable from a Past runs list in the run pane, read-only from the run records evidence: finish-pane and pane tests for the Past runs list and read-only past-run view pass in the finish-facts suite (263 pass) and the ship gate; pull request 23
+- [x] c4 Working now shows a Working and a Done section for the selected MSP, attributing lane workers and main-thread agents to their MSP evidence: Working and Done section and MSP attribution tests pass in the finish-facts suite and gate; the event data does not record a worker's MSP, so the pipeline msp: brief line, mitosis lane.start and lane.end and a per-lane agent log must emit it; pull request 23
+- [x] c5 Screenshots of the running panel in each final state are compared against the mock-up, or the comparison is listed as unproven evidence: listed as unproven: spec criterion 5.11 names the screenshot comparison unproven, and the owner stages each final state with scripts/stage-finish-fixtures.sh to compare against docs/mockups/finish-states.html
 
 ## Where things stand
 
