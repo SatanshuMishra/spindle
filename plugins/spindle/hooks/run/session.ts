@@ -12,6 +12,8 @@ export type RunLocation = {
 
 export type SessionFile = { mitosis: string; path: string }
 
+export const ledgerOf = (mitosis: string, repo: string) => `${mitosis}/${repo}/findings.jsonl`
+
 type RunHome = { path: string; anchor: unknown }
 
 const isRunHome = (value: unknown): value is RunHome => isObject(value) && typeof value.path === 'string'
@@ -49,6 +51,6 @@ export function locate(text: string | null, mitosis: string): RunLocation | null
     repo,
     home: chosen.path.replace(/\/+$/, ''),
     runDir: `${mitosis}/runs/${repo}/${slug}`,
-    ledger: `${mitosis}/${repo}/findings.jsonl`,
+    ledger: ledgerOf(mitosis, repo),
   }
 }

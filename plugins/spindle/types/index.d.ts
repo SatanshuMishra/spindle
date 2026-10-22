@@ -90,8 +90,10 @@ export type VerdictEvent = { msp: string; round: number; outcome: Outcome; block
 
 export type RunEnd = { status: string | null; isDraft: boolean }
 
+export type EventLog = 'absent' | 'unreadable' | 'read'
+
 export type EventFacts = {
-  isPresent: boolean
+  log: EventLog
   lane: Lane | null
   follows: string | null
   startedAt: number | null
@@ -109,6 +111,7 @@ export type FileFacts = HomeFacts & { source: FactSource; events: EventFacts }
 export type Lane = 'full' | 'standard' | 'direct'
 
 export type Lifecycle =
+  | 'unknown'
   | 'running'
   | 'shipped'
   | 'reopened'
@@ -150,6 +153,8 @@ export type PullRow = { head: string; number: string }
 
 export type RunIdentity = { readonly slug: string; readonly home: string | null }
 
+export type FinishedRun = RunIdentity & { readonly signals: Signals }
+
 export type Signals = {
   lane: Lane | null
   callStage: Stage | null
@@ -159,7 +164,7 @@ export type Signals = {
   isPullRequestRunning: boolean
   pulls: PullRow[]
   costUsd: number
-  finishedRun?: RunIdentity | null
+  finishedRun?: FinishedRun | null
 }
 
 export type RunView = {

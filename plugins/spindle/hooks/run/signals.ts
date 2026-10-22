@@ -96,7 +96,7 @@ export const toolCallSignals: Hook<'tool.call'> = async ($, e, next) => {
   const files = signal.isRunEntry ? await read($, filesState) : null
   const afterDone = (signals: Signals): Signals =>
     signal.isRunEntry && signals.isCleanDone
-      ? { ...NO_SIGNALS, finishedRun: files === null ? null : { slug: files.slug, home: files.home } }
+      ? { ...NO_SIGNALS, finishedRun: files === null ? null : { slug: files.slug, home: files.home, signals } }
       : signals
   await change($, current => {
     const signals = afterDone(current)

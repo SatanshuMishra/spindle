@@ -640,14 +640,17 @@ function recordedStage(files: FileFacts, signals: Signals): Stage | null {
   return laterOf(recorded, signals.callStage)
 }
 
+const laneOf = (files: FileFacts, signals: Signals) => signals.lane ?? files.follows?.lane ?? files.events.lane
+
 function stageOf(files: FileFacts, msps: readonly MspRow[], signals: Signals): Stage | 'unknown' {
+  if (files.source === 'events' && files.events.log === 'unreadable') return signals.callStage ?? 'unknown'
   const recorded = recordedStage(files, signals)
   if (recorded !== null) return recorded
   const call = signals.callStage
   if (call === 'clean') return 'clean'
   if (call === 'integrate' || files.hasLighthouse) return 'integrate'
   if (files.home === null) return call === null ? 'unknown' : isAtLeast(call, 'build') ? 'build' : call
-  if (followsOf(files) !== null && files.hasPlan === 'absent') return signals.pulls.length > 0 ? 'ship' : 'build'
+  if (followsOf(files) !== null && laneOf(files, signals) === 'direct' && files.hasPlan === 'absent') return signals.pulls.length > 0 ? 'ship' : 'build'
   if (files.hasPlan === 'bad') return 'unknown'
   if (files.hasPlan === 'absent') return isAtLeast(call, 'build') ? 'build' : 'spec'
   if (files.isStateBad) return 'unknown'
@@ -690,12 +693,14 @@ const SUPERSEDED = 'abandoned: superseded by'
 function endedAs(end: RunEnd): Lifecycle {
   const status = end.status ?? 'done'
   if (status.startsWith(SUPERSEDED)) return 'superseded'
-  if (status.startsWith(STOPPED) || status.startsWith('abandoned')) return 'stopped-critical'
+  if (status.startsWith(STOPPED)) return 'stopped-critical'
+  if (status.startsWith('abandoned')) return 'unknown'
   return end.isDraft ? 'closed-draft' : 'closed-done'
 }
 
 function lifecycleOf(files: FileFacts, msps: readonly MspRow[], signals: Signals): Lifecycle {
   const { events } = files
+  if (events.log === 'unreadable') return 'unknown'
   if (events.end !== null) return endedAs(events.end)
   if (files.source !== 'home' && (events.isCleanDone || files.source === 'record')) return 'cleaned'
   if (events.isWorkAfterShip) return 'reopened'
@@ -704,11 +709,14 @@ function lifecycleOf(files: FileFacts, msps: readonly MspRow[], signals: Signals
 }
 
 const isRecordFinished = (files: FileFacts) =>
-  files.source !== 'home' && (files.events.end !== null || files.events.isCleanDone)
+  files.source === 'record' || (files.source === 'events' && (files.events.end !== null || files.events.isCleanDone))
 
-export function buildView(files: FileFacts | null, signals: Signals): RunView | null {
+const ownSignals = (files: FileFacts | null, signals: Signals): Signals =>
+  files !== null && signals.finishedRun != null && isSameRun(signals.finishedRun, files) ? signals.finishedRun.signals : signals
+
+export function buildView(files: FileFacts | null, live: Signals): RunView | null {
+  const signals = ownSignals(files, live)
   if (files === null || !isRunStarted(files, signals)) return null
-  if (signals.finishedRun != null && isSameRun(signals.finishedRun, files)) return null
   const msps = files.msps.map(msp => withPull(msp, signals))
   const stage = stageOf(files, msps, signals)
   return {
@@ -720,7 +728,7 @@ export function buildView(files: FileFacts | null, signals: Signals): RunView | 
     round: roundOf(stage, msps, files.highestRound),
     isFinished: signals.isCleanDone || isRecordFinished(files),
     lifecycle: lifecycleOf(files, msps, signals),
-    lane: signals.lane ?? files.follows?.lane ?? files.events.lane,
+    lane: laneOf(files, signals),
     startedAt: earliestOf([files.oldestMtimeMs, signals.firstCallAt]),
     msps,
     rounds: files.rounds,

@@ -4,9 +4,9 @@ import type { EngineInterface } from 'claude-code'
 import type { EventFacts, FileFacts, RunIdentity } from '../../types'
 import { eventLogOf, readEvents, recordOf } from './events'
 import { cacheOf, fetchChanged, isGone, readRunFiles } from './home'
-import type { FileCache } from './home'
+import type { FileCache, FileText } from './home'
 import { eventRunFacts, inferFacts } from './infer'
-import { locate, sessionFile } from './session'
+import { ledgerOf, locate, sessionFile } from './session'
 import type { RunLocation, SessionFile } from './session'
 import { NO_SIGNALS } from './state'
 import { refresh } from './view'
@@ -19,24 +19,40 @@ export const POLL_MS = 2000
 
 type Read = { facts: FileFacts | null; cache: FileCache; isOtherRun: boolean }
 
-async function readSession($: EngineInterface, where: SessionFile, hasHome: boolean, cache: FileCache) {
+async function failedRead($: EngineInterface, path: string): Promise<FileText> {
+  return (await isGone($, path)) ? { kind: 'absent' } : { kind: 'unreadable' }
+}
+
+async function readSession(
+  $: EngineInterface,
+  where: SessionFile,
+  hasHome: boolean,
+  cache: FileCache,
+): Promise<{ text: FileText; cache: FileCache }> {
   if (!hasHome) {
     try {
       const text = await $.fs.read(where.path)
-      return { text: typeof text === 'string' ? text : null, cache: {} }
+      return { text: typeof text === 'string' ? { kind: 'text', text } : { kind: 'unreadable' }, cache: {} }
     } catch {
-      return { text: null, cache: {} }
+      return { text: await failedRead($, where.path), cache: {} }
     }
   }
   try {
     const stat = await $.fs.stat(where.path)
     const fetched = await fetchChanged($, [{ path: where.path, mtimeMs: stat.mtimeMs }], cache)
-    const file = fetched[0]?.text
-    return { text: file?.kind === 'text' ? file.text : null, cache: cacheOf(fetched) }
+    return { text: fetched[0]?.text ?? { kind: 'unreadable' }, cache: cacheOf(fetched) }
   } catch {
-    return { text: null, cache: {} }
+    return { text: await failedRead($, where.path), cache: {} }
   }
 }
+
+const locationOf = (known: FileFacts, mitosis: string): RunLocation => ({
+  slug: known.slug,
+  repo: known.repo,
+  home: known.home,
+  runDir: known.runDir,
+  ledger: known.repo === null ? null : ledgerOf(mitosis, known.repo),
+})
 
 const isSameLocated = (known: RunIdentity, location: RunLocation) =>
   known.slug === location.slug && (known.home === null || known.home === location.home)
@@ -53,7 +69,7 @@ async function readGoneRun(
     const run = await readRunFiles($, { ...location, home: `${record}/home`, runDir: `${record}/run` }, cache)
     return { facts: { ...inferFacts({ ...run.files, location }), source: 'record', events }, cache: run.cache }
   }
-  if (events.isPresent) return { facts: { ...eventRunFacts(location, events), source: 'events', events }, cache: {} }
+  if (events.log !== 'absent') return { facts: { ...eventRunFacts(location, events), source: 'events', events }, cache: {} }
   return { facts: null, cache: {} }
 }
 
@@ -69,18 +85,28 @@ async function readRun(
   return { facts: { ...inferFacts(run.files), source: 'home', events }, cache: run.cache }
 }
 
+async function isHomeGoneSince($: EngineInterface, known: FileFacts): Promise<boolean> {
+  return known.source === 'home' && known.home !== null && (await isGone($, known.home))
+}
+
 async function readFacts($: EngineInterface, cache: FileCache, isFinished: boolean): Promise<Read> {
   const where = await sessionFile($)
   if (where === null) return { facts: null, cache: {}, isOtherRun: false }
   const known = await read($, filesState)
   const session = await readSession($, where, known?.home != null, cache)
-  const location = locate(session.text, where.mitosis)
+  const location =
+    session.text.kind === 'unreadable'
+      ? known === null
+        ? null
+        : locationOf(known, where.mitosis)
+      : locate(session.text.kind === 'text' ? session.text.text : null, where.mitosis)
   if (location === null) return { facts: null, cache: session.cache, isOtherRun: false }
   const isOtherRun = known !== null && !isSameLocated(known, location)
-  if (isFinished && known !== null && !isOtherRun) {
+  if (isFinished && known !== null && !isOtherRun && !(await isHomeGoneSince($, known))) {
     if (known.events.end !== null) return { facts: known, cache: session.cache, isOtherRun }
     const finished = await readEvents($, eventLogOf(where.mitosis, location), cache)
-    return { facts: { ...known, events: finished.events }, cache: { ...session.cache, ...finished.cache }, isOtherRun }
+    const events = finished.events.log === 'unreadable' ? known.events : finished.events
+    return { facts: { ...known, events }, cache: { ...session.cache, ...finished.cache }, isOtherRun }
   }
   const logged = await readEvents($, eventLogOf(where.mitosis, location), cache)
   const run = await readRun($, where.mitosis, location, logged.events, cache)
@@ -90,7 +116,10 @@ async function readFacts($: EngineInterface, cache: FileCache, isFinished: boole
 async function startOtherRun($: EngineInterface, facts: FileFacts | null): Promise<void> {
   if (facts?.home == null) return
   const signals = await read($, signalsState)
-  if (signals.finishedRun != null) return
+  if (signals.finishedRun != null) {
+    await update($, signalsState, current => ({ ...current, finishedRun: null }))
+    return
+  }
   await update($, signalsState, () => NO_SIGNALS)
 }
 

@@ -1,14 +1,14 @@
 import type { EngineInterface } from 'claude-code'
 
 import type { EventFacts, Outcome, RunEnd, Stage, VerdictEvent } from '../../types'
-import { cacheOf, fetchChanged } from './home'
-import type { FileCache } from './home'
+import { cacheOf, fetchChanged, isGone } from './home'
+import type { FileCache, FileText } from './home'
 import type { RunLocation } from './session'
 import { LANES, isObject, parseJson } from './state'
 import type { Json } from './state'
 
 export const NO_EVENTS: EventFacts = {
-  isPresent: false,
+  log: 'absent',
   lane: null,
   follows: null,
   startedAt: null,
@@ -65,7 +65,7 @@ export function eventFacts(text: string): EventFacts {
   const last = ended[ended.length - 1]
   const startedAt = start === undefined || typeof start.ts !== 'string' ? NaN : Date.parse(start.ts)
   return {
-    isPresent: true,
+    log: 'read',
     lane: LANES.find(lane => lane === start?.lane) ?? null,
     follows: start === undefined ? null : textOr(start.follows),
     startedAt: Number.isNaN(startedAt) ? null : startedAt,
@@ -83,6 +83,11 @@ export function eventFacts(text: string): EventFacts {
   }
 }
 
+const UNREADABLE_EVENTS: EventFacts = { ...NO_EVENTS, log: 'unreadable' }
+
+const eventsOf = (file: FileText | undefined): EventFacts =>
+  file?.kind === 'text' ? eventFacts(file.text) : file?.kind === 'unreadable' ? UNREADABLE_EVENTS : NO_EVENTS
+
 export async function readEvents(
   $: EngineInterface,
   path: string | null,
@@ -92,9 +97,8 @@ export async function readEvents(
   try {
     const stat = await $.fs.stat(path)
     const fetched = await fetchChanged($, [{ path, mtimeMs: stat.mtimeMs }], cache)
-    const file = fetched[0]?.text
-    return { events: file?.kind === 'text' ? eventFacts(file.text) : NO_EVENTS, cache: cacheOf(fetched) }
+    return { events: eventsOf(fetched[0]?.text), cache: cacheOf(fetched) }
   } catch {
-    return { events: NO_EVENTS, cache: {} }
+    return { events: (await isGone($, path)) ? NO_EVENTS : UNREADABLE_EVENTS, cache: {} }
   }
 }
