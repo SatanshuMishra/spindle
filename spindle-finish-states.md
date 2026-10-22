@@ -1,7 +1,7 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: active
-Updated: 2026-10-22T03:38:46.257Z
-Next ids: c6 D2 R2 S1
+Updated: 2026-10-22T03:39:03.183Z
+Next ids: c6 D3 R2 S1
 
 ## Goal
 
@@ -28,6 +28,7 @@ Needs: D1, R1.
 ## Decisions in force
 
 - D1 Interphase hand-off: spindle-finish-states spec approved for build: Build now: run.zsh --plan-only, then the first build from the run home ~/.mitosis/spindle/spindle-finish-states.
+- D2 Ship: open finish-facts and finish-mockup as ready pull requests into feat/spindle-finish-states: Ship now with the reviewed-green heads as proven heads; mitosis gates the commits on top and pushes both MSPs, and both pull requests open ready for review into feat/spindle-finish-states.
 
 ## Open risks
 
