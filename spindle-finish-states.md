@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
-Status: active
-Updated: 2026-10-22T03:53:19.847Z
+Status: parked
+Updated: 2026-10-22T03:53:22.760Z
 Next ids: c6 D3 R2 S1
 
 ## Goal
@@ -21,9 +21,9 @@ Shipped: pull requests 23 (finish-facts) and 24 (finish-mockup) are open, ready 
 
 ## Next step
 
-Run SHIP=1 ~/.mitosis/spindle/spindle-finish-states/run.zsh --resume --proven-head finish-facts=e156024 --proven-head finish-mockup=f50fbdd, then open both pull requests into feat/spindle-finish-states, assign them and post each saved comment.
+The owner starts Integration by saying the MSP pull requests (23 and 24) merged; first pull requests 21 and 22 must merge, and if either changed in review, feat/spindle-finish-states merges them again before Integration.
 
-Needs: D2, R1.
+Needs: R1.
 
 ## Decisions in force
 
