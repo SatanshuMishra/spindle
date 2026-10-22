@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: active
-Updated: 2026-10-22T01:41:10.974Z
+Updated: 2026-10-22T01:43:07.002Z
 Next ids: c5 D2 R2 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Diagnose and fix why the spindle bar and panel vanish when pipeline clean-up run
 
 ## Where things stand
 
-Two MSPs on FEATURE branch fix/spindle-run-lifecycle. lifecycle-table: round 1 blocker C1 (wrong emitter in lifecycle table) and advisories C2, C3 fixed at 297ecfa with receipt review/lifecycle-table.receipt-C1.py green; round 2 code review running. run-record-reader (gate 12 of 12 red-then-green, suite 199 pass, conformance 5.1 to 5.6 met): round 1 verdict diagnose: blockers C1 (finished run hidden on the next pipeline call), C2 (lifecycle never cleaned when clean-up wins the poll race) and C3 (unreadable event log read as absent), each kind with a diagnosis agent; advisories C4 (a full or standard follow-up without a plan shown at Build) and C5 (any abandoned status labelled stopped-critical) to fix in the same pass; C6 rejected. No security reviewer (read-only local file parsing). Causes proven: (a) poll.ts:43 drops the view once clean-up deletes the run home; (b) session.ts:39 keeps the shipped run when the follow-up makes no run home, and poll.ts:53 freezes a finished view. The pipeline and logbook specs are written in their repositories and need a session launched in each, logbook first.
+Two MSPs on FEATURE branch fix/spindle-run-lifecycle. lifecycle-table: round 1 blocker C1 (wrong emitter in lifecycle table) and advisories C2, C3 fixed at 297ecfa with receipt review/lifecycle-table.receipt-C1.py green; round 2 validator running on carried P1 and one LOW advisory (pipeline report_time flags the repeated stage.start ship the doc row at line 52 names as a duplicate start). run-record-reader (gate 12 of 12 red-then-green, suite 199 pass, conformance 5.1 to 5.6 met): round 1 verdict diagnose: blockers C1 (finished run hidden on the next pipeline call), C2 (lifecycle never cleaned when clean-up wins the poll race) and C3 (unreadable event log read as absent), each kind with a diagnosis agent; advisories C4 (a full or standard follow-up without a plan shown at Build) and C5 (any abandoned status labelled stopped-critical) to fix in the same pass; C6 rejected. No security reviewer (read-only local file parsing). Causes proven: (a) poll.ts:43 drops the view once clean-up deletes the run home; (b) session.ts:39 keeps the shipped run when the follow-up makes no run home, and poll.ts:53 freezes a finished view. The pipeline and logbook specs are written in their repositories and need a session launched in each, logbook first.
 
 ## Next step
 
