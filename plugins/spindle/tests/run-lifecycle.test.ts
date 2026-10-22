@@ -334,3 +334,135 @@ test('a follow-up replaces a shipped run whose home still exists', async ($, on)
   expect(lines).toContain('follows rate-limit-api')
   expect(lines).not.toContain('run rate-limit-api repo api')
 })
+
+test('a cleaned run stays shown after a new pipeline call', async ($, on) => {
+  const world = harness(on, live, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($, '/Users/satanshumishra/Documents/DevLabs/spindle')
+  world.use(cleaned)
+  await world.clock.advance(2000)
+  await $.tool.call({ tool: 'Bash', command: `pipeline clean --repo /Users/satanshumishra/Documents/DevLabs/spindle --slug ${SLUG}` } as never)
+  await world.clock.advance(2000)
+
+  await $.tool.call({ tool: 'Skill', skill: 'interphase:bug', args: 'Fix the bars. Work autonomously.' } as never)
+  await world.clock.advance(2000)
+
+  const lines = await status($)
+  expect(lines).toContain(`run ${SLUG} repo spindle`)
+  expect(lines).toContain('stage clean round 0 finished yes')
+  expect(lines).toContain('lifecycle cleaned')
+})
+
+test('lifecycle cleaned when the clean call returns before a poll sees the home deleted', async ($, on) => {
+  const world = harness(on, live, { now: NOW })
+  world.answerBash('pipeline clean', 0)
+  await world.start($, '/Users/satanshumishra/Documents/DevLabs/spindle')
+  await $.tool.call({ tool: 'Bash', command: `pipeline clean --repo /Users/satanshumishra/Documents/DevLabs/spindle --slug ${SLUG}` } as never)
+  await world.clock.advance(2000)
+  world.use(cleaned)
+  await world.clock.advance(2000)
+  await world.clock.advance(2000)
+
+  const lines = await status($)
+  expect(lines).toContain(`run ${SLUG} repo spindle`)
+  expect(lines).toContain('lifecycle cleaned')
+})
+
+const NATIVE_LOG = `${MITOSIS}/spindle/events/${NATIVE}.jsonl`
+
+test('an unreadable event log of a run cleaned before records shows the run as unknown', async ($, on) => {
+  const world = harness(on, nativeLogged, { now: NOW })
+  world.failRead(NATIVE_LOG, 'EIO: i/o error')
+  await world.start($, '/Users/satanshumishra/Documents/DevLabs/spindle')
+
+  const lines = await status($)
+  expect(lines).toContain(`run ${NATIVE} repo spindle`)
+  expect(lines).toContain('stage unknown round 0 finished no')
+  expect(lines).toContain('lifecycle unknown')
+})
+
+test('an unreadable event log beside a run record is lifecycle unknown', async ($, on) => {
+  const world = harness(on, closed, { now: NOW })
+  world.failRead(EVENTS, 'EACCES: permission denied')
+  await world.start($, '/Users/satanshumishra/Documents/DevLabs/spindle')
+
+  const lines = await status($)
+  expect(lines).toContain('stage clean round 0 finished yes')
+  expect(lines).toContain('lifecycle unknown')
+})
+
+const CLEANED_ONLY = [...NATIVE_EVENTS.slice(0, -1), `{"v":1,"ts":"2026-10-21T21:16:30Z","run":"spindle/${NATIVE}","src":"pipeline","ev":"clean.done","kept":0}`]
+const nativeCleaned: Fixture = {
+  files: {
+    [SESSION]: session([{ path: NATIVE_HOME, anchor: NATIVE_ANCHOR }], NATIVE_ANCHOR, NATIVE, NOW),
+    [NATIVE_LOG]: events(CLEANED_ONLY, NOW),
+  },
+}
+
+test('one failed re-read of a finished run event log keeps what was known', async ($, on) => {
+  const world = harness(on, nativeCleaned, { now: NOW })
+  await world.start($, '/Users/satanshumishra/Documents/DevLabs/spindle')
+  expect(await status($)).toContain('lifecycle cleaned')
+
+  world.use({ files: { ...nativeCleaned.files, [NATIVE_LOG]: events(CLEANED_ONLY, NOW + 5 * SEC) } })
+  world.failRead(NATIVE_LOG, 'EIO: i/o error')
+  await world.clock.advance(2000)
+
+  const lines = await status($)
+  expect(lines).toContain('stage clean round 0 finished yes')
+  expect(lines).toContain('lifecycle cleaned')
+})
+
+test('one failed session-file read after a run finished keeps the run', async ($, on) => {
+  const world = harness(on, closed, { now: NOW })
+  await world.start($, '/Users/satanshumishra/Documents/DevLabs/spindle')
+  expect(await status($)).toContain('lifecycle closed-done')
+
+  world.failRead(SESSION, 'EIO: i/o error')
+  await world.clock.advance(2000)
+
+  const lines = await status($)
+  expect(lines).toContain(`run ${SLUG} repo spindle`)
+  expect(lines).toContain('lifecycle closed-done')
+})
+
+test('one failed session-file read during a live run keeps the run', async ($, on) => {
+  const world = harness(on, live, { now: NOW })
+  await world.start($, '/Users/satanshumishra/Documents/DevLabs/spindle')
+  expect(await status($)).toContain(`run ${SLUG} repo spindle`)
+
+  world.failRead(SESSION, 'EIO: i/o error')
+  await world.clock.advance(2000)
+
+  expect(await status($)).toContain(`run ${SLUG} repo spindle`)
+})
+
+test('lifecycle unknown for an abandoned end the table does not name', async ($, on) => {
+  const world = harness(on, logged(review, [...STARTED, apiEvent('run.end', { status: 'abandoned: owner dropped the work' })]), { now: RUN_NOW })
+  await world.start($)
+
+  const lines = await status($)
+  expect(lines).toContain('lifecycle unknown')
+  expect(lines).not.toContain('lifecycle stopped-critical')
+})
+
+const followedInLane = (base: Fixture, lane: string): Fixture => {
+  const followed = followedBy(base)
+  return { files: { ...followed.files, [`${QUOTA_FIX}/follows.json`]: file({ parent: 'rate-limit-api', lane }, RUN_NOW + 60_000) } }
+}
+
+test('a full-lane follow-up without a plan shows the spec stage', async ($, on) => {
+  const world = harness(on, followedInLane(ship, 'full'), { now: RUN_NOW })
+  await world.start($)
+
+  const lines = await status($)
+  expect(lines).toContain('run quota-fix repo api')
+  expect(lines).toContain('stage spec round 0 finished no')
+})
+
+test('a direct follow-up without a plan shows the build stage', async ($, on) => {
+  const world = harness(on, followedInLane(ship, 'direct'), { now: RUN_NOW })
+  await world.start($)
+
+  expect(await status($)).toContain('stage build round 0 finished no')
+})
