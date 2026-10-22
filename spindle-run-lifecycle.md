@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: active
-Updated: 2026-10-22T01:12:44.451Z
+Updated: 2026-10-22T01:12:47.456Z
 Next ids: c5 D2 R1 S1
 
 ## Goal
@@ -20,7 +20,9 @@ interphase:bug interview in progress (slug spindle-run-lifecycle): intent I1 to 
 
 ## Next step
 
-Record the owner's round 2 answers, design the criteria and Steps in the record, then hold the read-back.
+Cut the FEATURE branch with pipeline feature-branch, write the run home ~/.mitosis/spindle/spindle-run-lifecycle (CHARTER.md, worker-rules.txt, dispatch.zsh, run.zsh, items.json, graph.json), run --plan-only, then the first build.
+
+Needs: D1.
 
 ## Decisions in force
 
