@@ -54,7 +54,7 @@ const textOf = (node: Drawn) => (node.children ?? []).filter(child => typeof chi
 
 const keyOf = (node: Drawn) => String(node.props?.key ?? '')
 
-const buttonLabel = (node: Drawn) => String(node.props?.label ?? '').replace(/^\d /, '').replace(' ', ' · ')
+const buttonLabel = (node: Drawn) => String(node.props?.label ?? '').replace(' ', ' · ')
 
 type Svg = { alt: string; width: number; source: string; isInteractive: boolean }
 
@@ -637,8 +637,31 @@ test('pressing a second MSP moves the selection to it', async ($, on) => {
   expect(rowsOf(tree).some(row => row.key.includes(VIDEO))).toBe(false)
   const selectedAvatars = seenOf(tree).allSvgs.filter(svg => svg.source.includes('data-selected')).map(svg => svg.alt)
   expect(selectedAvatars).toEqual(['button-consistency crab'])
-  await pane.press({ key: 'show-all' })
+  await press(pane, 'button-consistency')
   expect(seenOf(await pane.drawn()).texts).toContain('Working now')
+})
+
+test('pressing a selected MSP hides its detail and pressing it again shows it', async ($, on) => {
+  await fireRun($, on)
+
+  for (const surface of ['desktop', 'terminal'] as const) {
+    const pane = await mountPane($, surface, 100)
+    await press(pane, VIDEO)
+    const shown = seenOf(await pane.drawn())
+    expect(shown.texts).toContain('video-starts-like-a-camera · workers')
+    expect(shown.buttons.map(button => button.key)).not.toContain('show-all')
+    expect(shown.buttons.some(button => /Show all/.test(String(button.prop)))).toBe(false)
+
+    await press(pane, VIDEO)
+    const hidden = seenOf(await pane.drawn())
+    expect(hidden.texts).toContain('Working now')
+    expect(hidden.texts.some(text => text.endsWith('· workers'))).toBe(false)
+
+    await press(pane, VIDEO)
+    expect(seenOf(await pane.drawn()).texts).toContain('video-starts-like-a-camera · workers')
+    await press(pane, VIDEO)
+    await pane.unmount()
+  }
 })
 
 test('MSP buttons draw their words as text and carry no label', async ($, on) => {
@@ -647,7 +670,7 @@ test('MSP buttons draw their words as text and carry no label', async ($, on) =>
   for (const columns of [36, 46, 100]) {
     const pane = await mountPane($, 'desktop', columns)
     const buttons = seenOf(await pane.drawn()).buttons
-    for (const button of mspButtons({ buttons } as Seen)) expect(String(button.prop)).toMatch(/^\d /)
+    for (const button of mspButtons({ buttons } as Seen)) expect(String(button.prop)).not.toMatch(/^\d/)
     const names = mspButtons({ buttons } as Seen).map(button => button.label.split(' · ')[0] ?? '')
     const labels = ['mic-recovery', VIDEO, 'hearing-and-ring', 'button-consistency']
     expect(names.length).toBe(labels.length)

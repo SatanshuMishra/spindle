@@ -39,7 +39,6 @@ const selectedState = atom({ plugin: 'spindle', key: 'selectedMsp' } as const, n
 const TITLE = 'Pipeline Insights'
 const PROOF_HINT = ['Acceptance test failed without the work (red)', 'and passed with it (green)']
 const VERDICT_LEGEND = 'Red: blocker · yellow: advisory · grey: other candidate'
-const SHOW_ALL = 'Show all'
 const MAIN_THREAD = 'run by the main thread'
 const RAIL_NAMES_COLUMNS = 60
 const RAIL_MARK = 24
@@ -339,17 +338,11 @@ async function toggleSelection($: EngineInterface, label: string): Promise<void>
   await update($, selectedState, current => (current === label ? null : label))
 }
 
-
-async function clearSelection($: EngineInterface): Promise<void> {
-  await update($, selectedState, () => null)
-}
-
 const hotkeyOf = (i: number) => (i < MAX_HOTKEYS ? { hotkey: String(i + 1) } : {})
 
 function desktopMspButton($: EngineInterface, ui: PaneElements, msp: MspRow, i: number, now: number, isSelected: boolean) {
   const { Button, Text } = ui
   const parts = [
-    ...(i < MAX_HOTKEYS ? [<Text dimColor mono size="caption">{String(i + 1)}</Text>, ' '] : []),
     <Text weight="semibold" wrap="truncate-end" {...(isSelected ? { color: ACCENT } : {})}>
       {msp.label}
     </Text>,
@@ -388,8 +381,8 @@ function terminalMspButton($: EngineInterface, ui: PaneElements, msp: MspRow, i:
   )
 }
 
-function workingHeading($: EngineInterface, ui: PaneElements, selected: string | null, count: number) {
-  const { Box, Button, Text } = ui
+function workingHeading(ui: PaneElements, selected: string | null, count: number) {
+  const { Box, Text } = ui
   if (selected === null) {
     return (
       <Box key="working-heading" flexDirection="row" gap="sm">
@@ -399,22 +392,10 @@ function workingHeading($: EngineInterface, ui: PaneElements, selected: string |
     )
   }
   return (
-    <Box key="working-heading" flexDirection="row" alignItems="center" justifyContent="space-between" gap="sm">
-      <Box key="working-title" flexShrink={1} minWidth={0}>
-        <Text weight="semibold" wrap="truncate-end">
-          {workingTitle(selected)}
-        </Text>
-      </Box>
-      <Button
-        key="show-all"
-        plain
-        dimColor
-        onPress={async () => {
-          await clearSelection($)
-        }}
-      >
-        {SHOW_ALL}
-      </Button>
+    <Box key="working-heading" flexShrink={1} minWidth={0}>
+      <Text weight="semibold" wrap="truncate-end">
+        {workingTitle(selected)}
+      </Text>
     </Box>
   )
 }
@@ -648,7 +629,7 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
         {view.msps.map(mspRow)}
       </Box>
       <Box key="pane-workers" flexDirection="column" gap="xs">
-        {workingHeading($, ui, selected, listed.length)}
+        {workingHeading(ui, selected, listed.length)}
         {isMainThreadOnly && selectedMsp !== undefined ? (
           <Text key="main-thread-note" dimColor size="footnote">{`${activityText(selectedMsp, now)} · ${MAIN_THREAD}`}</Text>
         ) : null}
@@ -696,7 +677,7 @@ function terminalPane($: EngineInterface, ui: PaneElements, view: RunView, selec
           <Text dimColor>{mspExtra(msp)}</Text>
         </Box>
       ))}
-      {workingHeading($, ui, selected, listed.length)}
+      {workingHeading(ui, selected, listed.length)}
       {listed.map((worker, i) => (
         <Text key={workerKey(worker, i)}>{terminalWorkerLine(view, worker, now)}</Text>
       ))}
