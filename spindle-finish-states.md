@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: active
-Updated: 2026-10-22T03:30:43.421Z
+Updated: 2026-10-22T03:30:45.123Z
 Next ids: c6 D2 R2 S1
 
 ## Goal
@@ -21,7 +21,7 @@ FEATURE branch feat/spindle-finish-states is pushed at 1666367, a merge of mitos
 
 ## Next step
 
-Finish the fix pass on both MSP branches (class-wide fix, receipt green, selecting check empty, advisories), then run round 2 review on each.
+Collect the round 2 reviewers' arrays into review/round-2/<msp>.findings.json, then run candidates, the validator, record and verdict for each MSP.
 
 Needs: D1, R1.
 
