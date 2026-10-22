@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: parked
-Updated: 2026-10-22T03:56:41.889Z
+Updated: 2026-10-22T03:56:43.386Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Integration: pull requests 21 (run-record-reader) and 22 (lifecycle-table) are m
 
 ## Next step
 
-The owner starts Integration by saying the MSP pull requests 21 and 22 merged; c2 and c3 also wait on the logbook spec (logbook-thread-follows) and the pipeline spec (pipeline-run-record) being built by sessions in those repositories, logbook first.
+Run lighthouse:test on fix/spindle-run-lifecycle against main with results in ~/.mitosis/spindle/spindle-run-lifecycle/lighthouse/run-1, and handle its verdict; c2 and c3 also wait on the logbook spec (logbook-thread-follows) and the pipeline spec (pipeline-run-record) being built by sessions in those repositories, logbook first.
 
 Needs: D2.
 
