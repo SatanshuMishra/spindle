@@ -1,7 +1,8 @@
 import { atom, read, update } from 'claude-code'
 import type { Elements, EngineInterface, RenderElement, RenderInput } from 'claude-code'
 
-import type { Activity, FinalState, Finish, MspRow, MspStatus, Outcome, Role, RoundRow, RunView, WorkerRole, WorkerRow } from '../../types'
+import type { Activity, FinalState, Finish, MspRow, MspStatus, Outcome, PastRun, Role, RoundRow, RunView, WorkerRole, WorkerRow } from '../../types'
+import { leavePastRun, readPastRun } from '../run/past'
 import { LANE_NAME } from '../run/state'
 import { NO_RUN, activityNow, currentActivity, elapsed, modelName, unplannedPulls } from '../run/summary'
 import { isFinishSettled } from '../run/view'
@@ -37,11 +38,16 @@ export const PANE_TITLE = 'Pipeline'
 const viewState = atom({ plugin: 'spindle', key: 'view' } as const, null)
 const selectedState = atom({ plugin: 'spindle', key: 'selectedMsp' } as const, null)
 const finishSeenState = atom({ plugin: 'spindle', key: 'finishSeen' } as const, null)
+const pastRunsState = atom({ plugin: 'spindle', key: 'pastRuns' } as const, null)
+const pastViewState = atom({ plugin: 'spindle', key: 'pastView' } as const, null)
+const pastSelectedState = atom({ plugin: 'spindle', key: 'pastSelectedMsp' } as const, null)
 
 const TITLE = 'Pipeline Insights'
 const PROOF_HINT = ['Acceptance test failed without the work (red)', 'and passed with it (green)']
 const VERDICT_LEGEND = 'Red: blocker · yellow: advisory · grey: other candidate'
 const MAIN_THREAD = 'run by the main thread'
+const COST_NOT_KEPT = 'not kept'
+const BACK_TO_SESSION = "Back to this session's run"
 const RAIL_NAMES_COLUMNS = 60
 const RAIL_MARK = 24
 const STRIP_W = 1600
@@ -124,7 +130,9 @@ const laneWordOf = (view: RunView) => (view.lane === null ? null : `${LANE_NAME[
 
 const stageName = (view: RunView) => view.finish?.word ?? (stageInfo(view.stage)?.name ?? '?')
 
-const costText = (view: RunView) => `~$${view.costUsd.toFixed(2)}`
+type Shown = { isPast: boolean; pastRuns: readonly PastRun[] }
+
+const costText = (view: RunView, shown: Shown) => (shown.isPast ? COST_NOT_KEPT : `~$${view.costUsd.toFixed(2)}`)
 
 const isCrew = (worker: WorkerRow) => worker.role !== 'captain'
 
@@ -395,13 +403,15 @@ export async function togglePane($: EngineInterface): Promise<string> {
   return 'Run pane opened.'
 }
 
-async function toggleSelection($: EngineInterface, label: string): Promise<void> {
-  await update($, selectedState, current => (current === label ? null : label))
+async function toggleSelection($: EngineInterface, label: string, isPast: boolean): Promise<void> {
+  const toggled = (current: string | null) => (current === label ? null : label)
+  if (isPast) await update($, pastSelectedState, toggled)
+  else await update($, selectedState, toggled)
 }
 
 const hotkeyOf = (i: number) => (i < MAX_HOTKEYS ? { hotkey: String(i + 1) } : {})
 
-function desktopMspButton($: EngineInterface, ui: PaneElements, msp: MspRow, i: number, now: number, isSelected: boolean) {
+function desktopMspButton($: EngineInterface, ui: PaneElements, msp: MspRow, i: number, now: number, isSelected: boolean, isPast: boolean) {
   const { Button, Text } = ui
   const parts = [
     <Text weight="semibold" wrap="truncate-end" {...(isSelected ? { color: ACCENT } : {})}>
@@ -418,7 +428,7 @@ function desktopMspButton($: EngineInterface, ui: PaneElements, msp: MspRow, i: 
       plain
       {...hotkeyOf(i)}
       onPress={async () => {
-        await toggleSelection($, msp.label)
+        await toggleSelection($, msp.label, isPast)
       }}
     >
       {parts}
@@ -426,7 +436,7 @@ function desktopMspButton($: EngineInterface, ui: PaneElements, msp: MspRow, i: 
   )
 }
 
-function terminalMspButton($: EngineInterface, ui: PaneElements, msp: MspRow, i: number, now: number) {
+function terminalMspButton($: EngineInterface, ui: PaneElements, msp: MspRow, i: number, now: number, isPast: boolean) {
   const { Button } = ui
   return (
     <Button
@@ -434,7 +444,7 @@ function terminalMspButton($: EngineInterface, ui: PaneElements, msp: MspRow, i:
       plain
       {...hotkeyOf(i)}
       onPress={async () => {
-        await toggleSelection($, msp.label)
+        await toggleSelection($, msp.label, isPast)
       }}
     >
       {mspLabel(msp, now)}
@@ -469,6 +479,42 @@ function sectionHeadings(selected: string | null, listed: readonly WorkerRow[]):
   if (selected === null) return null
   const live = listed.filter(worker => worker.isLive).length
   return { working: `Working · ${live}`, done: `Done · ${listed.length - live}` }
+}
+
+function backButton($: EngineInterface, ui: PaneElements, shown: Shown) {
+  const { Button } = ui
+  if (!shown.isPast) return null
+  return (
+    <Button
+      key="past-back"
+      onPress={async () => {
+        await leavePastRun($)
+      }}
+    >
+      {BACK_TO_SESSION}
+    </Button>
+  )
+}
+
+function pastRunsList($: EngineInterface, ui: PaneElements, runs: readonly PastRun[]) {
+  const { Box, Text, Button } = ui
+  if (runs.length === 0) return null
+  return (
+    <Box key="pane-past" flexDirection="column">
+      <Text dimColor>{`Past runs · ${runs.length}`}</Text>
+      {runs.map(run => (
+        <Button
+          key={`past-${run.slug}`}
+          plain
+          onPress={async () => {
+            await readPastRun($, run.slug)
+          }}
+        >
+          {run.slug}
+        </Button>
+      ))}
+    </Box>
+  )
 }
 
 function sectionHeading(ui: PaneElements, key: string, words: string) {
@@ -533,7 +579,7 @@ function lanesBar(ui: DesktopElements, msp: MspRow, i: number): RenderElement {
   )
 }
 
-function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, selected: string | null, room: Room) {
+function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, selected: string | null, room: Room, shown: Shown) {
   const { Box, Text, Svg } = ui
   const { columns, now, isSettled } = room
   const time = elapsed(view.startedAt, now)
@@ -562,7 +608,7 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
       <Box key={`msp-main-${msp.label}`} flexDirection="column" flexGrow={1} flexShrink={1} minWidth={0}>
         <Box key={`msp-line-${msp.label}`} flexDirection="row" alignItems="center" gap="sm">
           <Box key={`msp-press-${msp.label}`} flexGrow={1} flexShrink={1} minWidth={0}>
-            {desktopMspButton($, ui, msp, i, now, msp.label === selected)}
+            {desktopMspButton($, ui, msp, i, now, msp.label === selected, shown.isPast)}
           </Box>
           <Svg key={`msp-mark-${msp.label}`} source={markSvg(msp, i)} alt={`${msp.label}: ${MSP_STATUS[msp.status].word}`} width={MARK_PX} height={MARK_PX} />
         </Box>
@@ -698,9 +744,10 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
           {lane === null ? null : <Svg key="pane-lane" source={chipSvg(lane)} alt={lane} width={chipWidthOf(lane)} height={CHIP_H} />}
         </Box>
       </Box>
+      {backButton($, ui, shown)}
       {view.finish === null ? null : desktopFinish(ui, view, view.finish, isSettled)}
       <Box key="pane-tiles" flexDirection="row" gap="sm">
-        {tile('tile-cost', 'Cost', <Text weight="semibold" tabular wrap="truncate-end">{costText(view)}</Text>)}
+        {tile('tile-cost', 'Cost', <Text weight="semibold" tabular wrap="truncate-end">{costText(view, shown)}</Text>)}
         {tile(
           'tile-agents',
           'Agents',
@@ -736,6 +783,7 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
         {sections === null ? null : sectionHeading(ui, 'done-section', sections.done)}
         {doneRows}
       </Box>
+      {pastRunsList($, ui, shown.pastRuns)}
       {cardSlot(ui, 'pane-cards', cards, { top: 0, left: 0 })}
     </Box>
   )
@@ -758,7 +806,7 @@ const terminalWorkerLine = (view: RunView, worker: WorkerRow, now: number) => {
     .join('  ')
 }
 
-function terminalPane($: EngineInterface, ui: PaneElements, view: RunView, selected: string | null, now: number) {
+function terminalPane($: EngineInterface, ui: PaneElements, view: RunView, selected: string | null, now: number, shown: Shown) {
   const { Box, Text } = ui
   const time = elapsed(view.startedAt, now)
   const lane = laneWordOf(view)
@@ -771,16 +819,17 @@ function terminalPane($: EngineInterface, ui: PaneElements, view: RunView, selec
     <Box flexDirection="column">
       <Text bold>{TITLE}</Text>
       <Text>{lane === null ? view.slug : `${view.slug}  [${lane}]`}</Text>
+      {backButton($, ui, shown)}
       {view.finish === null ? null : <Text key="finish-headline">{view.finish.headline}</Text>}
       {(view.finish?.details ?? []).map((detail, i) => (
         <Text key={`finish-detail-${i}`}>{detail}</Text>
       ))}
-      <Text>{`Cost ${costText(view)}  ·  Agents ${liveCrewOf(view).length}  ·  Time ${time}`}</Text>
+      <Text>{`Cost ${costText(view, shown)}  ·  Agents ${liveCrewOf(view).length}  ·  Time ${time}`}</Text>
       <Text>{stageSummary(view)}</Text>
       <Text dimColor>{`MSPs · ${view.msps.length}`}</Text>
       {view.msps.map((msp, i) => (
         <Box key={`msp-row-${msp.label}`} flexDirection="row" gap={1}>
-          {terminalMspButton($, ui, msp, i, now)}
+          {terminalMspButton($, ui, msp, i, now, shown.isPast)}
           <Text dimColor>{mspExtra(msp)}</Text>
         </Box>
       ))}
@@ -792,6 +841,7 @@ function terminalPane($: EngineInterface, ui: PaneElements, view: RunView, selec
       {listed.flatMap((worker, i) => (worker.isLive ? [workerLine(worker, i)] : []))}
       {sections === null ? null : <Text key="done-section">{sections.done}</Text>}
       {listed.flatMap((worker, i) => (worker.isLive ? [] : [workerLine(worker, i)]))}
+      {pastRunsList($, ui, shown.pastRuns)}
     </Box>
   )
 }
@@ -799,19 +849,23 @@ function terminalPane($: EngineInterface, ui: PaneElements, view: RunView, selec
 export async function drawPane($: EngineInterface, e: RenderInput<'Pane'>) {
   const ui = $.ui.resolve(e)
   const { Box, Text } = ui
-  const view = await read($, viewState)
+  const [live, past, listed] = await Promise.all([read($, viewState), read($, pastViewState), read($, pastRunsState)])
+  const view = past ?? live
+  const pastRuns = (listed?.runs ?? []).filter(run => run.slug !== past?.slug)
   if (view === null) {
     return (
       <Box flexDirection="column">
         <Text dimColor>{NO_RUN}</Text>
+        {pastRunsList($, ui, pastRuns)}
       </Box>
     )
   }
+  const shown: Shown = { isPast: past !== null, pastRuns }
   const now = await $.clock.now()
-  const selected = selectedOf(view, await read($, selectedState))
+  const selected = selectedOf(view, shown.isPast ? await read($, pastSelectedState) : await read($, selectedState))
   const isSettled = isFinishSettled(await read($, finishSeenState), view)
   if (e.surface === 'desktop' && 'Svg' in ui) {
-    return desktopPane($, ui, view, selected, { columns: e.props.bodyColumns || 60, now, isSettled })
+    return desktopPane($, ui, view, selected, { columns: e.props.bodyColumns || 60, now, isSettled }, shown)
   }
-  return terminalPane($, ui, view, selected, now)
+  return terminalPane($, ui, view, selected, now, shown)
 }

@@ -42,6 +42,7 @@ export function harness(on: On, initial: Fixture | null, options: HarnessOptions
   let world: {
     fixture: Fixture | null
     failing: Readonly<Record<string, string>>
+    listFailing: Readonly<Record<string, string>>
     cwd: string
     reads: readonly string[]
     opened: readonly string[]
@@ -57,6 +58,7 @@ export function harness(on: On, initial: Fixture | null, options: HarnessOptions
   } = {
     fixture: initial,
     failing: {},
+    listFailing: {},
     cwd: '/home/owner/work/api',
     reads: [],
     opened: [],
@@ -91,6 +93,8 @@ export function harness(on: On, initial: Fixture | null, options: HarnessOptions
   })
   on('fs.list', (_$, e) => {
     const path = e.path
+    const failure = world.listFailing[path]
+    if (failure !== undefined) throw new Error(failure)
     if (pathsUnder(world.fixture, path).length === 0) throw missing(path)
     return { value: entriesOf(world.fixture, path) }
   })
@@ -164,6 +168,9 @@ export function harness(on: On, initial: Fixture | null, options: HarnessOptions
     clock,
     use: (fixture: Fixture | null) => change({ fixture }),
     failRead: (path: string, message: string) => change({ failing: { ...world.failing, [path]: message } }),
+    failList: (path: string, message: string) => change({ listFailing: { ...world.listFailing, [path]: message } }),
+    liftList: (path: string) =>
+      change({ listFailing: Object.fromEntries(Object.entries(world.listFailing).filter(([failing]) => failing !== path)) }),
     reads: () => world.reads,
     opened: () => world.opened,
     closed: () => world.closed,

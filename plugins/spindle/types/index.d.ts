@@ -188,6 +188,10 @@ export type Signals = {
   finishedRun?: FinishedRun | null
 }
 
+export type PastRun = { slug: string; mtimeMs: number }
+
+export type PastRuns = { repo: string; runs: readonly PastRun[] }
+
 export type RunView = {
   slug: string
   repo: string | null
@@ -220,6 +224,9 @@ declare module 'claude-code' {
       dismissedAt: string | null
       selectedMsp: string | null
       finishSeen: FinishSeen | null
+      pastRuns: PastRuns | null
+      pastView: RunView | null
+      pastSelectedMsp: string | null
     }
   }
 }
