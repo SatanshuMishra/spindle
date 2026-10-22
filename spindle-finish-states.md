@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: active
-Updated: 2026-10-22T03:04:21.904Z
+Updated: 2026-10-22T03:06:29.171Z
 Next ids: c6 D2 R2 S1
 
 ## Goal
@@ -17,7 +17,7 @@ Job 2 main part: mock up and build the band and run pane for every final lifecyc
 
 ## Where things stand
 
-FEATURE branch feat/spindle-finish-states is pushed at 1666367, a merge of mitosis/run-record-reader and mitosis/lifecycle-table, because Job 1's FEATURE branch holds none of their code until pull requests 21 and 22 merge; the run home's feature.json records it and pipeline feature-branch adopted it. The spec is handed off (7 Steps, 11 criteria, 5.11 screenshots unproven, review issues fixed). The event data records no worker's MSP; the pipeline's msp: brief line, mitosis lane.start and lane.end, and a mitosis per-lane agent log are what must emit it. Both MSPs are committed and gated: finish-facts (mitosis/finish-facts, 46 of 46 acceptance tests) and finish-mockup (mitosis/finish-mockup, 1 of 1); the finish-facts suite has one failure, pane.test.tsx "a second press clears the filter", which expects the untagged role lines criterion 5.7 changed. Round 1 review is running: code reviewer and conformance auditor on both MSPs, security reviewer on finish-mockup for the staging script's rm -rf; the finish-facts conformance audit found criteria 5.1 to 5.9 met.
+FEATURE branch feat/spindle-finish-states is pushed at 1666367, a merge of mitosis/run-record-reader and mitosis/lifecycle-table, because Job 1's FEATURE branch holds none of their code until pull requests 21 and 22 merge; the run home's feature.json records it and pipeline feature-branch adopted it. The spec is handed off (7 Steps, 11 criteria, 5.11 screenshots unproven, review issues fixed). The event data records no worker's MSP; the pipeline's msp: brief line, mitosis lane.start and lane.end, and a mitosis per-lane agent log are what must emit it. Both MSPs are committed and gated: finish-facts (mitosis/finish-facts, 46 of 46 acceptance tests) and finish-mockup (mitosis/finish-mockup, 1 of 1); the finish-facts suite has one failure, pane.test.tsx "a second press clears the filter", which expects the untagged role lines criterion 5.7 changed. Round 1 review is running: code reviewer and conformance auditor on both MSPs, security reviewer on finish-mockup for the staging script's rm -rf; both conformance audits found nothing (5.1 to 5.10 met, 5.11 unproven), the security reviewer reported S1 (MEDIUM: the staging script overwrites a real session file whose run_homes is empty), and the code reviewers are still running.
 
 ## Next step
 
