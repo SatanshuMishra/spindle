@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spindle Finish States</title>
+<link rel="icon" href="data:,">
+<style>
+:root {
+  --bg: #fbfaf8;
+  --surface: #ffffff;
+  --tile: #f4f3f0;
+  --track: #ecebe8;
+  --line: #e4e4e1;
+  --dot: #d9d8d4;
+  --t: #1f1f1f;
+  --s: #6b6b68;
+  --m: #9a9a96;
+  --accent: #8f8cf4;
+  --accent-ink: #5a56c9;
+  --done: #3B9C5F;
+  --fail: #D0453F;
+  --clay: #D97757;
+  --ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1a1a19; --surface: #222221; --tile: #262625; --track: #2c2c2b; --line: #333331; --dot: #3a3a38;
+    --t: #ececec; --s: #a8a8a4; --m: #7d7d79; --accent-ink: #b3b0ff; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1a1a19; --surface: #222221; --tile: #262625; --track: #2c2c2b; --line: #333331; --dot: #3a3a38;
+  --t: #ececec; --s: #a8a8a4; --m: #7d7d79; --accent-ink: #b3b0ff; color-scheme: dark;
+}
+body { margin: 0; background: var(--bg); color: var(--t); font-family: var(--ui); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 40px 16px 72px; display: grid; gap: 40px; }
+h1, h2 { margin: 0; text-wrap: balance; }
+h1 { font-size: 30px; letter-spacing: -0.02em; font-weight: 700; }
+h2 { font-size: 17px; font-weight: 650; font-family: var(--mono); }
+p { margin: 0; max-width: 70ch; }
+.muted { color: var(--s); }
+.group-h { font-family: var(--ui); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--s); }
+
+.sv-t { fill: var(--t); } .sv-s { fill: var(--s); } .sv-m { fill: var(--m); } .sv-k { fill: var(--track); } .sv-tile { fill: var(--tile); }
+.sv-tk { fill: var(--m); opacity: .55; } .sv-mstroke { stroke: var(--m); } .sv-mfill { fill: var(--m); }
+.sv-live { animation: sv-p 1.6s ease-in-out infinite; } @keyframes sv-p { 50% { opacity: .3; } }
+svg { display: block; max-width: 100%; overflow: visible; }
+
+.frame { display: grid; grid-template-columns: minmax(0, 1fr) 372px; gap: 22px; align-items: start; border: 1px solid var(--line); border-radius: 14px; padding: 18px 16px 22px; background-color: var(--bg); background-image: radial-gradient(var(--dot) 1px, transparent 1.2px); background-size: 14px 14px; }
+@media (max-width: 860px) { .frame { grid-template-columns: minmax(0, 1fr); } }
+.caption { grid-column: 1 / -1; display: grid; gap: 4px; }
+.caption-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.btn { font: 600 12px var(--ui); color: var(--t); background: var(--tile); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; cursor: pointer; }
+.btn:hover { background: var(--track); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.band { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 8px; min-width: 0; }
+.band-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--m); }
+.band-row { min-width: 0; }
+.settled { display: flex; align-items: center; gap: 8px; height: 22px; font-size: 13px; font-weight: 500; min-width: 0; }
+.settled-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.settled-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--m); }
+.settled-dot[data-word="Done"], .settled-dot[data-word="Cleaned"] { background: var(--done); }
+.settled-dot[data-word="Stopped"], .settled-dot[data-word="Draft"] { background: var(--fail); }
+
+.pane { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; min-width: 0; }
+.pane-head { display: flex; align-items: center; justify-content: space-between; padding: 9px 12px; border-bottom: 1px solid var(--line); font-size: 12.5px; font-weight: 600; }
+.pane-head .x { color: var(--m); font-weight: 500; }
+.pane-body { padding: 12px 12px 14px; display: grid; gap: 12px; }
+.sec { display: grid; gap: 6px; }
+.sec-h { font-size: 11.5px; font-weight: 600; color: var(--s); display: flex; justify-content: space-between; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+.empty { font-size: 12px; color: var(--m); padding: 2px 0; }
+
+.finish { display: grid; gap: 4px; padding: 10px 12px; border-radius: 10px; background: var(--tile); }
+.finish-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.finish-head strong { font-size: 14px; }
+.finish-word { flex: none; font-size: 11px; font-weight: 600; color: #fff; padding: 1px 8px; border-radius: 999px; background: var(--accent); }
+.finish-word[data-word="Done"], .finish-word[data-word="Cleaned"] { background: var(--done); }
+.finish-word[data-word="Stopped"], .finish-word[data-word="Draft"] { background: var(--fail); }
+.finish-word[data-word="Unknown"] { background: var(--m); }
+.finish-detail { font-size: 12.5px; color: var(--s); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sv-live, .cel-hop { animation: none; }
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header style="display:grid;gap:10px">
+    <h1>Spindle finish states</h1>
+    <p class="muted">One frame per lifecycle state of docs/run-lifecycle.md, plus a closed-done run that is not a clean success, an abandoned end the table does not name, and unknown. Each frame draws the band above the prompt and the run pane with spindle-design's crab and band code. Only closed-done's celebration moves: six crew crabs hop once within 3 seconds, and nothing moves under reduced motion. Every value is invented for the mock-up.</p>
+  </header>
+
+  <h2 class="group-h">Live states</h2>
+
+  <article class="frame" data-state="running">
+    <div class="caption"><h2>running</h2><p class="muted">The run works: round 1 of review, three reviewers at work.</p></div>
+    <div class="band"></div>
+    <div class="pane"></div>
+  </article>
+
+  <article class="frame" data-state="shipped">
+    <div class="caption"><h2>shipped</h2><p class="muted">Every MSP's pull request is open; lighthouse runs over the FEATURE branch during Integration.</p></div>
+    <div class="band"></div>
+    <div class="pane"></div>
+  </article>
+
+  <article class="frame" data-state="reopened">
+    <div class="caption"><h2>reopened</h2><p class="muted">A shipped run takes round 3 before its FEATURE pull request merges; it reads shipped again once it ships.</p></div>
+    <div class="band"></div>
+    <div class="pane"></div>
+  </article>
+
+  <h2 class="group-h">Final states</h2>
+
+  <article class="frame" data-state="closed-done">
+    <div class="caption">
+      <div class="caption-row"><h2>closed-done</h2><button class="btn" type="button" data-replay="closed-done">Play the celebration again</button></div>
+      <p class="muted">A clean success: the thread closed done, no MSP shipped as a draft and lighthouse is green. The crew hops once, then the band settles to one line.</p>
+    </div>
+    <div class="band"></div>
+    <div class="pane"></div>
+  </article>
+
+  <article class="frame" data-state="closed-done-plain">
+    <div class="caption"><h2>closed-done-plain</h2><p class="muted">closed-done without a green lighthouse verdict: a plain Done that says why there is no celebration.</p></div>
+    <div class="band"></div>
+    <div class="pane"></div>
+  </article>
+
+  <article class="frame" data-state="closed-draft">
+    <div class="caption"><h2>closed-draft</h2><p class="muted">The run ended with a draft pull request for the blocked MSP; its bar and stage rail stop short of done.</p></div>
+    <div class="band"></div>
+    <div class="pane"></div>
+  </article>
+
+  <article class="frame" data-state="stopped-critical">
+    <div class="caption"><h2>stopped-critical</h2><p class="muted">A hard failure stopped the run at review with nothing pushed.</p></div>
+    <div class="band"></div>
+    <div class="pane"></div>
+  </article>
+
+  <article class="frame" data-state="superseded">
+    <div class="caption"><h2>superseded</h2><p class="muted">The run was abandoned unfinished because rate-limit-api-2 replaced it.</p></div>
+    <div class="band"></div>
+    <div class="pane"></div>
+  </article>
+
+  <article class="frame" data-state="cleaned">
+    <div class="caption"><h2>cleaned</h2><p class="muted">Clean-up deleted the run home after writing the run record; the thread has not closed yet.</p></div>
+    <div class="band"></div>
+    <div class="pane"></div>
+  </article>
+
+  <article class="frame" data-state="abandoned">
+    <div class="caption"><h2>abandoned</h2><p class="muted">An abandoned end the lifecycle table does not name, shown with the run.end reason.</p></div>
+    <div class="band"></div>
+    <div class="pane"></div>
+  </article>
+
+  <article class="frame" data-state="unknown">
+    <div class="caption"><h2>unknown</h2><p class="muted">The event log could not be read, so spindle cannot say how the run ended.</p></div>
+    <div class="band"></div>
+    <div class="pane"></div>
+  </article>
+</main>
+<script>const CLAY = '#D97757'
+const INK = '#1F1E1D'
+const CRAB_BOX = 30
+
+const ROLE_COLOR = {
+  interphase: '#7F77DD',
+  mitosis: '#1D9E75',
+  review: '#D85A30',
+  verdict: '#BA7517',
+  ship: '#378ADD',
+  continuity: '#888780',
+}
+
+const stamp = (f, x, y, rows, map, cls) =>
+  rows.forEach((row, dy) => [...row].forEach((ch, dx) => map[ch] && f(x + dx, y + dy, 1, 1, map[ch], cls)))
+
+const crabBody = (f, armFront = 0, armCls) => {
+  f(7, 10, 16, 12, CLAY)
+  f(3, 14, 4, 4, CLAY)
+  f(23, 14 + armFront, 4, 4, CLAY, armCls)
+  f(9, 12, 2, 2, INK)
+  f(19, 12, 2, 2, INK)
+  f(7, 22, 2, 4, CLAY, 'la')
+  f(17, 22, 2, 4, CLAY, 'la')
+  f(11, 22, 2, 4, CLAY, 'lb')
+  f(21, 22, 2, 4, CLAY, 'lb')
+}
+
+const CRAB_CSS = `<style>
+.run .la{animation:st .5s steps(1) infinite}.run .lb{animation:st .5s steps(1) infinite -.25s}
+.run .bd{animation:bob .5s steps(1) infinite -.125s}
+.run g{transform-box:fill-box}
+@keyframes st{50%{transform:translateY(-1px)}}@keyframes bob{50%{transform:translateY(1px)}}
+@keyframes blink{50%{opacity:.15}}
+.c-scribe.run .it{transform-origin:0 100%;animation:scrib .5s ease-in-out infinite}
+@keyframes scrib{25%{transform:rotate(-14deg)}75%{transform:rotate(10deg)}}
+.c-scout.run .it{transform-origin:0 50%;animation:scope 1s ease-in-out infinite}
+@keyframes scope{50%{transform:scaleX(1.35)}}
+.c-scout.run .gl{animation:blink 1s steps(1) infinite -.5s}
+.c-reader.run .pg{transform-origin:0 50%;animation:page 1s ease-in-out infinite}
+@keyframes page{50%{transform:scaleX(-1)}}
+.c-builder.run .it{transform-origin:100% 100%;animation:twist .5s ease-in-out infinite}
+@keyframes twist{50%{transform:rotate(-35deg)}}
+.c-detective.run .it{animation:scan 1s steps(1) infinite}
+.c-detective.run .gl{animation:blink 1s steps(1) infinite -.5s}
+@keyframes scan{25%{transform:translate(-1px,1px)}50%{transform:translate(-2px,2px)}75%{transform:translate(-1px,1px)}}
+.c-guard.run .it{animation:guard 1s steps(1) infinite}
+@keyframes guard{50%{transform:translateY(-2px)}}
+.c-judge.run .it{transform-origin:0 100%;animation:gavel 1s cubic-bezier(.6,0,.4,1) infinite}
+@keyframes gavel{0%,40%{transform:rotate(-40deg)}55%{transform:rotate(8deg)}70%,100%{transform:rotate(0)}}
+.c-auditor.run .ck1{animation:tick 1.5s steps(1) infinite}
+.c-auditor.run .ck2{animation:tick 1.5s steps(1) infinite -.5s}
+.c-auditor.run .ck3{animation:tick 1.5s steps(1) infinite -1s}
+@keyframes tick{0%{opacity:0}33%,100%{opacity:1}}
+.c-doctor.run .gl{animation:blink .5s steps(1) infinite}
+.c-doctor.run .it{animation:scan 1s steps(1) infinite}
+.c-keeper.run .glow{animation:lamp 1s ease-in-out infinite}
+@keyframes lamp{50%{opacity:.35}}
+.c-keeper.run .beam{transform-origin:0 50%;animation:beam 2s ease-in-out infinite}
+@keyframes beam{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
+.c-captain.run .pg{transform-origin:0 50%;animation:page 2s ease-in-out infinite}
+.c-cashier.run .slip{transform-origin:50% 0;animation:slip 1s steps(4) infinite}
+@keyframes slip{0%{transform:scaleY(.25)}100%{transform:scaleY(1)}}
+.c-courier.run .it{animation:hop .5s steps(1) infinite}
+.c-tester.run .scr{animation:lamp .5s steps(1) infinite}
+.c-tester.run .tap{animation:blink .25s steps(1) infinite}
+@keyframes hop{50%{transform:translate(1px,-2px)}}
+@media (prefers-reduced-motion: reduce){.run,.run g{animation:none!important}}
+</style>`
+
+const COSTUMES = {
+  scribe: (f, t) => {
+    crabBody(f, -4)
+    stamp(f, 6, 5, ['......bbbbbb......', '...bbbbbbbbbbbb...', '..bbbbbbbbbbbbbb..', '.bbbbbbbbbbbbbbbb.', 'dddddddddddddddddd'], { b: t, d: '#3E3A73' })
+    f(14, 4, 2, 1, '#3E3A73')
+    stamp(f, 24, 0, ['...w', '..ww', '.wwg', 'wwg.', 'wg..', 'k...', 'k...'], { w: '#F8F6F1', g: '#D2D1C8', k: INK }, 'it')
+  },
+  scout: (f, t) => {
+    crabBody(f, -4)
+    stamp(f, 5, 5, ['.kk..............kk.', '.kkk....kkkk....kkk.', '..kkkkkkkwwkkkkkkk..', '..kkkkkkkkkkkkkkkk..', '.gggggggggggggggggg.'], { k: '#55514C', w: '#F8F6F1', g: t })
+    stamp(f, 21, 10, ['bbbbbbbb', 'bccccccb', 'bbbbbbbb'], { b: '#A0703F', c: '#E0B25A' }, 'it')
+    f(29, 11, 1, 1, '#fff', 'gl')
+  },
+  reader: (f, t) => {
+    crabBody(f)
+    stamp(f, 7, 11, ['.kkkk....kkkk.', 'k....kkkk....k', 'k....k..k....k', '.kkkk....kkkk.'], { k: '#3A3A3C' })
+    f(8, 12, 4, 2, 'rgba(169,214,245,.55)'); f(17, 12, 4, 2, 'rgba(169,214,245,.55)')
+    stamp(f, 9, 17, ['ppppp.ppppp', 'pllll.lllpp', 'ppppp.ppppp', 'tttttttttttt'], { p: '#F8F6F1', l: '#C9CCD2', t })
+    f(15, 17, 5, 3, '#ECEAE3', 'pg')
+  },
+  builder: (f, t) => {
+    crabBody(f)
+    stamp(f, 6, 4, ['.....yyyyyyyy.....', '...yyyyyhhyyyyy...', '..yyyyyyhhyyyyyy..', '..yyyyyyhhyyyyyy..', '.yyyyyyyhhyyyyyyy.', 'dddddddddddddddddd'], { y: '#F5C542', h: '#FBE08A', d: '#C99A1E' })
+    f(13, 5, 4, 2, t)
+    stamp(f, 0, 10, ['.s.s', 'sss.', '.s..', '.s..'], { s: '#8E929A' }, 'it')
+  },
+  detective: (f, t) => {
+    crabBody(f, -4, 'it')
+    stamp(f, 6, 3, ['......bbbbbb......', '....bbcbbcbbbb....', '...bbbbbbbbbbbb...', '..bcbbcbbcbbcbbb..', '.bbbbbbbbbbbbbbbb.', 'dddddddddddddddddd'], { b: '#7A4A26', c: '#A0703F', d: '#5A3519' })
+    f(6, 9, 18, 1, t)
+    stamp(f, 23, 1, ['.kkk.', 'k...k', 'k...k', 'k...k', '.kkk.'], { k: '#3A3A3C' }, 'it')
+    f(24, 2, 3, 3, 'rgba(169,214,245,.7)', 'it'); f(25, 6, 1, 4, '#7A4A26', 'it'); f(24, 2, 1, 1, '#fff', 'gl')
+  },
+  guard: (f, t) => {
+    crabBody(f)
+    stamp(f, 6, 3, ['.....mmmmmmmm.....', '...mmmmmmmmmmmm...', '..mmmmmmmmmmmmmm..', '..mmmmmmmmmmmmmm..', '.mmmmmmmmmmmmmmmm.', '.dddddddddddddddd.', '.d..............d.'], { m: '#B8BCC4', d: '#7D828C' })
+    f(14, 0, 2, 3, t)
+    stamp(f, 22, 11, ['ssssssss', 'sttttts.', 'sttkkts.', 'stttkts.', '.sttts..', '..sss...'], { s: '#7D828C', t, k: '#F8F6F1' }, 'it')
+  },
+  judge: (f, t) => {
+    crabBody(f, -4)
+    stamp(f, 5, 3, ['....wwwwwwwwww....', '..wwgwwgwwgwwgww..', '.wwwwwwwwwwwwwwww.', 'wgwwgww....wwgwwgw', 'ww..............ww', 'wg..............gw', 'ww..............ww', 'wg..............gw'], { w: '#F4F3EE', g: '#D2D1C8' })
+    f(13, 18, 4, 2, t)
+    stamp(f, 23, 3, ['.bbbbb', '.bbbbb', '...h..', '...h..', '...h..', '...h..', '...h..'], { b: '#7A4A26', h: '#A0703F' }, 'it')
+  },
+  auditor: (f, t) => {
+    crabBody(f)
+    stamp(f, 6, 7, ['..vvvvvvvvvvvvvv..', 'vvvvvvvvvvvvvvvvvv'], { v: t })
+    f(6, 9, 18, 1, 'rgba(255,255,255,.35)')
+    stamp(f, 22, 12, ['..cc..', 'pppppp', 'p....p', 'p....p', 'p....p', 'p....p', 'pppppp'], { c: '#8E929A', p: '#C9A26B' })
+    f(23, 14, 4, 4, '#F8F6F1')
+    f(23, 14, 1, 1, '#3B9C5F', 'ck1'); f(23, 16, 1, 1, '#3B9C5F', 'ck2'); f(23, 17, 1, 1, '#3B9C5F', 'ck3')
+    f(25, 14, 2, 1, '#9a9a96'); f(25, 16, 2, 1, '#9a9a96')
+  },
+  doctor: (f, t) => {
+    crabBody(f, -4, 'it')
+    f(6, 8, 18, 2, '#F4F3EE')
+    stamp(f, 11, 4, ['.ssss.', 'smmmms', 'smmmms', '.ssss.'], { s: '#8E929A', m: '#E6E8EE' })
+    f(12, 5, 1, 1, '#fff', 'gl')
+    stamp(f, 20, 6, ['..kkk.', '.k...k', '.k...k', '..k.k.', '...k..', '..ttt.', '..ttt.'], { k: '#3A3A3C', t }, 'it')
+  },
+  keeper: (f, t) => {
+    crabBody(f, -4)
+    stamp(f, 4, 5, ['......yyyyyy..........', '....yyyyyyyyyy........', '...yyyyyyyyyyyy.......', 'ddddddddddddddddddddd.', '.dd..............dd...'], { y: '#F5C542', d: '#C99A1E' })
+    f(27, 5, 3, 1, '#3A3A3C')
+    stamp(f, 26, 6, ['kkkkk', 'k...k', 'k...k', 'kkkkk'], { k: '#3A3A3C' })
+    f(27, 7, 3, 2, '#FFD66B', 'glow')
+    f(30, 6, 8, 4, 'rgba(255,214,107,.35)', 'beam')
+  },
+  captain: (f, t) => {
+    crabBody(f)
+    stamp(f, 5, 5, ['....nnnnnnnnnn....', '..nnnnnnnnnnnnnn..', '.wwwwwwwwwwwwwwww.', '.nnnnnnnggnnnnnnn.', 'kkkkkkkkkkkkkkkkkk.'], { n: '#2B3A55', w: '#F4F3EE', g: '#F5C542', k: INK })
+    stamp(f, 9, 17, ['nnnnn.nnnnn', 'nllll.lllln', 'nnnnn.nnnnn'], { n: '#2B3A55', l: '#C9CCD2' })
+    f(15, 17, 5, 3, '#3A4D70', 'pg')
+  },
+  cashier: (f, t) => {
+    crabBody(f, -4)
+    stamp(f, 6, 7, ['..vvvvvvvvvvvvvv..', 'vvvvvvvvvvvvvvvvvv'], { v: '#3B9C5F' })
+    f(6, 9, 18, 1, 'rgba(255,255,255,.35)')
+    f(23, 8, 6, 2, '#4A4A48')
+    stamp(f, 24, 10, ['pppp', 'p--p', 'pppp', 'p--p', 'pppp', 'p.p.'], { p: '#F8F6F1', '-': '#9a9a96' }, 'slip')
+  },
+  courier: (f, t) => {
+    crabBody(f, -4, 'it')
+    stamp(f, 6, 6, ['...cccccccccccc...', '..cccccccccccccc..', '.cccccccccccccccc.', 'bbbbbbbbbbbbbbbbbbbbbb'], { c: t, b: '#1F4E7A' })
+    stamp(f, 22, 5, ['eeeeeeee', 'ewe..ewe', 'e.weew.e', 'e..ww..e', 'eeeeeeee'], { e: '#F8F6F1', w: '#C9CCD2' }, 'it')
+  },
+  tester: (f, t) => {
+    crabBody(f, -4)
+    stamp(f, 6, 7, ['..hhhhhhhhhhhhhh..', 'hhhhhhhhhhhhhhhhhh', 'h................h'], { h: '#3A3A3C' })
+    f(5, 9, 2, 3, t); f(23, 9, 2, 3, t)
+    stamp(f, 23, 8, ['kkkkk', 'kssskk', 'kssskk', 'kssskk', 'kkkkk'], { k: '#2B2B2D', s: '#9FD3F5' })
+    f(24, 9, 3, 3, '#E6F4FD', 'scr')
+    f(25, 10, 1, 1, t, 'tap')
+  },
+  plain: f => crabBody(f),
+}
+
+const ROLES = [
+  { id: 'captain', name: 'Captain', who: 'main session', stage: 'continuity', color: ROLE_COLOR.continuity },
+  { id: 'scribe', name: 'Scribe', who: 'interphase', stage: 'interphase', color: ROLE_COLOR.interphase },
+  { id: 'scout', name: 'Scout', who: 'interphase:scout', stage: 'interphase', color: ROLE_COLOR.interphase },
+  { id: 'reader', name: 'Proofreader', who: 'interphase:spec-reviewer', stage: 'interphase', color: ROLE_COLOR.interphase },
+  { id: 'builder', name: 'Builder', who: 'mitosis worker', stage: 'mitosis', color: ROLE_COLOR.mitosis },
+  { id: 'detective', name: 'Detective', who: 'code-reviewer', stage: 'review', color: ROLE_COLOR.review },
+  { id: 'guard', name: 'Guard', who: 'security-reviewer', stage: 'review', color: ROLE_COLOR.review },
+  { id: 'auditor', name: 'Auditor', who: 'conformance-auditor', stage: 'review', color: ROLE_COLOR.review },
+  { id: 'judge', name: 'Judge', who: 'validator', stage: 'verdict', color: ROLE_COLOR.verdict },
+  { id: 'doctor', name: 'Doctor', who: 'diagnosis', stage: 'verdict', color: ROLE_COLOR.verdict },
+  { id: 'cashier', name: 'Cashier', who: 'receipts', stage: 'verdict', color: ROLE_COLOR.verdict },
+  { id: 'tester', name: 'Tester', who: 'smoke run, one per platform', stage: 'review', color: ROLE_COLOR.review },
+  { id: 'courier', name: 'Courier', who: 'pull-request', stage: 'ship', color: ROLE_COLOR.ship },
+  { id: 'keeper', name: 'Keeper', who: 'lighthouse', stage: 'ship', color: ROLE_COLOR.ship },
+]
+
+const crab = (x, y, costume, color, dim = false, isWalking = false, scale = 1.1, mirror = false) => {
+  const groups = new Map([['bd', []]])
+  const f = (cx, cy, w, h, c, cls = 'bd') => {
+    if (!groups.has(cls)) groups.set(cls, [])
+    groups.get(cls).push(`<rect x="${cx}" y="${cy}" width="${w}" height="${h}" fill="${c}"/>`)
+  }
+  ;(COSTUMES[costume] ?? COSTUMES.plain)(f, color)
+  const group = cls => `<g class="${cls}">${(groups.get(cls) ?? []).join('')}</g>`
+  const props = [...groups.keys()].filter(k => k !== 'bd' && k !== 'la' && k !== 'lb')
+  const body = `<g class="bd">${groups.get('bd').join('')}${props.map(group).join('')}</g>`
+  const place = mirror ? `translate(${x + CRAB_BOX * scale},${y}) scale(${-scale},${scale})` : `translate(${x},${y}) scale(${scale})`
+  return `<g transform="${place}" opacity="${dim ? 0.45 : 1}" shape-rendering="crispEdges"><g class="c-${costume}${isWalking ? ' run' : ''}">${body}${group('la')}${group('lb')}</g></g>`
+}
+</script>
+<script>const FONT = "-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',system-ui,sans-serif"
+const ACCENT = '#8f8cf4'
+const DONE = '#5fbf8f'
+const FAIL = '#D0453F'
+const LANE_COLORS = ['#1D9E75', '#378ADD', '#BA7517', '#7F77DD', '#D85A30']
+
+const STAGES = [
+  { id: 'spec', name: 'Spec', color: ROLE_COLOR.interphase },
+  { id: 'build', name: 'Build', color: ROLE_COLOR.mitosis },
+  { id: 'review', name: 'Review', color: ROLE_COLOR.review },
+  { id: 'fix', name: 'Fix', color: ROLE_COLOR.verdict },
+  { id: 'ship', name: 'Ship', color: ROLE_COLOR.ship },
+  { id: 'integrate', name: 'Integrate', color: ROLE_COLOR.ship },
+  { id: 'clean', name: 'Clean-up', color: ROLE_COLOR.continuity },
+]
+
+const xml = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+const noise = (x, y) => {
+  const s = Math.sin(x * 12.9898 + y * 78.233) * 43758.5453
+  return s - Math.floor(s)
+}
+const charEm = ch => (/[\s.,:;'|!il1()[\]]/.test(ch) ? 0.3 : /[A-Z@%mw]/.test(ch) ? 0.72 : 0.56)
+const textWidth = (s, size) => [...s].reduce((w, ch) => w + charEm(ch) * size, 0)
+const fitText = (s, size, maxW) => {
+  if (textWidth(s, size) <= maxW) return s
+  let out = ''
+  for (const ch of s) {
+    if (textWidth(out + ch + '…', size) > maxW) break
+    out += ch
+  }
+  return out + '…'
+}
+const stageIndex = id => STAGES.findIndex(s => s.id === id)
+const stageOf = id => STAGES[stageIndex(id)] ?? STAGES[0]
+
+const BAND_H = 22
+const BAR_H = 16
+const CELL = 3
+
+const progressOf = run => (run.isFinished ? 1 : (stageIndex(run.stage) + run.stageProgress) / STAGES.length)
+
+const bandSvg = (run, W) => {
+  const title = fitText(run.slug, 13, Math.max(60, W * 0.32))
+  const laneW = textWidth(run.lane, 10.5) + 14
+  const LANE_X = Math.round(16 + textWidth(title, 13) + 8)
+  const BAR_X = Math.round(LANE_X + laneW + 10)
+  const TAIL = 74
+  const BAR_W = Math.max(60, W - BAR_X - TAIL)
+  const stage = stageOf(run.stage)
+  const color = run.isFinished ? DONE : run.isBlocked ? FAIL : ACCENT
+  const fillW = Math.round(BAR_W * progressOf(run))
+  const y0 = (BAND_H - BAR_H) / 2
+  const dots = []
+  const cols = Math.floor(fillW / CELL)
+  const rows = Math.floor(BAR_H / CELL)
+  for (let c = 0; c < cols; c++) {
+    const density = 0.35 + 0.6 * Math.pow(c / Math.max(1, cols), 1.2)
+    for (let r = 0; r < rows; r++) {
+      if (noise(c, r) < density) dots.push(`<rect class="t${Math.floor(noise(r, c) * 4)}" x="${c * CELL + 1}" y="${r * CELL + 1}" width="2" height="2"/>`)
+    }
+  }
+  const ticks = []
+  for (let i = 1; i < STAGES.length; i++) {
+    const x = Math.round((BAR_W * i) / STAGES.length)
+    if (x > fillW + 4) ticks.push(`<rect x="${x}" y="${BAR_H / 2 - 4}" width="1.5" height="8" rx=".75"/>`)
+  }
+  const label = run.isFinished ? 'Done' : run.round ? `${stage.name} · R${run.round}` : stage.name
+  const pillW = Math.round(18 + label.length * 6.4)
+  const pillX = Math.max(0, Math.min(BAR_W - pillW, fillW - pillW))
+  const lead = run.crew[0]
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${BAND_H}" viewBox="0 0 ${W} ${BAND_H}" role="img" aria-label="${xml(run.slug)}: ${xml(label)}">
+<style>
+.t0,.t1,.t2,.t3{animation:tw ${run.isFinished ? 3.2 : 2.2}s ease-in-out infinite}
+.t1{animation-duration:2.8s;animation-delay:-.7s}.t2{animation-duration:1.9s;animation-delay:-1.3s}.t3{animation-duration:3.3s;animation-delay:-.4s}
+@keyframes tw{0%,100%{opacity:1}50%{opacity:${run.isFinished ? 0.8 : 0.3}}}
+@media (prefers-reduced-motion: reduce){.t0,.t1,.t2,.t3{animation:none}}
+</style>
+<defs><clipPath id="bc-${W}"><rect width="${BAR_W}" height="${BAR_H}" rx="${BAR_H / 2}"/></clipPath></defs>
+<circle cx="5" cy="${BAND_H / 2}" r="4" fill="${run.isFinished ? DONE : stage.color}"/>
+<text class="sv-t" x="16" y="${BAND_H / 2 + 4.5}" font-family="${FONT}" font-size="13" font-weight="500">${xml(title)}</text>
+<rect class="sv-k" x="${LANE_X}" y="${(BAND_H - 16) / 2}" width="${laneW}" height="16" rx="4"/>
+<text class="sv-s" x="${LANE_X + laneW / 2}" y="${BAND_H / 2 + 3.8}" text-anchor="middle" font-family="${FONT}" font-size="10.5" font-weight="600">${run.lane}</text>
+<g transform="translate(${BAR_X},${y0})">
+<rect class="sv-k" width="${BAR_W}" height="${BAR_H}" rx="${BAR_H / 2}"/>
+<g clip-path="url(#bc-${W})"><g fill="${color}">${dots.join('')}</g><g class="sv-tk">${ticks.join('')}</g></g>
+<rect x="${pillX}" width="${pillW}" height="${BAR_H}" rx="${BAR_H / 2}" fill="${color}"/>
+<text x="${pillX + pillW / 2}" y="${BAR_H / 2 + 4}" text-anchor="middle" font-family="${FONT}" font-size="11" font-weight="600" fill="#ffffff">${xml(label)}</text>
+</g>
+<text class="sv-m" x="${W - 34}" y="${BAND_H / 2 + 4.5}" text-anchor="end" font-family="${FONT}" font-size="12.5" style="font-variant-numeric:tabular-nums">${run.elapsed}</text>
+${CRAB_CSS}${lead ? crab(W - 27, -1, lead.costume, lead.color, false, !run.isFinished, 0.8) : ''}
+</svg>`
+}
+
+const terminalBand = (run, width = 18) => {
+  const filled = Math.round(width * progressOf(run))
+  const stage = stageOf(run.stage)
+  const label = run.isFinished ? 'Done' : run.round ? `${stage.name} R${run.round}` : stage.name
+  return `● ${run.slug}  [${run.lane}]  ${'█'.repeat(filled)}${'░'.repeat(width - filled)}  ${label} · ${run.msps.length} MSPs · ${run.crew.length} agents  ${run.elapsed}`
+}
+
+const statusMark = (x, y, status, color) => {
+  if (status === 'running') return `<circle class="sv-live" cx="${x}" cy="${y}" r="3.5" fill="${color}"/>`
+  if (status === 'done') return `<path d="M${x - 5} ${y}l3.5 3.5 6.5-7" fill="none" stroke="#3B9C5F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`
+  if (status === 'failed') return `<path d="M${x - 4} ${y - 4}l8 8M${x + 4} ${y - 4}l-8 8" stroke="${FAIL}" stroke-width="1.8" stroke-linecap="round"/>`
+  return `<circle cx="${x}" cy="${y}" r="5" fill="none" class="sv-mstroke" stroke-width="1.4"/>`
+}
+
+const svg = (W, H, body, label = '') =>
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"${label ? ` role="img" aria-label="${xml(label)}"` : ''}>${CRAB_CSS}${body}</svg>`
+
+const headerSvg = (W, run) => {
+  const gap = 6
+  const tw = (W - gap * 2) / 3
+  const tile = (i, k, v) => `<rect class="sv-tile" x="${i * (tw + gap)}" y="28" width="${tw}" height="40" rx="8"/>
+<text class="sv-s" x="${i * (tw + gap) + 9}" y="44" font-family="${FONT}" font-size="11">${k}</text>
+<text class="sv-t" x="${i * (tw + gap) + 9}" y="61" font-family="${FONT}" font-size="15" font-weight="600" style="font-variant-numeric:tabular-nums">${v}</text>`
+  const laneW = textWidth(`${run.lane} lane`, 10.5) + 14
+  const titleW = textWidth(run.slug, 14)
+  return svg(W, 72, `<text class="sv-t" x="0" y="15" font-family="${FONT}" font-size="14" font-weight="600">${xml(run.slug)}</text>
+<rect class="sv-k" x="${titleW + 8}" y="3" width="${laneW}" height="16" rx="4"/>
+<text class="sv-s" x="${titleW + 8 + laneW / 2}" y="14.8" text-anchor="middle" font-family="${FONT}" font-size="10.5" font-weight="600">${run.lane} lane</text>
+${tile(0, 'Cost', '≈' + run.cost)}${tile(1, 'Agents', `${run.crew.length} live · ${run.agentsTotal}`)}${tile(2, 'Time', run.elapsed)}`, `${run.slug}, ${run.lane} lane`)
+}
+
+const railSvg = (W, run) => {
+  const n = STAGES.length
+  const step = (W - 24) / (n - 1)
+  const cur = run.isFinished ? n : stageIndex(run.stage)
+  const nodes = STAGES.map((s, i) => {
+    const x = 12 + i * step
+    const status = i < cur ? 'done' : i === cur ? (run.isBlocked ? 'failed' : 'running') : 'pending'
+    const mark =
+      status === 'done' ? `<circle cx="${x}" cy="12" r="7" fill="${DONE}"/><path d="M${x - 3.2} 12l2.2 2.2 4.2-4.6" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>`
+      : status === 'running' ? `<circle class="sv-live" cx="${x}" cy="12" r="10" fill="${s.color}" opacity=".25"/><circle cx="${x}" cy="12" r="6" fill="${s.color}"/>`
+      : status === 'failed' ? `<circle cx="${x}" cy="12" r="7" fill="${FAIL}"/><path d="M${x - 2.5} 9.5l5 5M${x + 2.5} 9.5l-5 5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>`
+      : `<circle cx="${x}" cy="12" r="5" class="sv-k sv-mstroke" stroke-width="1.2"/>`
+    return `${mark}<text class="${status === 'pending' ? 'sv-m' : 'sv-t'}" x="${x}" y="36" text-anchor="middle" font-family="${FONT}" font-size="10.5"${status === 'running' ? ' font-weight="600"' : ''}>${s.name}</text>`
+  })
+  const doneX = 12 + Math.min(cur, n - 1) * step
+  return svg(W, 44, `<rect class="sv-k" x="12" y="11" width="${W - 24}" height="2" rx="1"/><rect x="12" y="11" width="${Math.max(0, doneX - 12)}" height="2" rx="1" fill="${DONE}"/>${nodes.join('')}`, `Stage ${run.isFinished ? 'done' : stageOf(run.stage).name}`)
+}
+
+const MSP_STATUS = {
+  planned: ['Planned', 'pending'],
+  building: ['Building', 'running'],
+  proving: ['Proving acceptance', 'running'],
+  review: ['In review', 'running'],
+  fixing: ['Fixing', 'running'],
+  green: ['Green', 'done'],
+  pr: ['PR open', 'done'],
+  merged: ['Merged', 'done'],
+  draft: ['Draft PR · blocked', 'failed'],
+}
+
+const mspSvg = (W, m, i) => {
+  const [word, mark] = MSP_STATUS[m.status]
+  const color = LANE_COLORS[i % LANE_COLORS.length]
+  const isRunning = mark === 'running'
+  const barX = 44
+  const barW = W - barX - 64
+  const pct = m.steps ? m.done / m.steps : 0
+  const proof = m.proof
+    ? `<g transform="translate(${W - 56},40)"><circle cx="0" cy="0" r="3.5" fill="${FAIL}"/><path d="M6 0h6" class="sv-mstroke" stroke-width="1.2"/><circle cx="18" cy="0" r="3.5" fill="${m.proof === 'green' ? DONE : 'none'}" class="${m.proof === 'green' ? '' : 'sv-mstroke'}" stroke-width="1.2"/></g>`
+    : ''
+  return svg(W, 54, `<rect x="0" y="4" width="3" height="46" rx="1.5" fill="${color}"/>
+${crab(8, 10, 'builder', color, mark === 'pending', isRunning, 1.1)}
+<text class="sv-t" x="${barX}" y="18" font-family="${FONT}" font-size="13" font-weight="600">${xml(m.name)}</text>
+<text class="sv-m" x="${barX}" y="32" font-family="ui-monospace,'SF Mono',Menlo,monospace" font-size="10">${xml(fitText(m.branch, 10, barW))}</text>
+<rect class="sv-k" x="${barX}" y="39" width="${barW}" height="4" rx="2"/>
+<rect x="${barX}" y="39" width="${Math.round(barW * pct)}" height="4" rx="2" fill="${mark === 'failed' ? FAIL : color}"/>
+${statusMark(W - 8, 16, mark, color)}
+<text class="sv-s" x="${W - 20}" y="20" text-anchor="end" font-family="${FONT}" font-size="11">${m.pr ? `${word} ${m.pr}` : m.round ? `${word} · R${m.round}` : word}</text>
+${proof}`, `${m.name}: ${word}`)
+}
+
+const agentSvg = (W, a) => {
+  const ctxW = 48
+  return svg(W, 44, `${crab(4, 6, a.costume, a.color, false, true, 1.1)}
+<text class="sv-t" x="44" y="18" font-family="${FONT}" font-size="13" font-weight="600">${xml(a.name)}</text>
+<text class="sv-m" x="44" y="34" font-family="${FONT}" font-size="11">${xml(a.task)}</text>
+<text class="sv-s" x="${W}" y="18" text-anchor="end" font-family="${FONT}" font-size="11" style="font-variant-numeric:tabular-nums">${a.model} · ${a.time}</text>
+<rect class="sv-k" x="${W - ctxW}" y="28" width="${ctxW}" height="4" rx="2"/>
+<rect x="${W - ctxW}" y="28" width="${Math.round((ctxW * a.ctx) / 100)}" height="4" rx="2" class="sv-mfill"/>`, `${a.name}: ${a.task}`)
+}
+
+const VERDICT_COLOR = { green: DONE, loop: ACCENT, diagnose: '#BA7517', blocked: FAIL }
+
+const roundSvg = (W, r) => {
+  const chipW = textWidth(r.verdict, 11) + 18
+  const seg = (W - 120) / Math.max(1, r.candidates)
+  const pips = []
+  for (let i = 0; i < r.candidates; i++) {
+    const kind = i < r.blockers ? 'b' : i < r.blockers + r.advisories ? 'a' : 'r'
+    const fill = kind === 'b' ? FAIL : kind === 'a' ? '#BA7517' : null
+    pips.push(`<rect x="${40 + i * seg}" y="30" width="${Math.max(3, seg - 3)}" height="8" rx="2" ${fill ? `fill="${fill}"` : 'class="sv-k"'}/>`)
+  }
+  return svg(W, 50, `<text class="sv-t" x="0" y="20" font-family="${FONT}" font-size="13" font-weight="600">R${r.n}</text>
+<text class="sv-s" x="40" y="20" font-family="${FONT}" font-size="11">${xml(r.msp)} · ${r.candidates} candidates · ${r.blockers} blockers · ${r.advisories} advisory</text>
+${pips.join('')}
+<rect x="${W - chipW}" y="25" width="${chipW}" height="18" rx="9" fill="${VERDICT_COLOR[r.verdict]}"/>
+<text x="${W - chipW / 2}" y="37.5" text-anchor="middle" font-family="${FONT}" font-size="11" font-weight="600" fill="#fff">${r.verdict}</text>`, `Round ${r.n} ${r.msp}: ${r.verdict}`)
+}
+
+const splitSvg = (W, H, count) => {
+  const cx = W / 2
+  const lanes = Array.from({ length: count }, (_, i) => i)
+  const spread = Math.min(110, (W - 80) / Math.max(1, count - 1))
+  const parts = lanes.map(i => {
+    const dx = (i - (count - 1) / 2) * spread
+    return `<g class="sp-child" style="--dx:${dx}px;animation-delay:${0.15 * i}s">${crab(cx - 16.5, H - 46, 'builder', LANE_COLORS[i % LANE_COLORS.length], false, true, 1.1)}</g>`
+  })
+  const fibers = lanes.map(i => {
+    const dx = (i - (count - 1) / 2) * spread
+    return `<path class="sp-fiber" d="M${cx} 30 Q ${cx + dx * 0.4} ${H / 2} ${cx + dx} ${H - 40}" fill="none" stroke="${LANE_COLORS[i % LANE_COLORS.length]}" stroke-width="1.4" stroke-dasharray="3 4"/>`
+  })
+  return svg(W, H, `<style>
+.sp-child{animation:sp-out 2.4s cubic-bezier(.5,0,.2,1) infinite alternate}
+@keyframes sp-out{0%,15%{transform:translateX(0)}70%,100%{transform:translateX(var(--dx))}}
+.sp-fiber{animation:sp-fib 2.4s ease-in-out infinite alternate}
+@keyframes sp-fib{0%,15%{opacity:0}70%,100%{opacity:.8}}
+.sp-pole{animation:sp-pole 1.2s ease-in-out infinite}
+@keyframes sp-pole{50%{opacity:.4}}
+@media (prefers-reduced-motion: reduce){.sp-child{animation:none;transform:translateX(var(--dx))}.sp-fiber{animation:none;opacity:.8}.sp-pole{animation:none}}
+</style>
+${crab(cx - 16.5, 4, 'scribe', ROLE_COLOR.interphase, false, false, 1.1)}
+<circle class="sp-pole" cx="${cx}" cy="34" r="3" fill="${ACCENT}"/>
+${fibers.join('')}${parts.join('')}`, `One spec dividing into ${count} MSP lanes`)
+}
+</script>
+<script>
+const role = id => ROLES.find(r => r.id === id)
+const agent = (id, name, task, model, time, ctx) => ({ ...role(id), costume: id, name, task, model, time, ctx })
+
+const SLUG = 'rate-limit-api'
+const CELEBRATION_CREW = ['captain', 'scribe', 'builder', 'detective', 'judge', 'courier']
+const HOP_SECONDS = 0.7
+const HOP_STAGGER = 0.12
+
+const MSP_BASE = [
+  { name: 'limiter-core', branch: 'mitosis/rate-limit-api/limiter-core', steps: 5 },
+  { name: 'redis-store', branch: 'mitosis/rate-limit-api/redis-store', steps: 4 },
+  { name: 'headers-docs', branch: 'mitosis/rate-limit-api/headers-docs', steps: 3 },
+]
+const msps = states => MSP_BASE.map((m, i) => ({ ...m, ...states[i] }))
+const shippedMsps = status =>
+  msps([
+    { status, done: 5, pr: '#41', proof: 'green' },
+    { status, done: 4, pr: '#42', proof: 'green' },
+    { status, done: 3, pr: '#43', proof: 'green' },
+  ])
+
+const ROUND_1 = { n: 1, msp: 'limiter-core', candidates: 7, blockers: 2, advisories: 1, verdict: 'loop' }
+const ROUND_2 = { n: 2, msp: 'limiter-core', candidates: 3, blockers: 0, advisories: 0, verdict: 'green' }
+
+const FINISHED_CREW = [
+  { ...agent('scribe', 'Scribe', 'Wrote the spec · 9 Steps', 'Opus 5.5', '19m', 31), reached: 'spec' },
+  { ...agent('builder', 'Builder ×3', 'mitosis workers · 3 MSPs', 'Opus 5.5', '24m', 40), reached: 'build' },
+  { ...agent('detective', 'Detective', 'code-reviewer · 2 rounds', 'Opus 5.5', '9m', 22), reached: 'review' },
+  { ...agent('judge', 'Judge', 'validator · 10 candidates', 'Opus 5.5', '6m', 26), reached: 'review' },
+  { ...agent('courier', 'Courier', 'Opened #41, #42, #43', 'Sonnet 5.5', '2m', 9), reached: 'ship' },
+  { ...agent('keeper', 'Keeper', 'lighthouse · run 1', 'Sonnet 5.5', '7m', 18), reached: 'integrate' },
+]
+const doneCrewOf = run => FINISHED_CREW.filter(worker => stageIndex(worker.reached) <= stageIndex(run.stage))
+
+const base = { slug: SLUG, lane: 'Full', cost: '$9.80', agentsTotal: 12, rounds: [ROUND_1, ROUND_2], crew: [] }
+
+const FRAMES = {
+  running: {
+    run: {
+      ...base, stage: 'review', stageProgress: 0.3, round: 1, elapsed: '48m', cost: '$5.64', agentsTotal: 6,
+      crew: [
+        agent('detective', 'Detective', 'code-reviewer · limiter-core', 'Opus 5.5', '4m', 22),
+        agent('guard', 'Guard', 'security-reviewer · limiter-core', 'Opus 5.5', '3m', 18),
+        agent('auditor', 'Auditor', 'conformance-auditor · redis-store', 'Sonnet 5.5', '2m', 11),
+      ],
+      msps: msps([{ status: 'review', done: 5, round: 1, proof: 'green' }, { status: 'review', done: 4, round: 1, proof: 'green' }, { status: 'review', done: 3, round: 1, proof: 'green' }]),
+      rounds: [],
+    },
+  },
+  shipped: {
+    run: {
+      ...base, stage: 'integrate', stageProgress: 0.4, round: 2, elapsed: '1h 32m', cost: '$9.10',
+      crew: [agent('keeper', 'Keeper', 'lighthouse · FEATURE branch', 'Sonnet 5.5', '3m', 14)],
+      msps: shippedMsps('pr'),
+    },
+  },
+  reopened: {
+    run: {
+      ...base, stage: 'review', stageProgress: 0.5, round: 3, elapsed: '1h 51m', cost: '$10.40',
+      crew: [agent('detective', 'Detective', 'code-reviewer · limiter-core round 3', 'Opus 5.5', '2m', 16)],
+      msps: msps([{ status: 'review', done: 5, round: 3, proof: 'green' }, { status: 'pr', done: 4, pr: '#42', proof: 'green' }, { status: 'pr', done: 3, pr: '#43', proof: 'green' }]),
+      rounds: [ROUND_1, ROUND_2, { n: 3, msp: 'limiter-core', candidates: 2, blockers: 1, advisories: 0, verdict: 'loop' }],
+    },
+  },
+  cleaned: {
+    run: { ...base, stage: 'clean', stageProgress: 1, round: 2, elapsed: '2h 14m', isFinished: true, msps: shippedMsps('merged') },
+    finish: { word: 'Cleaned', headline: 'Cleaned up', details: ['The thread has not closed yet'] },
+  },
+  'closed-done': {
+    run: { ...base, stage: 'clean', stageProgress: 1, round: 2, elapsed: '2h 14m', isFinished: true, msps: shippedMsps('merged') },
+    finish: { word: 'Done', headline: 'Finished clean', details: ['Every MSP shipped and lighthouse is green'], isCelebrated: true },
+  },
+  'closed-done-plain': {
+    run: { ...base, stage: 'clean', stageProgress: 1, round: 2, elapsed: '2h 14m', isFinished: true, msps: shippedMsps('merged') },
+    finish: { word: 'Done', headline: 'Done', details: ['No celebration: lighthouse verdict failures'] },
+  },
+  'closed-draft': {
+    run: {
+      ...base, stage: 'clean', stageProgress: 0.9, round: 2, elapsed: '2h 20m',
+      msps: msps([
+        { status: 'merged', done: 5, pr: '#41', proof: 'green' },
+        { status: 'draft', done: 3, pr: '#42', round: 2, proof: 'red' },
+        { status: 'merged', done: 3, pr: '#43', proof: 'green' },
+      ]),
+      rounds: [ROUND_1, { n: 2, msp: 'redis-store', candidates: 4, blockers: 1, advisories: 0, verdict: 'blocked' }],
+    },
+    finish: { word: 'Draft', headline: 'Ended as a draft pull request', details: ['redis-store blocked'] },
+  },
+  'stopped-critical': {
+    run: {
+      ...base, stage: 'review', stageProgress: 0.5, round: 1, elapsed: '57m', cost: '$6.90', agentsTotal: 7, isBlocked: true,
+      msps: msps([{ status: 'review', done: 5, round: 1, proof: 'green' }, { status: 'review', done: 4, round: 1, proof: 'green' }, { status: 'review', done: 3, round: 1, proof: 'green' }]),
+      rounds: [ROUND_1],
+    },
+    finish: { word: 'Stopped', headline: 'Stopped at review: hard failure', details: [] },
+  },
+  superseded: {
+    run: {
+      ...base, stage: 'review', stageProgress: 0.6, round: 1, elapsed: '1h 02m', cost: '$7.10', agentsTotal: 7,
+      msps: msps([{ status: 'review', done: 5, round: 1, proof: 'green' }, { status: 'review', done: 4, round: 1, proof: 'green' }, { status: 'review', done: 3, round: 1, proof: 'green' }]),
+      rounds: [ROUND_1],
+    },
+    finish: { word: 'Superseded', headline: 'Superseded by rate-limit-api-2', details: [] },
+  },
+  abandoned: {
+    run: {
+      ...base, stage: 'review', stageProgress: 0.4, round: 1, elapsed: '51m', cost: '$6.20', agentsTotal: 6,
+      msps: msps([{ status: 'review', done: 5, round: 1, proof: 'green' }, { status: 'review', done: 4, round: 1, proof: 'green' }, { status: 'review', done: 3, round: 1, proof: 'green' }]),
+      rounds: [ROUND_1],
+    },
+    finish: { word: 'Abandoned', headline: 'Abandoned', details: ['Owner dropped the work'] },
+  },
+  unknown: {
+    run: { ...base, stage: 'ship', stageProgress: 0.5, round: 2, elapsed: '—', cost: '—', msps: shippedMsps('pr') },
+    finish: { word: 'Unknown', headline: 'Status unknown', details: ['The event log could not be read'] },
+  },
+}
+
+const still = markup => markup.replace(/ run"/g, '"').replace(/class="sv-live" /g, '')
+
+const bandLabel = run => {
+  const stage = stageOf(run.stage)
+  return run.isFinished ? 'Done' : run.round ? `${stage.name} · R${run.round}` : stage.name
+}
+
+const pillOf = (barW, run, label) => {
+  const width = Math.round(18 + label.length * 6.4)
+  const fillW = Math.round(barW * progressOf(run))
+  return { x: Math.max(0, Math.min(barW - width, fillW - width)), width }
+}
+
+const finishBandSvg = (run, W, word) => {
+  const drawn = bandSvg(run, W)
+  const label = bandLabel(run)
+  const barW = Number(drawn.match(/<rect class="sv-k" width="([\d.]+)" height="16"/)[1])
+  const was = pillOf(barW, run, label)
+  const now = pillOf(barW, run, word)
+  return still(drawn)
+    .replace(/<rect class="t(\d)"/g, '<rect class="still-t$1"')
+    .replace(/\.t0,\.t1,\.t2,\.t3\{animation:[^}]*\}\n\.t1\{[^\n]*\n/, '')
+    .replace(`aria-label="${xml(run.slug)}: ${xml(label)}"`, `aria-label="${xml(run.slug)}: ${xml(word)}"`)
+    .replace(`<rect x="${was.x}" width="${was.width}"`, `<rect x="${now.x}" width="${now.width}"`)
+    .replace(`<text x="${was.x + was.width / 2}"`, `<text x="${now.x + now.width / 2}"`)
+    .replace(`>${xml(label)}</text>\n</g>`, `>${xml(word)}</text>\n</g>`)
+}
+
+const celebrationSvg = (W, H, scale, slug) => {
+  const box = CRAB_BOX * scale
+  const gap = Math.max(4, Math.min(18, (W - box * CELEBRATION_CREW.length) / (CELEBRATION_CREW.length - 1)))
+  const rowW = box * CELEBRATION_CREW.length + gap * (CELEBRATION_CREW.length - 1)
+  const left = Math.max(0, (W - rowW) / 2)
+  const crabs = CELEBRATION_CREW.map(
+    (id, i) =>
+      `<g class="cel-hop" style="animation-delay:${(i * HOP_STAGGER).toFixed(2)}s">${crab(left + i * (box + gap), H - 28 * scale - 1, id, role(id).color, false, false, scale)}</g>`,
+  )
+  return svg(W, H, `<style>
+.cel-hop{animation:cel-hop ${HOP_SECONDS}s cubic-bezier(.3,0,.3,1) 1 both}
+@keyframes cel-hop{0%,100%{transform:translateY(0)}40%{transform:translateY(-${Math.round(6 * scale)}px)}}
+@media (prefers-reduced-motion: reduce){.cel-hop{animation:none}}
+</style>${crabs.join('')}`, `Celebration: ${slug} finished clean`)
+}
+
+const widthOf = el => Math.max(240, Math.floor(el.getBoundingClientRect().width))
+
+const section = (title, count, body) => `<div class="sec"><div class="sec-h"><span>${title}</span><span>${count}</span></div>${body}</div>`
+
+const finishBlock = (W, run, finish) => {
+  const art = finish.isCelebrated ? celebrationSvg(W, 48, 1.2, run.slug) : ''
+  const details = finish.details.map(line => `<p class="finish-detail">${xml(line)}</p>`).join('')
+  return `<div class="finish${finish.isCelebrated ? ' is-celebrated' : ''}">${art}
+<div class="finish-head"><span class="finish-word" data-word="${xml(finish.word)}">${xml(finish.word)}</span><strong>${xml(finish.headline)}</strong></div>${details}</div>`
+}
+
+const paneHtml = (W, run, finish) => {
+  const isLive = finish === undefined
+  const draw = markup => (isLive ? markup : still(markup))
+  const parts = [
+    finish ? finishBlock(W, run, finish) : '',
+    headerSvg(W, isLive ? run : { ...run, crew: [] }),
+    draw(railSvg(W, run)),
+    section('MSPs', run.msps.length, run.msps.map((m, i) => draw(mspSvg(W, m, i))).join('')),
+    section('Working now', run.crew.length, run.crew.length ? run.crew.map(a => agentSvg(W, a)).join('') : '<div class="empty">Nobody is working; the run has ended.</div>'),
+  ]
+  if (!isLive) parts.push(section('Done', doneCrewOf(run).length, doneCrewOf(run).map(a => still(agentSvg(W, a))).join('')))
+  if (run.rounds.length) parts.push(section('Review rounds', run.rounds.length, run.rounds.map(r => roundSvg(W, r)).join('')))
+  return `<div class="pane-head"><span>Pipeline</span><span class="x">⌄ ×</span></div><div class="pane-body">${parts.join('')}</div>`
+}
+
+const settledLine = (run, finish) =>
+  `<div class="settled" role="img" aria-label="${xml(run.slug)} · ${xml(finish.headline)}"><span class="settled-dot" data-word="${xml(finish.word)}"></span><span class="settled-text">${xml(run.slug)} · ${xml(finish.headline)}</span></div>`
+
+const bandHtml = (W, run, finish) => {
+  if (finish === undefined) return `<div class="band-label">Band · live</div><div class="band-row">${bandSvg(run, W)}</div>`
+  const compact = finish.isCelebrated ? `<div class="band-row">${celebrationSvg(Math.min(W, 220), 22, 0.6, run.slug)}</div>` : ''
+  return `<div class="band-label">Band · during the finish</div>${compact}<div class="band-row">${finishBandSvg(run, W, finish.word)}</div>
+<div class="band-label">Band · settled</div><div class="band-row">${settledLine(run, finish)}</div>`
+}
+
+const drawFrame = frame => {
+  const { run, finish } = FRAMES[frame.dataset.state]
+  const band = frame.querySelector('.band')
+  const pane = frame.querySelector('.pane')
+  band.innerHTML = bandHtml(widthOf(band), run, finish)
+  pane.innerHTML = paneHtml(widthOf(pane) - 24, run, finish)
+}
+
+const drawAll = () => document.querySelectorAll('[data-state]').forEach(drawFrame)
+
+document.querySelectorAll('[data-replay]').forEach(button => {
+  button.onclick = () => drawFrame(document.querySelector(`[data-state="${button.dataset.replay}"]`))
+})
+addEventListener('resize', drawAll)
+drawAll()
+</script>
+</body>
+</html>
