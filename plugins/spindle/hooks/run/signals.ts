@@ -1,13 +1,14 @@
 import { atom, read, update } from 'claude-code'
 import type { Hook } from 'claude-code'
 
-import type { AgentRow, Lane, Role, Signals, Stage } from '../../types'
+import type { AgentRow, FileFacts, Lane, Role, Signals, Stage } from '../../types'
 import { isPipelineClean, isRunScript, isShipping, simpleCommands } from './command'
 import { contextMax, contextTokens, stepCost } from './cost'
 import { STAGES, isRunStarted } from './infer'
 import { NO_SIGNALS } from './state'
 import { refresh } from './view'
 import type { ViewDollar } from './view'
+import { agentWords, mspOfAgent } from './workers'
 
 const MAX_AGENTS = 200
 
@@ -145,6 +146,8 @@ export const agentSpawnSignals: Hook<'agent.spawn'> = async ($, e, next) => {
     contextTokens: 0,
     contextMax: contextMax(started.model),
     isRunning: true,
+    msp: null,
+    round: null,
   }
   await change($, signals => ({
     ...signals,
@@ -176,12 +179,18 @@ export const turnStepSignals: Hook<'turn.step'> = async function* ($, e, next) {
   return result
 }
 
+function finishedAgent(agent: AgentRow, files: FileFacts | null): AgentRow {
+  const msp = files === null ? null : mspOfAgent(`${agent.prompt}\n${agent.description}`, files.msps, files.worktrees)
+  return { ...agent, isRunning: false, prompt: '', msp: msp?.label ?? null, round: agentWords(agent, msp).round }
+}
+
 export const turnCompleteSignals: Hook<'turn.complete'> = async ($, e, next) => {
   const agentId = e.agentId
   if (agentId !== undefined) {
+    const files = await read($, filesState)
     await change($, signals => ({
       ...signals,
-      agents: signals.agents.map(agent => (agent.id === agentId ? { ...agent, isRunning: false, prompt: '' } : agent)),
+      agents: signals.agents.map(agent => (agent.id === agentId && agent.isRunning ? finishedAgent(agent, files) : agent)),
     }))
   }
   return next(e)

@@ -1,10 +1,11 @@
 import { atom, read, update } from 'claude-code'
 import type { Elements, EngineInterface, RenderElement, RenderInput } from 'claude-code'
 
-import type { Activity, MspRow, MspStatus, Outcome, Role, RoundRow, RunView, WorkerRole, WorkerRow } from '../../types'
+import type { Activity, FinalState, Finish, MspRow, MspStatus, Outcome, Role, RoundRow, RunView, WorkerRole, WorkerRow } from '../../types'
 import { LANE_NAME } from '../run/state'
 import { NO_RUN, activityNow, currentActivity, elapsed, modelName, unplannedPulls } from '../run/summary'
-import { ROLE_COLOR, colorOf, costumeOf, crab } from './crew'
+import { isFinishSettled } from '../run/view'
+import { CRAB_BOX, ROLE_COLOR, colorOf, costumeOf, crab } from './crew'
 import { cardSlot, cardTrigger } from './hint'
 import type { Card } from './hint'
 import {
@@ -35,6 +36,7 @@ export const PANE_TITLE = 'Pipeline'
 
 const viewState = atom({ plugin: 'spindle', key: 'view' } as const, null)
 const selectedState = atom({ plugin: 'spindle', key: 'selectedMsp' } as const, null)
+const finishSeenState = atom({ plugin: 'spindle', key: 'finishSeen' } as const, null)
 
 const TITLE = 'Pipeline Insights'
 const PROOF_HINT = ['Acceptance test failed without the work (red)', 'and passed with it (green)']
@@ -61,6 +63,14 @@ const PIP = 8
 const PIP_STEP = 10
 const VERDICT_CHIP_H = 18
 const MAX_HOTKEYS = 9
+const CELEBRATION_CREW: readonly Role[] = ['captain', 'scribe', 'builder', 'detective', 'judge', 'courier']
+const CELEBRATION_SCALE = 1.1
+const CELEBRATION_STEP = 38
+const CELEBRATION_HOP_PX = 5
+const CELEBRATION_W = CELEBRATION_STEP * CELEBRATION_CREW.length
+const CELEBRATION_H = Math.ceil(CRAB_BOX * CELEBRATION_SCALE) + CELEBRATION_HOP_PX
+const HOP_SECONDS = 0.6
+const HOP_STAGGER_SECONDS = 0.2
 
 const ROLE_NAME: Readonly<Record<WorkerRole, string>> = {
   captain: 'Captain',
@@ -112,7 +122,7 @@ type PaneElements = Pick<Elements['terminal'], 'Box' | 'Text' | 'Button'>
 
 const laneWordOf = (view: RunView) => (view.lane === null ? null : `${LANE_NAME[view.lane]} lane`)
 
-const stageName = (view: RunView) => (view.isFinished ? 'Done' : (stageInfo(view.stage)?.name ?? '?'))
+const stageName = (view: RunView) => view.finish?.word ?? (stageInfo(view.stage)?.name ?? '?')
 
 const costText = (view: RunView) => `~$${view.costUsd.toFixed(2)}`
 
@@ -127,7 +137,10 @@ export const stageSummary = (view: RunView) => {
   return counts.length === 0 ? `Stage ${stageName(view)}` : `Stage ${stageName(view)} · ${counts.join(', ')}`
 }
 
-const currentIndexOf = (view: RunView) => (view.isFinished ? STAGE_TABLE.length : stageIndex(view.stage))
+const FULLY_DONE: ReadonlySet<FinalState> = new Set(['closed-done', 'cleaned'])
+
+const currentIndexOf = (view: RunView) =>
+  view.finish !== null && FULLY_DONE.has(view.finish.state) ? STAGE_TABLE.length : stageIndex(view.stage)
 
 const mspStatusText = (msp: MspRow) => {
   const word = MSP_STATUS[msp.status].word
@@ -252,6 +265,54 @@ function proofSvg(msp: MspRow): string {
     PROOF_W,
     PROOF_H,
     `<text class="sv-m" x="0" y="10" font-family="${FONT}" font-size="${PROOF_PX}">proof</text>${red}<path d="M${x + 10} 7h6" class="sv-mstroke" stroke-width="1.2"/>${green}`,
+  )
+}
+
+const hopCss = () =>
+  `<style>
+.hop{animation-name:cel-hop;animation-duration:${HOP_SECONDS}s;animation-timing-function:ease-out;animation-iteration-count:1;animation-fill-mode:both}
+${CELEBRATION_CREW.map((_, i) => `.hop-${i}{animation-delay:${(i * HOP_STAGGER_SECONDS).toFixed(1)}s}`).join('')}
+@keyframes cel-hop{0%,100%{transform:translateY(0)}45%{transform:translateY(-${CELEBRATION_HOP_PX}px)}}
+@media (prefers-reduced-motion: reduce){.hop{animation:none}}
+</style>`
+
+function celebrationSvg(isSettled: boolean): string {
+  const crabs = CELEBRATION_CREW.map(
+    (role, i) =>
+      `<g class="hop hop-${i}">${crab(i * CELEBRATION_STEP + 2, CELEBRATION_HOP_PX, costumeOf(role), colorOf(role), false, false, CELEBRATION_SCALE)}</g>`,
+  ).join('')
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${CELEBRATION_W}" height="${CELEBRATION_H}" viewBox="0 0 ${CELEBRATION_W} ${CELEBRATION_H}">${isSettled ? '' : hopCss()}${crabs}</svg>`
+}
+
+const finishColor = (finish: Finish) =>
+  finish.isCelebrated || finish.state === 'closed-done'
+    ? { color: DONE }
+    : finish.state === 'stopped-critical'
+      ? { color: FAIL }
+      : { dimColor: true }
+
+function desktopFinish(ui: DesktopElements, view: RunView, finish: Finish, isSettled: boolean): RenderElement {
+  const { Box, Text, Svg } = ui
+  return (
+    <Box key="pane-finish" flexDirection="column" gap="xs">
+      {finish.isCelebrated ? (
+        <Svg
+          key="finish-celebration"
+          source={celebrationSvg(isSettled)}
+          alt={`Celebration: ${view.slug} finished clean`}
+          width={CELEBRATION_W}
+          height={CELEBRATION_H}
+        />
+      ) : null}
+      <Text weight="semibold" {...finishColor(finish)}>
+        {finish.headline}
+      </Text>
+      {finish.details.map((detail, i) => (
+        <Text key={`finish-detail-${i}`} dimColor size="footnote">
+          {detail}
+        </Text>
+      ))}
+    </Box>
   )
 }
 
@@ -402,7 +463,24 @@ function workingHeading(ui: PaneElements, selected: string | null, count: number
 
 const roundHeading = (worker: WorkerRow) => (worker.round === null ? 'Build' : `Round ${worker.round}`)
 
-type Room = { columns: number; now: number }
+const mspTag = (worker: WorkerRow, selected: string | null) => (selected === null ? worker.msp : null)
+
+function sectionHeadings(selected: string | null, listed: readonly WorkerRow[]): { working: string; done: string } | null {
+  if (selected === null) return null
+  const live = listed.filter(worker => worker.isLive).length
+  return { working: `Working · ${live}`, done: `Done · ${listed.length - live}` }
+}
+
+function sectionHeading(ui: PaneElements, key: string, words: string) {
+  const { Text } = ui
+  return (
+    <Text key={key} dimColor weight="semibold">
+      {words}
+    </Text>
+  )
+}
+
+type Room = { columns: number; now: number; isSettled: boolean }
 
 type DesktopElements = PaneElements & Pick<Elements['desktop'], 'Svg'>
 
@@ -457,7 +535,7 @@ function lanesBar(ui: DesktopElements, msp: MspRow, i: number): RenderElement {
 
 function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, selected: string | null, room: Room) {
   const { Box, Text, Svg } = ui
-  const { columns, now } = room
+  const { columns, now, isSettled } = room
   const time = elapsed(view.startedAt, now)
   const lane = laneWordOf(view)
   const live = liveCrewOf(view)
@@ -526,6 +604,7 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
     const kind = round === undefined ? undefined : firstKindOf(view, worker)
     const words = round === undefined ? worker.words : verdictWords(worker)
     const right = rightText(worker, now)
+    const tag = mspTag(worker, selected)
     const layout = round === undefined ? undefined : verdictLayout(VERDICT_ROOM, round)
     return (
       <Box key={key} flexDirection="row" alignItems="center" gap="sm">
@@ -537,9 +616,16 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
           height={WORKER_CRAB_PX}
         />
         <Box key={`${key}-words`} flexDirection="column" flexGrow={1} flexShrink={1} minWidth={0}>
-          <Text weight="semibold" wrap="truncate-end">
-            {ROLE_NAME[worker.role]}
-          </Text>
+          <Box key={`${key}-role`} flexDirection="row" gap="xs" minWidth={0}>
+            <Text weight="semibold" wrap="truncate-end">
+              {ROLE_NAME[worker.role]}
+            </Text>
+            {tag === null ? null : (
+              <Text dimColor wrap="truncate-end">
+                {`· ${tag}`}
+              </Text>
+            )}
+          </Box>
           {cardTrigger(
             ui,
             `pane-words-${i}`,
@@ -576,7 +662,7 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
   }
   const selectedMsp = view.msps.find(msp => msp.label === selected)
   const isMainThreadOnly = selectedMsp !== undefined && !listed.some(worker => worker.isLive)
-  const workerRows = listed.flatMap((worker, i) => {
+  const rowsWithHeadings = (worker: WorkerRow, i: number) => {
     const previous = listed[i - 1]
     const isNewRound = selected !== null && !worker.isLive && (previous === undefined || previous.isLive || previous.round !== worker.round)
     return [
@@ -589,7 +675,10 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
         : []),
       workerRow(worker, i),
     ]
-  })
+  }
+  const liveRows = listed.flatMap((worker, i) => (worker.isLive ? rowsWithHeadings(worker, i) : []))
+  const doneRows = listed.flatMap((worker, i) => (worker.isLive ? [] : rowsWithHeadings(worker, i)))
+  const sections = sectionHeadings(selected, listed)
   const cards: readonly Card[] = [{ scope: 'pane-slug', lines: [view.slug] }, ...mspCards, ...workerCards]
   return (
     <Box flexDirection="column" gap="md">
@@ -609,6 +698,7 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
           {lane === null ? null : <Svg key="pane-lane" source={chipSvg(lane)} alt={lane} width={chipWidthOf(lane)} height={CHIP_H} />}
         </Box>
       </Box>
+      {view.finish === null ? null : desktopFinish(ui, view, view.finish, isSettled)}
       <Box key="pane-tiles" flexDirection="row" gap="sm">
         {tile('tile-cost', 'Cost', <Text weight="semibold" tabular wrap="truncate-end">{costText(view)}</Text>)}
         {tile(
@@ -638,10 +728,13 @@ function desktopPane($: EngineInterface, ui: DesktopElements, view: RunView, sel
       </Box>
       <Box key="pane-workers" flexDirection="column" gap="xs">
         {workingHeading(ui, selected, listed.length)}
+        {sections === null ? null : sectionHeading(ui, 'working-section', sections.working)}
         {isMainThreadOnly && selectedMsp !== undefined ? (
           <Text key="main-thread-note" dimColor size="footnote">{`${activityText(selectedMsp, now)} · ${MAIN_THREAD}`}</Text>
         ) : null}
-        {workerRows}
+        {liveRows}
+        {sections === null ? null : sectionHeading(ui, 'done-section', sections.done)}
+        {doneRows}
       </Box>
       {cardSlot(ui, 'pane-cards', cards, { top: 0, left: 0 })}
     </Box>
@@ -670,12 +763,18 @@ function terminalPane($: EngineInterface, ui: PaneElements, view: RunView, selec
   const time = elapsed(view.startedAt, now)
   const lane = laneWordOf(view)
   const listed = listedWorkers(view, selected)
+  const sections = sectionHeadings(selected, listed)
+  const workerLine = (worker: WorkerRow, i: number) => <Text key={workerKey(worker, i)}>{terminalWorkerLine(view, worker, now)}</Text>
   const mspExtra = (msp: MspRow) =>
     [`${msp.lanesDone}/${msp.lanesTotal}`, proofMarks(msp), mspStatusText(msp)].filter(part => part !== '').join('  ')
   return (
     <Box flexDirection="column">
       <Text bold>{TITLE}</Text>
       <Text>{lane === null ? view.slug : `${view.slug}  [${lane}]`}</Text>
+      {view.finish === null ? null : <Text key="finish-headline">{view.finish.headline}</Text>}
+      {(view.finish?.details ?? []).map((detail, i) => (
+        <Text key={`finish-detail-${i}`}>{detail}</Text>
+      ))}
       <Text>{`Cost ${costText(view)}  ·  Agents ${liveCrewOf(view).length}  ·  Time ${time}`}</Text>
       <Text>{stageSummary(view)}</Text>
       <Text dimColor>{`MSPs · ${view.msps.length}`}</Text>
@@ -689,9 +788,10 @@ function terminalPane($: EngineInterface, ui: PaneElements, view: RunView, selec
         <Text key={`pull-row-${pull.number}`}>{`Pull request #${pull.number}  ${pull.head}`}</Text>
       ))}
       {workingHeading(ui, selected, listed.length)}
-      {listed.map((worker, i) => (
-        <Text key={workerKey(worker, i)}>{terminalWorkerLine(view, worker, now)}</Text>
-      ))}
+      {sections === null ? null : <Text key="working-section">{sections.working}</Text>}
+      {listed.flatMap((worker, i) => (worker.isLive ? [workerLine(worker, i)] : []))}
+      {sections === null ? null : <Text key="done-section">{sections.done}</Text>}
+      {listed.flatMap((worker, i) => (worker.isLive ? [] : [workerLine(worker, i)]))}
     </Box>
   )
 }
@@ -709,8 +809,9 @@ export async function drawPane($: EngineInterface, e: RenderInput<'Pane'>) {
   }
   const now = await $.clock.now()
   const selected = selectedOf(view, await read($, selectedState))
+  const isSettled = isFinishSettled(await read($, finishSeenState), view)
   if (e.surface === 'desktop' && 'Svg' in ui) {
-    return desktopPane($, ui, view, selected, { columns: e.props.bodyColumns || 60, now })
+    return desktopPane($, ui, view, selected, { columns: e.props.bodyColumns || 60, now, isSettled })
   }
   return terminalPane($, ui, view, selected, now)
 }

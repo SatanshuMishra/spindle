@@ -2,6 +2,8 @@ import type {
   Activity,
   EventFacts,
   FileFacts,
+  FinalState,
+  Finish,
   FollowsLink,
   HomeFacts,
   LaneFact,
@@ -513,12 +515,20 @@ export function inferFacts(files: RunFiles): HomeFacts {
     buildingTier: building[0]?.tier ?? '',
     oldestMtimeMs: fileTimes.length > 0 ? Math.min(...fileTimes) : null,
     follows: followsLinkOf(files.follows),
+    lighthouseVerdict: lighthouseVerdictOf(files.lighthouse),
   }
 }
 
 function followsLinkOf(file: FileText): FollowsLink | null {
   const follows = parsed(file, followsShape)
   return follows.kind === 'ok' ? follows.value : null
+}
+
+const lighthouseShape = (value: unknown): string | null => (isObject(value) && typeof value.verdict === 'string' ? value.verdict : null)
+
+function lighthouseVerdictOf(file: FileText): string | null {
+  const verdict = parsed(file, lighthouseShape)
+  return verdict.kind === 'ok' ? verdict.value : null
 }
 
 const EVENT_STATUS: Readonly<Record<Outcome, MspStatus>> = {
@@ -616,6 +626,7 @@ export function eventRunFacts(location: RunLocation, events: EventFacts): HomeFa
     buildingTier: '',
     oldestMtimeMs: events.startedAt,
     follows: null,
+    lighthouseVerdict: null,
   }
 }
 
@@ -687,6 +698,7 @@ export const isSameRun = (one: RunIdentity, other: RunIdentity) => one.slug === 
 export const isRunStarted = (files: FileFacts | null, signals: Signals) =>
   signals.callStage !== null || (files?.home ?? null) !== null
 
+const ABANDONED = 'abandoned:'
 const STOPPED = 'abandoned: stopped at'
 const SUPERSEDED = 'abandoned: superseded by'
 
@@ -708,8 +720,65 @@ function lifecycleOf(files: FileFacts, msps: readonly MspRow[], signals: Signals
   return isShipped ? 'shipped' : 'running'
 }
 
-const isRecordFinished = (files: FileFacts) =>
-  files.source === 'record' || (files.source === 'events' && (files.events.end !== null || files.events.isCleanDone))
+const isRunEnded = (files: FileFacts) =>
+  files.source === 'record' || files.events.end !== null || (files.source === 'events' && files.events.isCleanDone)
+
+const NAMED_FINAL: ReadonlySet<Lifecycle> = new Set(['closed-done', 'closed-draft', 'stopped-critical', 'superseded', 'cleaned', 'unknown'])
+
+const FINISH_WORD: Readonly<Record<FinalState, string>> = {
+  'closed-done': 'Done',
+  'closed-draft': 'Draft',
+  'stopped-critical': 'Stopped',
+  superseded: 'Superseded',
+  cleaned: 'Cleaned',
+  abandoned: 'Abandoned',
+  unknown: 'Unknown',
+}
+
+const statusAfter = (status: string | null, prefix: string): string => (status ?? '').slice(prefix.length + 1)
+
+const isOtherAbandoned = (status: string | null) =>
+  status !== null && status.startsWith(ABANDONED) && !status.startsWith(STOPPED) && !status.startsWith(SUPERSEDED)
+
+function finalStateOf(lifecycle: Lifecycle, end: RunEnd | null): FinalState {
+  if (lifecycle === 'unknown' && isOtherAbandoned(end?.status ?? null)) return 'abandoned'
+  return NAMED_FINAL.has(lifecycle) ? (lifecycle as FinalState) : 'cleaned'
+}
+
+function blockedMsps(rounds: readonly RoundRow[]): string[] {
+  const labels = [...new Set(rounds.map(round => round.msp))]
+  return labels.filter(label => {
+    const own = rounds.filter(round => round.msp === label)
+    return own.reduce((highest, round) => (round.n > highest.n ? round : highest)).outcome === 'blocked'
+  })
+}
+
+function plainDone(lighthouseVerdict: string | null, blocked: readonly string[]): readonly string[] {
+  if (lighthouseVerdict === null) return ['No celebration: no lighthouse verdict found']
+  if (lighthouseVerdict !== 'green') return [`No celebration: lighthouse verdict ${lighthouseVerdict}`]
+  return blocked.map(label => `No celebration: ${label} blocked`)
+}
+
+function finishWords(state: FinalState, end: RunEnd | null, lighthouseVerdict: string | null, blocked: readonly string[]) {
+  const status = end?.status ?? null
+  if (state === 'closed-done') return { headline: 'Done', details: plainDone(lighthouseVerdict, blocked) }
+  if (state === 'closed-draft') return { headline: 'Ended as a draft pull request', details: blocked.map(label => `${label} blocked`) }
+  if (state === 'stopped-critical') return { headline: `Stopped at ${statusAfter(status, STOPPED)}`, details: [] }
+  if (state === 'superseded') return { headline: `Superseded by ${statusAfter(status, SUPERSEDED)}`, details: [] }
+  if (state === 'cleaned') return { headline: 'Cleaned up', details: ['The thread has not closed yet'] }
+  if (state === 'abandoned') return { headline: 'Abandoned', details: [capitalised(statusAfter(status, ABANDONED))] }
+  return { headline: 'Status unknown', details: ['The event log could not be read'] }
+}
+
+function finishOf(lifecycle: Lifecycle, end: RunEnd | null, rounds: readonly RoundRow[], lighthouseVerdict: string | null): Finish {
+  const state = finalStateOf(lifecycle, end)
+  const blocked = blockedMsps(rounds)
+  const isCelebrated = state === 'closed-done' && end?.isDraft !== true && blocked.length === 0 && lighthouseVerdict === 'green'
+  const words = isCelebrated
+    ? { headline: 'Finished clean', details: ['Every MSP shipped and lighthouse is green'] }
+    : finishWords(state, end, lighthouseVerdict, blocked)
+  return { state, word: FINISH_WORD[state], isCelebrated, ...words }
+}
 
 const ownSignals = (files: FileFacts | null, signals: Signals): Signals =>
   files !== null && signals.finishedRun != null && isSameRun(signals.finishedRun, files) ? signals.finishedRun.signals : signals
@@ -719,6 +788,8 @@ export function buildView(files: FileFacts | null, live: Signals): RunView | nul
   if (files === null || !isRunStarted(files, signals)) return null
   const msps = files.msps.map(msp => withPull(msp, signals))
   const stage = stageOf(files, msps, signals)
+  const isFinished = signals.isCleanDone || isRunEnded(files)
+  const lifecycle = lifecycleOf(files, msps, signals)
   return {
     slug: files.slug,
     repo: files.repo,
@@ -726,8 +797,9 @@ export function buildView(files: FileFacts | null, live: Signals): RunView | nul
     follows: followsOf(files),
     stage,
     round: roundOf(stage, msps, files.highestRound),
-    isFinished: signals.isCleanDone || isRecordFinished(files),
-    lifecycle: lifecycleOf(files, msps, signals),
+    isFinished,
+    lifecycle,
+    finish: isFinished ? finishOf(lifecycle, files.events.end, files.rounds, files.lighthouseVerdict) : null,
     lane: laneOf(files, signals),
     startedAt: earliestOf([files.oldestMtimeMs, signals.firstCallAt]),
     msps,

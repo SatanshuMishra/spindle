@@ -84,6 +84,7 @@ export type HomeFacts = {
   buildingTier: string
   oldestMtimeMs: number | null
   follows: FollowsLink | null
+  lighthouseVerdict: string | null
 }
 
 export type VerdictEvent = { msp: string; round: number; outcome: Outcome; blockers: number; advisories: number }
@@ -121,6 +122,24 @@ export type Lifecycle =
   | 'stopped-critical'
   | 'superseded'
 
+export type FinalState = 'closed-done' | 'closed-draft' | 'stopped-critical' | 'superseded' | 'cleaned' | 'abandoned' | 'unknown'
+
+export type Finish = {
+  state: FinalState
+  word: string
+  isCelebrated: boolean
+  headline: string
+  details: readonly string[]
+}
+
+export type FinishSeen = {
+  slug: string
+  home: string | null
+  at: number
+  isLive: boolean
+  isSettled: boolean
+}
+
 export type Role = 'captain' | 'scribe' | 'builder' | 'detective' | 'judge' | 'courier' | 'plain'
 
 export type AgentRow = {
@@ -134,6 +153,8 @@ export type AgentRow = {
   contextTokens: number
   contextMax: number
   isRunning: boolean
+  msp: string | null
+  round: number | null
 }
 
 export type WorkerRole = Role | 'diagnosis' | 'smoke'
@@ -176,6 +197,7 @@ export type RunView = {
   round: number
   isFinished: boolean
   lifecycle: Lifecycle
+  finish: Finish | null
   lane: Lane | null
   startedAt: number | null
   msps: MspRow[]
@@ -197,6 +219,7 @@ declare module 'claude-code' {
       view: RunView | null
       dismissedAt: string | null
       selectedMsp: string | null
+      finishSeen: FinishSeen | null
     }
   }
 }
