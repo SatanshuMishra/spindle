@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: active
-Updated: 2026-10-22T03:35:54.537Z
+Updated: 2026-10-22T03:36:35.389Z
 Next ids: c6 D2 R2 S1
 
 ## Goal
@@ -17,7 +17,7 @@ Job 2 main part: mock up and build the band and run pane for every final lifecyc
 
 ## Where things stand
 
-FEATURE branch feat/spindle-finish-states is pushed at 1666367, a merge of mitosis/run-record-reader and mitosis/lifecycle-table, because Job 1's FEATURE branch holds none of their code until pull requests 21 and 22 merge; the run home's feature.json records it and pipeline feature-branch adopted it. The spec is handed off (7 Steps, 11 criteria, 5.11 screenshots unproven, review issues fixed). The event data records no worker's MSP; the pipeline's msp: brief line, mitosis lane.start and lane.end, and a mitosis per-lane agent log are what must emit it. Both MSPs are built and gated (finish-facts on mitosis/finish-facts, finish-mockup on mitosis/finish-mockup); both conformance audits found nothing (5.1 to 5.10 met, 5.11 unproven). Round 1 was loop for both; every blocker and advisory is fixed with receipts green and selecting checks empty. finish-facts is green at round 2 (head e156024, suite 263 pass, no slow checks left to rerun). finish-mockup round 2 at f50fbdd (check.sh exit 0) has two LOW advisory candidates, the staging guard lacking a positive re-stage case and the rail check running page scripts in node:vm, and its validator is judging them with the three carried blockers. finish-mockup's pull request must name .github/workflows/check.yml and scripts/check-staging-guard.sh under risk, as files no Step owned.
+FEATURE branch feat/spindle-finish-states is pushed at 1666367, a merge of mitosis/run-record-reader and mitosis/lifecycle-table, because Job 1's FEATURE branch holds none of their code until pull requests 21 and 22 merge; the run home's feature.json records it and pipeline feature-branch adopted it. The spec is handed off (7 Steps, 11 criteria, 5.11 screenshots unproven, review issues fixed). The event data records no worker's MSP; the pipeline's msp: brief line, mitosis lane.start and lane.end, and a mitosis per-lane agent log are what must emit it. Both MSPs are built and gated (finish-facts on mitosis/finish-facts, finish-mockup on mitosis/finish-mockup); both conformance audits found nothing (5.1 to 5.10 met, 5.11 unproven). Round 1 was loop for both; every blocker and advisory is fixed with receipts green and selecting checks empty. finish-facts is green at round 2 (proven head e156024, suite 263 pass, no slow checks left to rerun) and carries the glossary terms and ADR 0009 in d249ddb on top. finish-mockup round 2 at f50fbdd (check.sh exit 0) has two LOW advisory candidates, the staging guard lacking a positive re-stage case and the rail check running page scripts in node:vm, and its validator is judging them with the three carried blockers. finish-mockup's pull request must name .github/workflows/check.yml and scripts/check-staging-guard.sh under risk, as files no Step owned.
 
 ## Next step
 
