@@ -84,5 +84,6 @@ export function summary(view: RunView | null, now: number): string {
     `builders ${view.buildingLanes}`,
     `cost ${view.costUsd.toFixed(4)}`,
     `agents ${view.agents.filter(agent => agent.isRunning).length} live ${view.agents.length} total`,
+    ...(view.finish === null ? [] : [`finish ${view.finish.state} ${view.finish.isCelebrated ? 'celebrated' : 'plain'}`]),
   ].join('\n')
 }

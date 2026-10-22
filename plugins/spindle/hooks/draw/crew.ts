@@ -144,3 +144,31 @@ export function crab(
     : `translate(${x},${y}) scale(${scale})`
   return `<g transform="${place}" opacity="${dim ? 0.45 : 1}" shape-rendering="crispEdges"><g class="c-${costume}${isWalking ? ' run' : ''}">${body}${group('la')}${group('lb')}</g></g>`
 }
+
+export type CelebrationLook = { crew: readonly Role[]; scale: number; step: number; inset: number; hopPx: number }
+
+const HOP_SECONDS = 0.6
+const HOP_STAGGER_SECONDS = 0.2
+
+export const celebrationSize = (look: CelebrationLook) => ({
+  width: look.step * look.crew.length,
+  height: Math.ceil(CRAB_BOX * look.scale) + look.hopPx,
+})
+
+const hopCss = (look: CelebrationLook) => `<style>
+.hop{animation-name:hop-${look.hopPx};animation-duration:${HOP_SECONDS}s;animation-timing-function:ease-out;animation-iteration-count:1;animation-fill-mode:both}
+${look.crew.map((_, i) => `.hop-${i}{animation-delay:${(i * HOP_STAGGER_SECONDS).toFixed(1)}s}`).join('')}
+@keyframes hop-${look.hopPx}{0%,100%{transform:translateY(0)}45%{transform:translateY(-${look.hopPx}px)}}
+@media (prefers-reduced-motion: reduce){.hop{animation:none}}
+</style>`
+
+export function celebrationSvg(look: CelebrationLook, isSettled: boolean): string {
+  const { width, height } = celebrationSize(look)
+  const crabs = look.crew
+    .map(
+      (role, i) =>
+        `<g class="hop hop-${i}">${crab(i * look.step + look.inset, look.hopPx, costumeOf(role), colorOf(role), false, false, look.scale)}</g>`,
+    )
+    .join('')
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${isSettled ? '' : hopCss(look)}${crabs}</svg>`
+}

@@ -1,11 +1,12 @@
 import { atom, read, update } from 'claude-code'
 import type { Elements, EngineInterface, RenderElement, RenderInput, UiPressArgument } from 'claude-code'
 
-import type { Lane, Role, RunView } from '../../types'
+import type { Finish, Lane, Role, RunView } from '../../types'
 import { LANE_NAME } from '../run/state'
 import { activityNow, currentActivity, elapsed } from '../run/summary'
-import { activitySignature } from '../run/view'
-import { CRAB_CSS, colorOf, costumeOf, crab } from './crew'
+import { activitySignature, isFinishSettled } from '../run/view'
+import { CRAB_CSS, celebrationSize, celebrationSvg, colorOf, costumeOf, crab } from './crew'
+import type { CelebrationLook } from './crew'
 import { cardSlot, cardTrigger, hint, tallestCard } from './hint'
 import type { Card } from './hint'
 import { stageSummary, togglePane } from './pane'
@@ -13,6 +14,7 @@ import { ACCENT, CHIP_H, DONE, FONT, STAGE_TABLE, THEME_CSS, TRACK, chipSvg, chi
 
 const viewState = atom({ plugin: 'spindle', key: 'view' } as const, null)
 const dismissedState = atom({ plugin: 'spindle', key: 'dismissedAt' } as const, null)
+const finishSeenState = atom({ plugin: 'spindle', key: 'finishSeen' } as const, null)
 
 const BAR_H = 16
 const CELL = 3
@@ -24,6 +26,9 @@ const TICK_W = 2
 const TICK_H = 8
 const CRAB_W = 24
 const CRAB_H = 22
+const CELEBRATION_PARTNERS: readonly Role[] = ['captain', 'builder', 'judge']
+const CELEBRATION_SIZE = 3
+const CELEBRATION_FORM = { scale: 0.8, step: 26, inset: 0, hopPx: 3 } as const
 const BAR_SPARE_COLUMNS = 12
 const BAR_COLUMNS = 60
 const DOT_PX = 10
@@ -62,11 +67,13 @@ export function leadOf(view: RunView): Role {
 const roundPart = (view: RunView) =>
   view.stage === 'review' || view.stage === 'fix' ? Math.min(0.9, view.round * 0.25) : 0
 
+const isFinishedDone = (finish: Finish | null) => finish?.isFullyDone === true
+
 const progressOf = (view: RunView) =>
-  view.isFinished ? 1 : (Math.max(0, stageIndex(view.stage)) + roundPart(view)) / STAGE_TABLE.length
+  isFinishedDone(view.finish) ? 1 : (Math.max(0, stageIndex(view.stage)) + roundPart(view)) / STAGE_TABLE.length
 
 export function pillText(view: RunView): string {
-  if (view.isFinished) return 'Done'
+  if (view.finish !== null) return view.finish.word
   const stage = stageInfo(view.stage)
   if (stage === null) return 'stage ?'
   return view.round > 0 ? `${stage.name} · R${view.round}` : stage.name
@@ -89,9 +96,11 @@ const mspLinesOf = (view: RunView, now: number): readonly string[] =>
     return `${msp.label}: ${activity === undefined ? 'status unknown' : activityNow(activity, now)}`
   })
 
-const dotColorOf = (view: RunView) => (view.isFinished ? DONE : (stageInfo(view.stage)?.color ?? ACCENT))
+const dotColorOf = (view: RunView) => (isFinishedDone(view.finish) ? DONE : (stageInfo(view.stage)?.color ?? ACCENT))
 
-const barColorOf = (view: RunView) => (view.isFinished ? DONE : ACCENT)
+const barColorOf = (view: RunView) => (isFinishedDone(view.finish) ? DONE : ACCENT)
+
+const lineWordsOf = (view: RunView) => (view.finish === null ? pillText(view) : view.finish.headline)
 
 type BandRoom = {
   columns: number
@@ -124,6 +133,13 @@ function planBand(room: BandRoom): BandPlan {
   return { isSlugShown, isLaneShown, isBarShown, barColumns }
 }
 
+const TWINKLE_CSS = `<style>
+.t0,.t1,.t2,.t3{animation:tw 2.2s ease-in-out infinite}
+.t1{animation-duration:2.8s;animation-delay:-.7s}.t2{animation-duration:1.9s;animation-delay:-1.3s}.t3{animation-duration:3.3s;animation-delay:-.4s}
+@keyframes tw{0%,100%{opacity:1}50%{opacity:0.3}}
+@media (prefers-reduced-motion: reduce){.t0,.t1,.t2,.t3{animation:none}}
+</style>`
+
 function barSvg(view: RunView): string {
   const cols = Math.floor(TEXTURE_W / CELL)
   const rows = Math.floor(BAR_H / CELL)
@@ -134,12 +150,7 @@ function barSvg(view: RunView): string {
         : '',
     ).join(''),
   ).join('')
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${TEXTURE_W}" height="${BAR_H}" viewBox="0 0 ${TEXTURE_W} ${BAR_H}" preserveAspectRatio="${CROP_FROM_START}"><style>
-.t0,.t1,.t2,.t3{animation:tw ${view.isFinished ? 3.2 : 2.2}s ease-in-out infinite}
-.t1{animation-duration:2.8s;animation-delay:-.7s}.t2{animation-duration:1.9s;animation-delay:-1.3s}.t3{animation-duration:3.3s;animation-delay:-.4s}
-@keyframes tw{0%,100%{opacity:1}50%{opacity:${view.isFinished ? 0.8 : 0.3}}}
-@media (prefers-reduced-motion: reduce){.t0,.t1,.t2,.t3{animation:none}}
-</style><clipPath id="spindle-bar-start"><rect width="${TEXTURE_W + BAR_H}" height="${BAR_H}" rx="${BAR_H / 2}"/></clipPath><g data-part="bar" fill="${barColorOf(view)}" clip-path="url(#spindle-bar-start)">${dots}</g></svg>`
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${TEXTURE_W}" height="${BAR_H}" viewBox="0 0 ${TEXTURE_W} ${BAR_H}" preserveAspectRatio="${CROP_FROM_START}">${view.isFinished ? '' : TWINKLE_CSS}<clipPath id="spindle-bar-start"><rect width="${TEXTURE_W + BAR_H}" height="${BAR_H}" rx="${BAR_H / 2}"/></clipPath><g data-part="bar" fill="${barColorOf(view)}" clip-path="url(#spindle-bar-start)">${dots}</g></svg>`
 }
 
 const trackHalfSvg = (crop: string, x: number) =>
@@ -178,6 +189,13 @@ ${CRAB_CSS}${crab(0, -1, costumeOf(lead), colorOf(lead), false, !view.isFinished
 </svg>`
 }
 
+const celebrationCrewOf = (view: RunView): readonly Role[] => {
+  const lead = leadOf(view)
+  return [lead, ...CELEBRATION_PARTNERS.filter(role => role !== lead)].slice(0, CELEBRATION_SIZE)
+}
+
+const celebrationLookOf = (view: RunView): CelebrationLook => ({ ...CELEBRATION_FORM, crew: celebrationCrewOf(view) })
+
 const blockBar = (view: RunView, blocks: number) => {
   const filled = Math.round(blocks * progressOf(view))
   return `${'█'.repeat(filled)}${'░'.repeat(blocks - filled)}`
@@ -185,7 +203,7 @@ const blockBar = (view: RunView, blocks: number) => {
 
 function terminalLine(view: RunView, plan: BandPlan, time: string): string {
   const lane = laneOf(view)
-  const pill = pillText(view)
+  const pill = lineWordsOf(view)
   const middle = plan.isBarShown ? `${blockBar(view, plan.barColumns - [...pill].length - 1)} ${pill}` : pill
   return [
     plan.isSlugShown ? DOT : null,
@@ -313,12 +331,46 @@ function desktopBand(
         <Text dimColor tabular wrap="truncate">
           {elapsed(view.startedAt, now)}
         </Text>
-        <Svg source={crabSvg(view)} alt={`${costumeOf(leadOf(view))} crab`} width={CRAB_W} height={CRAB_H} />
+        {view.finish?.isCelebrated ? (
+          <Svg
+            key="spindle-celebration"
+            source={celebrationSvg(celebrationLookOf(view), false)}
+            alt={`Celebration: ${view.slug} finished clean`}
+            {...celebrationSize(celebrationLookOf(view))}
+          />
+        ) : (
+          <Svg source={crabSvg(view)} alt={`${costumeOf(leadOf(view))} crab`} width={CRAB_W} height={CRAB_H} />
+        )}
         {countButton($, ui, view)}
         {dismissButton($, ui, view)}
       </Box>
       {below}
       {cardSlot(ui, 'spindle-cards', cards, { top: -tallestCard(cards), left: 0 })}
+    </Box>
+  )
+}
+
+function settledBand(
+  $: EngineInterface,
+  ui: DesktopElements,
+  view: RunView,
+  finish: Finish,
+  room: { now: number; below: RenderElement | null },
+): RenderElement {
+  const { Box, Text, Svg } = ui
+  return (
+    <Box flexDirection="column">
+      <Box key="spindle-row" flexDirection="row" alignItems="center" gap="sm">
+        <Svg source={dotSvg(view)} alt={stageSummary(view)} width={DOT_PX} height={DOT_PX} />
+        <Box key="spindle-finish-room" flexShrink={1} minWidth={0} flexGrow={1}>
+          <Text wrap="truncate-end">{`${view.slug} · ${finish.headline}`}</Text>
+        </Box>
+        <Text dimColor tabular wrap="truncate">
+          {elapsed(view.startedAt, room.now)}
+        </Text>
+        {dismissButton($, ui, view)}
+      </Box>
+      {room.below}
     </Box>
   )
 }
@@ -329,7 +381,7 @@ function terminalBand($: EngineInterface, ui: BandElements, view: RunView, room:
   const time = elapsed(view.startedAt, now)
   const working = workingOf(view).length
   const lane = laneOf(view)
-  const pill = pillText(view)
+  const pill = lineWordsOf(view)
   const plan = planBand({
     columns,
     fixed: [DOT.length, time.length, `×${working}`.length, DISMISS.length],
@@ -366,12 +418,21 @@ export async function drawBand(
   e: RenderInput<'AbovePrompt'>,
   beneath: () => Promise<RenderElement> | RenderElement,
 ): Promise<RenderElement> {
-  const [view, dismissedAt, now] = await Promise.all([read($, viewState), read($, dismissedState), $.clock.now()])
+  const [view, dismissedAt, seen, now] = await Promise.all([
+    read($, viewState),
+    read($, dismissedState),
+    read($, finishSeenState),
+    $.clock.now(),
+  ])
   if (view === null || e.props.hasSurvey || isDismissed(dismissedAt, view)) return beneath()
   const drawn = await Promise.resolve(beneath()).catch(() => null)
   const below = isEnginePlaceholder(drawn) ? null : drawn
   const ui = $.ui.resolve(e)
   const room = { columns: e.props.bodyColumns || 100, now, below }
-  if (e.surface === 'desktop' && 'Svg' in ui) return desktopBand($, ui, view, room)
+  if (e.surface === 'desktop' && 'Svg' in ui) {
+    return view.finish !== null && isFinishSettled(seen, view)
+      ? settledBand($, ui, view, view.finish, room)
+      : desktopBand($, ui, view, room)
+  }
   return terminalBand($, ui, view, room)
 }

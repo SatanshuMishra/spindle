@@ -6,6 +6,7 @@ import { PANE, drawPane, togglePane } from './draw/pane'
 import { startPolling } from './run/poll'
 import { agentSpawnSignals, toolCallSignals, turnCompleteSignals, turnStepSignals } from './run/signals'
 import { summary } from './run/summary'
+import { activitySignature } from './run/view'
 
 const viewState = atom({ plugin: 'spindle', key: 'view' } as const, null)
 const dismissedState = atom({ plugin: 'spindle', key: 'dismissedAt' } as const, null)
@@ -27,10 +28,11 @@ export const register: Register = on => {
   on('turn.complete', turnCompleteSignals)
 
   on('command.run', { command: 'spindle' }, async ($, e) => {
+    const view = await read($, viewState)
     if (e.args.trim() === 'status') {
-      return { text: summary(await read($, viewState), await $.clock.now()) }
+      return { text: summary(view, await $.clock.now()) }
     }
-    await update($, dismissedState, () => null)
+    await update($, dismissedState, () => (view !== null && view.isFinished ? activitySignature(view) : null))
     return { text: await togglePane($) }
   })
 
