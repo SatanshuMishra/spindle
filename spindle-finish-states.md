@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: active
-Updated: 2026-10-22T03:39:03.183Z
+Updated: 2026-10-22T03:39:05.886Z
 Next ids: c6 D3 R2 S1
 
 ## Goal
@@ -21,9 +21,9 @@ FEATURE branch feat/spindle-finish-states is pushed at 1666367, a merge of mitos
 
 ## Next step
 
-Ship both MSPs: finish-mockup's comment, pipeline promote, the ship boundary, SHIP=1 run.zsh --resume with the reviewed-green heads as proven heads, then open both pull requests into feat/spindle-finish-states.
+Run SHIP=1 ~/.mitosis/spindle/spindle-finish-states/run.zsh --resume --proven-head finish-facts=e156024 --proven-head finish-mockup=f50fbdd, then open both pull requests into feat/spindle-finish-states, assign them and post each saved comment.
 
-Needs: D1, R1.
+Needs: D2, R1.
 
 ## Decisions in force
 
