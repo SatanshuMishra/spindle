@@ -8,6 +8,7 @@ import type { FileCache, FileText } from './home'
 import { eventRunFacts, inferFacts } from './infer'
 import { ledgerOf, locate, sessionFile } from './session'
 import type { RunLocation, SessionFile } from './session'
+import { storePastRuns } from './past'
 import { NO_SIGNALS } from './state'
 import { refresh } from './view'
 
@@ -17,7 +18,7 @@ const viewState = atom({ plugin: 'spindle', key: 'view' } as const, null)
 
 export const POLL_MS = 2000
 
-type Read = { facts: FileFacts | null; cache: FileCache; isOtherRun: boolean }
+type Read = { facts: FileFacts | null; cache: FileCache; isOtherRun: boolean; mitosis: string | null; location: RunLocation | null }
 
 async function failedRead($: EngineInterface, path: string): Promise<FileText> {
   return (await isGone($, path)) ? { kind: 'absent' } : { kind: 'unreadable' }
@@ -57,7 +58,7 @@ const locationOf = (known: FileFacts, mitosis: string): RunLocation => ({
 const isSameLocated = (known: RunIdentity, location: RunLocation) =>
   known.slug === location.slug && (known.home === null || known.home === location.home)
 
-async function readGoneRun(
+export async function readGoneRun(
   $: EngineInterface,
   mitosis: string,
   location: RunLocation,
@@ -91,7 +92,7 @@ async function isHomeGoneSince($: EngineInterface, known: FileFacts): Promise<bo
 
 async function readFacts($: EngineInterface, cache: FileCache, isFinished: boolean): Promise<Read> {
   const where = await sessionFile($)
-  if (where === null) return { facts: null, cache: {}, isOtherRun: false }
+  if (where === null) return { facts: null, cache: {}, isOtherRun: false, mitosis: null, location: null }
   const known = await read($, filesState)
   const session = await readSession($, where, known?.home != null, cache)
   const location =
@@ -100,17 +101,18 @@ async function readFacts($: EngineInterface, cache: FileCache, isFinished: boole
         ? null
         : locationOf(known, where.mitosis)
       : locate(session.text.kind === 'text' ? session.text.text : null, where.mitosis)
-  if (location === null) return { facts: null, cache: session.cache, isOtherRun: false }
+  const found = { mitosis: where.mitosis, location }
+  if (location === null) return { facts: null, cache: session.cache, isOtherRun: false, ...found }
   const isOtherRun = known !== null && !isSameLocated(known, location)
   if (isFinished && known !== null && !isOtherRun && !(await isHomeGoneSince($, known))) {
-    if (known.events.end !== null) return { facts: known, cache: session.cache, isOtherRun }
+    if (known.events.end !== null) return { facts: known, cache: session.cache, isOtherRun, ...found }
     const finished = await readEvents($, eventLogOf(where.mitosis, location), cache)
     const events = finished.events.log === 'unreadable' ? known.events : finished.events
-    return { facts: { ...known, events }, cache: { ...session.cache, ...finished.cache }, isOtherRun }
+    return { facts: { ...known, events }, cache: { ...session.cache, ...finished.cache }, isOtherRun, ...found }
   }
   const logged = await readEvents($, eventLogOf(where.mitosis, location), cache)
   const run = await readRun($, where.mitosis, location, logged.events, cache)
-  return { facts: run.facts, cache: { ...session.cache, ...logged.cache, ...run.cache }, isOtherRun }
+  return { facts: run.facts, cache: { ...session.cache, ...logged.cache, ...run.cache }, isOtherRun, ...found }
 }
 
 async function startOtherRun($: EngineInterface, facts: FileFacts | null): Promise<void> {
@@ -130,11 +132,12 @@ export async function startPolling($: EngineInterface): Promise<void> {
     polling = { ...polling, isBusy: true }
     try {
       const shown = await read($, viewState)
-      const { facts, cache, isOtherRun } = await readFacts($, polling.cache, shown?.isFinished === true)
+      const { facts, cache, isOtherRun, mitosis, location } = await readFacts($, polling.cache, shown?.isFinished === true)
       polling = { ...polling, cache }
       if (isOtherRun) await startOtherRun($, facts)
       const previous = await read($, filesState)
       if (JSON.stringify(previous) !== JSON.stringify(facts)) await update($, filesState, () => facts)
+      await storePastRuns($, mitosis, location)
       await refresh($)
     } finally {
       polling = { ...polling, isBusy: false }

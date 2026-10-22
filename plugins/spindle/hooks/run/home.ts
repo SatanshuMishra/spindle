@@ -28,12 +28,14 @@ export type RunFiles = {
   laneNames: readonly string[]
   ledger: FileText
   follows: FileText
+  lighthouse: FileText
 }
 
 type Wanted = { path: string; mtimeMs: number }
 type Fetched = Wanted & { text: FileText }
 
 const ROUND_FOLDER = /^round-(\d+)$/
+const LIGHTHOUSE_FOLDER = /^run-(\d+)$/
 const VERDICT = /^(.+)\.verdict\.json$/
 const FINDINGS = /^(.+)\.findings\.json$/
 
@@ -82,10 +84,10 @@ const fileIn = (entries: readonly FsEntry[] | null, folder: string, name: string
   return entry ? { path: `${folder}/${name}`, mtimeMs: entry.mtimeMs } : null
 }
 
-const roundNumbers = (entries: readonly FsEntry[] | null): number[] =>
+const folderNumbers = (entries: readonly FsEntry[] | null, pattern: RegExp): number[] =>
   (entries ?? [])
     .filter(entry => entry.kind === 'dir')
-    .map(entry => ROUND_FOLDER.exec(entry.name)?.[1])
+    .map(entry => pattern.exec(entry.name)?.[1])
     .filter((digits): digits is string => digits !== undefined)
     .map(Number)
     .sort((a, b) => a - b)
@@ -111,19 +113,27 @@ export async function readRunFiles(
         laneNames: [],
         ledger: ABSENT,
         follows: ABSENT,
+        lighthouse: ABSENT,
       },
       cache: {},
     }
   }
-  const [homeEntries, reviewEntries, runEntries, laneEntries, ledgerEntries] = await Promise.all([
+  const [homeEntries, reviewEntries, runEntries, laneEntries, ledgerEntries, lighthouseEntries] = await Promise.all([
     listing($, home),
     listing($, `${home}/review`),
     listing($, runDir),
     listing($, `${runDir}/lanes`),
     listing($, parentOf(ledger)),
+    listing($, `${home}/lighthouse`),
   ])
-  const numbers = roundNumbers(reviewEntries)
-  const roundEntries = await Promise.all(numbers.map(n => listing($, `${home}/review/round-${n}`)))
+  const numbers = folderNumbers(reviewEntries, ROUND_FOLDER)
+  const lighthouseRuns = folderNumbers(lighthouseEntries, LIGHTHOUSE_FOLDER)
+  const latestLighthouse = lighthouseRuns[lighthouseRuns.length - 1]
+  const lighthouseFolder = latestLighthouse === undefined ? null : `${home}/lighthouse/run-${latestLighthouse}`
+  const [roundEntries, lighthouseRunEntries] = await Promise.all([
+    Promise.all(numbers.map(n => listing($, `${home}/review/round-${n}`))),
+    lighthouseFolder === null ? null : listing($, lighthouseFolder),
+  ])
   const roundFiles = numbers.flatMap((n, i) =>
     (roundEntries[i] ?? [])
       .filter(entry => entry.kind === 'file' && (VERDICT.test(entry.name) || FINDINGS.test(entry.name)))
@@ -133,7 +143,8 @@ export async function readRunFiles(
   const stateFile = fileIn(runEntries, runDir, 'state.json')
   const ledgerFile = fileIn(ledgerEntries, parentOf(ledger), nameOf(ledger))
   const followsFile = fileIn(homeEntries, home, 'follows.json')
-  const wanted = [planFile, stateFile, ledgerFile, followsFile, ...roundFiles].filter((one): one is Wanted => one !== null)
+  const lighthouseFile = lighthouseFolder === null ? null : fileIn(lighthouseRunEntries, lighthouseFolder, 'verdict.json')
+  const wanted = [planFile, stateFile, ledgerFile, followsFile, lighthouseFile, ...roundFiles].filter((one): one is Wanted => one !== null)
   const fetched = await fetchChanged($, wanted, cache)
   const textOf = (file: Wanted | null): FileText =>
     file === null ? ABSENT : (fetched.find(one => one.path === file.path)?.text ?? ABSENT)
@@ -164,6 +175,7 @@ export async function readRunFiles(
       laneNames: (laneEntries ?? []).filter(entry => entry.kind === 'file').map(entry => entry.name),
       ledger: textOf(ledgerFile),
       follows: textOf(followsFile),
+      lighthouse: textOf(lighthouseFile),
     },
     cache: cacheOf(fetched),
   }

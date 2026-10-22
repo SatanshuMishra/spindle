@@ -26,6 +26,16 @@ _Avoid_: status (a verdict or an MSP's), phase
 **Final status**:
 The lifecycle state a run ended in, as its thread's ledger status records it.
 
+**Finish**:
+How spindle shows a finished run ended: its final state, a short word such as Done, Draft or Stopped, a headline and the reasons, and whether it is a clean success.
+
+**Clean success**:
+A run that closed done with no MSP shipped as a draft and a green lighthouse verdict on its latest lighthouse run; only a clean success gets the celebration.
+_Avoid_: success (for any closed-done run)
+
+**Past run**:
+A run other than the one the session shows, reached read-only from its run record through the run pane's Past runs list.
+
 **Follow-up run**:
 A run that starts after its parent run was cleaned up, to fix what the parent shipped; it has its own slug and thread and names its parent.
 _Avoid_: hotfix, rerun
@@ -68,7 +78,7 @@ _Avoid_: step (interphase's unit of build work), phase
 Where an open round is: suite running, reviewing, validating or diagnosing, read from the round's files; a round with a verdict has an outcome instead.
 
 **Worker**:
-An agent or a mitosis lane doing work for a run, drawn as one row in Working now with its crew crab; it belongs to the MSP whose label or worktree its prompt names.
+An agent or a mitosis lane doing work for a run, drawn as one row in Working now with its crew crab; it belongs to the MSP its brief's `msp:` line names, else the MSP whose label or worktree its prompt names, and a lane to its plan.json MSP.
 _Avoid_: job, task
 
 ## Drawing
@@ -82,6 +92,13 @@ The pane `/spindle` toggles, showing the whole run view.
 
 **Crew**:
 The crabs that stand for who is working: Captain, Scribe, Builder, Detective, Judge and Courier, each a costume on the same clay crab.
+
+**Celebration**:
+The crew crabs hopping once at the top of the run pane, and in compact form in the band, when spindle sees a run become a clean success; it ends within 3 seconds and is still under reduced motion.
+_Avoid_: confetti, animation (for the whole finish)
+
+**Settled**:
+A finish after its motion: five seconds after spindle first saw it, or at once for a run already finished when first read; the band then shrinks to one line, the slug and the finish headline.
 
 **Card slot**:
 The one fixed place in the band or the run pane where a hover card appears; every element with a card reveals it there, so at most one shows.

@@ -30,10 +30,21 @@ export function mspNamed(text: string, msps: readonly MspRow[], worktrees: reado
   )
 }
 
+const MSP_LINE = /^msp: (.+)$/
+
+export function mspOfAgent(text: string, msps: readonly MspRow[], worktrees: readonly Worktree[]): MspRow | null {
+  const lined = text
+    .split('\n')
+    .map(line => MSP_LINE.exec(line.trim())?.[1])
+    .map(label => msps.find(msp => msp.label === label))
+    .find((msp): msp is MspRow => msp !== undefined)
+  return lined ?? mspNamed(text, msps, worktrees)
+}
+
 const latestRound = (msp: MspRow | null): number | null =>
   [...(msp?.activities ?? [])].reverse().find(activity => activity.kind === 'round')?.round ?? null
 
-function agentWords(agent: AgentRow, msp: MspRow | null): { words: string; round: number | null } {
+export function agentWords(agent: AgentRow, msp: MspRow | null): { words: string; round: number | null } {
   const named = ROUND_NAMED.exec(`${agent.prompt} ${agent.description}`)?.[1]
   const round = msp === null ? null : named !== undefined ? Number(named) : latestRound(msp)
   if (round !== null && agent.role === 'judge') return { words: `Round ${round} · validating`, round }
@@ -41,8 +52,26 @@ function agentWords(agent: AgentRow, msp: MspRow | null): { words: string; round
   return { words: agent.description === '' ? agent.type : agent.description, round }
 }
 
+function finishedWords(agent: AgentRow): string {
+  if (agent.round !== null && agent.role === 'detective') return `Round ${agent.round} · reviewed`
+  if (agent.round !== null && agent.role === 'judge') return `Round ${agent.round} · validated`
+  return agent.description === '' ? agent.type : agent.description
+}
+
 function agentRow(agent: AgentRow, msps: readonly MspRow[], worktrees: readonly Worktree[]): WorkerRow {
-  const msp = mspNamed(`${agent.prompt}\n${agent.description}`, msps, worktrees)
+  if (!agent.isRunning) {
+    return {
+      msp: agent.msp,
+      role: agent.role,
+      words: finishedWords(agent),
+      isLive: false,
+      round: agent.round,
+      model: agent.model,
+      startedAt: agent.startedAt,
+      contextShare: null,
+    }
+  }
+  const msp = mspOfAgent(`${agent.prompt}\n${agent.description}`, msps, worktrees)
   const { words, round } = agentWords(agent, msp)
   return {
     msp: msp?.label ?? null,
@@ -99,6 +128,13 @@ function roundRows(files: RoundFiles, msps: readonly MspRow[]): WorkerRow[] {
 const COURIER: WorkerRow = { ...NO_DETAIL, msp: null, role: 'courier', words: 'Ship · opening pull request', isLive: true }
 const CAPTAIN: WorkerRow = { ...NO_DETAIL, msp: null, role: 'captain', words: 'main thread', isLive: true }
 
+const isShownByRoundFiles = (agent: AgentRow, files: FileFacts) =>
+  (agent.role === 'detective' || agent.role === 'judge') &&
+  files.roundFiles.some(round => round.msp === agent.msp && round.n === agent.round)
+
+const isMainThreadLive = (files: FileFacts, signals: Signals) =>
+  !signals.isCleanDone && files.source === 'home' && files.events.end === null
+
 export function workersOf(files: FileFacts, msps: readonly MspRow[], signals: Signals): WorkerRow[] {
   const live = [
     ...signals.agents.filter(agent => agent.isRunning).map(agent => agentRow(agent, msps, files.worktrees)),
@@ -106,9 +142,12 @@ export function workersOf(files: FileFacts, msps: readonly MspRow[], signals: Si
     ...(signals.isPullRequestRunning ? [COURIER] : []),
   ]
   const done = [
+    ...signals.agents
+      .filter(agent => !agent.isRunning && agent.msp !== null && !isShownByRoundFiles(agent, files))
+      .map(agent => agentRow(agent, msps, files.worktrees)),
     ...files.lanes.filter(lane => lane.state !== 'building').map(laneRow),
     ...files.roundFiles.flatMap(round => roundRows(round, msps)),
   ]
-  const captain = live.length === 0 && !signals.isCleanDone ? [CAPTAIN] : []
+  const captain = live.length === 0 && isMainThreadLive(files, signals) ? [CAPTAIN] : []
   return [...live, ...captain, ...done]
 }
