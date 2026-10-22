@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: active
-Updated: 2026-10-22T03:18:06.761Z
+Updated: 2026-10-22T03:18:08.132Z
 Next ids: c6 D2 R2 S1
 
 ## Goal
