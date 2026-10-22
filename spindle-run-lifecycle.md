@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: parked
-Updated: 2026-10-22T04:01:08.967Z
+Updated: 2026-10-22T04:01:12.625Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Integration done: lighthouse run 1 is green against main (suite passes on both b
 
 ## Next step
 
-Run lighthouse:test on fix/spindle-run-lifecycle against main with results in ~/.mitosis/spindle/spindle-run-lifecycle/lighthouse/run-1, and handle its verdict; c2 and c3 also wait on the logbook spec (logbook-thread-follows) and the pipeline spec (pipeline-run-record) being built by sessions in those repositories, logbook first.
+The owner starts Clean-up by saying the FEATURE pull request 25 merged; c2 and c3 still wait on the logbook spec (logbook-thread-follows) and the pipeline spec (pipeline-run-record) being built by sessions in those repositories, logbook first.
 
 Needs: D2.
 
