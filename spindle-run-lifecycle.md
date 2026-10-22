@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: active
-Updated: 2026-10-22T01:29:08.809Z
+Updated: 2026-10-22T01:29:11.982Z
 Next ids: c5 D2 R1 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Review round 1 running on both MSPs of FEATURE branch fix/spindle-run-lifecycle:
 
 ## Next step
 
-When the build exits, run Stage 3 review on both MSPs (code-reviewer and conformance-auditor, round 1), validate, fix, then ship with SHIP=1 after recording the ship decision.
+When the four round 1 reviewers return, collect each MSP's findings, run pipeline candidates, the validator, record and verdict, fix what is confirmed, then ship with SHIP=1 after recording the ship decision.
 
 Needs: D1.
 
