@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: parked
-Updated: 2026-10-22T03:53:22.760Z
+Updated: 2026-10-22T04:01:25.103Z
 Next ids: c6 D3 R2 S1
 
 ## Goal
@@ -21,9 +21,9 @@ Shipped: pull requests 23 (finish-facts) and 24 (finish-mockup) are open, ready 
 
 ## Next step
 
-The owner starts Integration by saying the MSP pull requests (23 and 24) merged; first pull requests 21 and 22 must merge, and if either changed in review, feat/spindle-finish-states merges them again before Integration.
+Run lighthouse:test on feat/spindle-finish-states against main with results in ~/.mitosis/spindle/spindle-finish-states/lighthouse/run-1, and handle its verdict.
 
-Needs: R1.
+Needs: D2.
 
 ## Decisions in force
 
@@ -32,7 +32,6 @@ Needs: R1.
 
 ## Open risks
 
-- R1 Job 2's MSP pull requests target feat/spindle-finish-states, which carries Job 1's unmerged MSPs; if pull request 21 or 22 changes in review, the FEATURE branch must merge them again.
 
 ## Settled, do not reopen
 
