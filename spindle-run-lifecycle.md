@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: active
-Updated: 2026-10-22T00:50:18.038Z
+Updated: 2026-10-22T00:50:20.547Z
 Next ids: c5 D1 R1 S1
 
 ## Goal
@@ -36,3 +36,4 @@ Record the owner's round 2 answers, design the criteria and Steps in the record,
 - Hand-over note: ~/Library/Application Support/Work Claude/side-session-notes/local_63d28fe9-95f7-415c-b78d-1ef6cb24f3f7/spindle-lifecycle-handover.md
 - Interphase files: docs/specs/spindle-run-lifecycle.decisions.md and .record.json in the spindle checkout
 - Probe replay: /var/folders/tz/b798spt96sjfyy924nf0cw4c0000gn/T/interphase-probe-_w7ed32t/plugins/spindle/tests/probe-lifecycle.test.ts
+- Glossary: GLOSSARY.md in the spindle checkout
