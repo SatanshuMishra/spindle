@@ -758,6 +758,19 @@ const celebrationSvg = (W, H, scale, slug) => {
 </style>${crabs.join('')}`, `Celebration: ${slug} finished clean`)
 }
 
+const RAIL_DONE_WORDS = ['Done', 'Cleaned']
+
+const finishRailSvg = (W, run, finish) => {
+  const isDone = RAIL_DONE_WORDS.includes(finish.word)
+  return railSvg(W, { ...run, isFinished: isDone, isBlocked: !isDone && finish.word === 'Stopped' })
+    .replace(/aria-label="Stage [^"]*"/, `aria-label="Stage ${xml(finish.word)}"`)
+    .replace(
+      /<circle class="sv-live" cx="([\d.]+)" cy="12" r="10" fill="[^"]*" opacity="\.25"\/><circle cx="[\d.]+" cy="12" r="6" fill="[^"]*"\/>/,
+      (_, x) => `<circle cx="${x}" cy="12" r="6" class="sv-k sv-mstroke" stroke-width="1.6"/><path d="M${x - 2.5} 12h5" class="sv-mstroke" stroke-width="1.6" stroke-linecap="round"/>`,
+    )
+    .replace(' font-weight="600"', '')
+}
+
 const widthOf = el => Math.max(240, Math.floor(el.getBoundingClientRect().width))
 
 const section = (title, count, body) => `<div class="sec"><div class="sec-h"><span>${title}</span><span>${count}</span></div>${body}</div>`
@@ -775,7 +788,7 @@ const paneHtml = (W, run, finish) => {
   const parts = [
     finish ? finishBlock(W, run, finish) : '',
     headerSvg(W, isLive ? run : { ...run, crew: [] }),
-    draw(railSvg(W, run)),
+    finish ? still(finishRailSvg(W, run, finish)) : draw(railSvg(W, run)),
     section('MSPs', run.msps.length, run.msps.map((m, i) => draw(mspSvg(W, m, i))).join('')),
     section('Working now', run.crew.length, run.crew.length ? run.crew.map(a => agentSvg(W, a)).join('') : '<div class="empty">Nobody is working; the run has ended.</div>'),
   ]

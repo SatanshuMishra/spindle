@@ -13,4 +13,5 @@ jobs:
         with:
           node-version: 22
       - run: npm install -g @anthropic-ai/claude-code@2.1.303
+      - run: sudo apt-get update && sudo apt-get install -y zsh
       - run: scripts/check.sh

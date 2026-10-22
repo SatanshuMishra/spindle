@@ -31,22 +31,23 @@ events=$fixture/events/$slug.jsonl
 session_file=$mitosis/sessions/$session_id.json
 anchor="Pipeline anchor: $slug at $home, thread $slug: fixture"
 
-points_only_at_fixtures() {
+is_staged_session() {
   perl -MJSON::PP -0777 -e '
-    my ($fixture, $path) = @ARGV;
+    my ($fixture, $path, @slugs) = @ARGV;
     open my $in, "<", $path or exit 1;
     my $session = eval { JSON::PP->new->decode(scalar <$in>) } or exit 1;
-    ref $session eq "HASH" && ref $session->{run_homes} eq "ARRAY" or exit 1;
+    ref $session eq "HASH" && ref $session->{run_homes} eq "ARRAY" && @{ $session->{run_homes} } or exit 1;
+    defined $session->{thread_id} && !ref $session->{thread_id} && grep { $_ eq $session->{thread_id} } @slugs or exit 1;
     for my $entry (@{ $session->{run_homes} }) {
       ref $entry eq "HASH" && defined $entry->{path} && !ref $entry->{path} or exit 1;
       index($entry->{path}, "$fixture/") == 0 && $entry->{path} !~ m{/\.\.(/|$)} or exit 1;
     }
     exit 0;
-  ' -- $fixture $session_file
+  ' -- $fixture $session_file ${FINAL_STATES/%/-run}
 }
 
-if [[ -L $session_file ]] || { [[ -e $session_file ]] && ! points_only_at_fixtures; }; then
-  print -u2 "stage-finish-fixtures: refusing to overwrite $session_file: its run_homes do not all lie under $fixture/"
+if [[ -L $session_file ]] || { [[ -e $session_file ]] && ! is_staged_session; }; then
+  print -u2 "stage-finish-fixtures: refusing to overwrite $session_file: this script did not stage it"
   exit 2
 fi
 
