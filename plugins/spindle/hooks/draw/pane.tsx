@@ -1,12 +1,13 @@
 import { atom, read, update } from 'claude-code'
 import type { Elements, EngineInterface, RenderElement, RenderInput } from 'claude-code'
 
-import type { Activity, FinalState, Finish, MspRow, MspStatus, Outcome, PastRun, Role, RoundRow, RunView, WorkerRole, WorkerRow } from '../../types'
+import type { Activity, Finish, MspRow, MspStatus, Outcome, PastRun, Role, RoundRow, RunView, WorkerRole, WorkerRow } from '../../types'
 import { leavePastRun, readPastRun } from '../run/past'
 import { LANE_NAME } from '../run/state'
 import { NO_RUN, activityNow, currentActivity, elapsed, modelName, unplannedPulls } from '../run/summary'
 import { isFinishSettled } from '../run/view'
-import { CRAB_BOX, ROLE_COLOR, colorOf, costumeOf, crab } from './crew'
+import { ROLE_COLOR, celebrationSize, celebrationSvg, colorOf, costumeOf, crab } from './crew'
+import type { CelebrationLook } from './crew'
 import { cardSlot, cardTrigger } from './hint'
 import type { Card } from './hint'
 import {
@@ -69,14 +70,13 @@ const PIP = 8
 const PIP_STEP = 10
 const VERDICT_CHIP_H = 18
 const MAX_HOTKEYS = 9
-const CELEBRATION_CREW: readonly Role[] = ['captain', 'scribe', 'builder', 'detective', 'judge', 'courier']
-const CELEBRATION_SCALE = 1.1
-const CELEBRATION_STEP = 38
-const CELEBRATION_HOP_PX = 5
-const CELEBRATION_W = CELEBRATION_STEP * CELEBRATION_CREW.length
-const CELEBRATION_H = Math.ceil(CRAB_BOX * CELEBRATION_SCALE) + CELEBRATION_HOP_PX
-const HOP_SECONDS = 0.6
-const HOP_STAGGER_SECONDS = 0.2
+const CELEBRATION: CelebrationLook = {
+  crew: ['captain', 'scribe', 'builder', 'detective', 'judge', 'courier'],
+  scale: 1.1,
+  step: 38,
+  inset: 2,
+  hopPx: 5,
+}
 
 const ROLE_NAME: Readonly<Record<WorkerRole, string>> = {
   captain: 'Captain',
@@ -145,10 +145,7 @@ export const stageSummary = (view: RunView) => {
   return counts.length === 0 ? `Stage ${stageName(view)}` : `Stage ${stageName(view)} · ${counts.join(', ')}`
 }
 
-const FULLY_DONE: ReadonlySet<FinalState> = new Set(['closed-done', 'cleaned'])
-
-const currentIndexOf = (view: RunView) =>
-  view.finish !== null && FULLY_DONE.has(view.finish.state) ? STAGE_TABLE.length : stageIndex(view.stage)
+const currentIndexOf = (view: RunView) => (view.finish?.isFullyDone === true ? STAGE_TABLE.length : stageIndex(view.stage))
 
 const mspStatusText = (msp: MspRow) => {
   const word = MSP_STATUS[msp.status].word
@@ -276,22 +273,6 @@ function proofSvg(msp: MspRow): string {
   )
 }
 
-const hopCss = () =>
-  `<style>
-.hop{animation-name:cel-hop;animation-duration:${HOP_SECONDS}s;animation-timing-function:ease-out;animation-iteration-count:1;animation-fill-mode:both}
-${CELEBRATION_CREW.map((_, i) => `.hop-${i}{animation-delay:${(i * HOP_STAGGER_SECONDS).toFixed(1)}s}`).join('')}
-@keyframes cel-hop{0%,100%{transform:translateY(0)}45%{transform:translateY(-${CELEBRATION_HOP_PX}px)}}
-@media (prefers-reduced-motion: reduce){.hop{animation:none}}
-</style>`
-
-function celebrationSvg(isSettled: boolean): string {
-  const crabs = CELEBRATION_CREW.map(
-    (role, i) =>
-      `<g class="hop hop-${i}">${crab(i * CELEBRATION_STEP + 2, CELEBRATION_HOP_PX, costumeOf(role), colorOf(role), false, false, CELEBRATION_SCALE)}</g>`,
-  ).join('')
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${CELEBRATION_W}" height="${CELEBRATION_H}" viewBox="0 0 ${CELEBRATION_W} ${CELEBRATION_H}">${isSettled ? '' : hopCss()}${crabs}</svg>`
-}
-
 const finishColor = (finish: Finish) =>
   finish.isCelebrated || finish.state === 'closed-done'
     ? { color: DONE }
@@ -306,10 +287,9 @@ function desktopFinish(ui: DesktopElements, view: RunView, finish: Finish, isSet
       {finish.isCelebrated ? (
         <Svg
           key="finish-celebration"
-          source={celebrationSvg(isSettled)}
+          source={celebrationSvg(CELEBRATION, isSettled)}
           alt={`Celebration: ${view.slug} finished clean`}
-          width={CELEBRATION_W}
-          height={CELEBRATION_H}
+          {...celebrationSize(CELEBRATION)}
         />
       ) : null}
       <Text weight="semibold" {...finishColor(finish)}>

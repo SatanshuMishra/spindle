@@ -84,8 +84,10 @@ export type HomeFacts = {
   buildingTier: string
   oldestMtimeMs: number | null
   follows: FollowsLink | null
-  lighthouseVerdict: string | null
+  lighthouseVerdict: LighthouseVerdict
 }
+
+export type LighthouseVerdict = { kind: 'absent' } | { kind: 'unreadable' } | { kind: 'verdict'; value: string }
 
 export type VerdictEvent = { msp: string; round: number; outcome: Outcome; blockers: number; advisories: number }
 
@@ -128,6 +130,7 @@ export type Finish = {
   state: FinalState
   word: string
   isCelebrated: boolean
+  isFullyDone: boolean
   headline: string
   details: readonly string[]
 }

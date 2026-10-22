@@ -281,3 +281,13 @@ test('a run that celebrated never replays after its finish changes and returns',
   expect(celebration.map(svg => svg.alt)).toEqual(['Celebration: rate-limit-api finished clean'])
   expect(celebration[0]?.source).not.toContain('@keyframes')
 })
+
+test('closed-done with an unreadable lighthouse verdict says it could not be read', async ($, on) => {
+  const world = harness(on, recorded(logged(greenIntegrate, [...CLEANED, DONE])), { now: NOW })
+  world.failRead(`${RECORD}/home/lighthouse/run-1/verdict.json`, 'EIO: i/o error')
+  await world.start($)
+
+  const tree = await desktopTree($)
+  expect(textsOf(tree)).toContain('No celebration: the lighthouse verdict could not be read')
+  expect(celebrationOf(tree)).toEqual([])
+})

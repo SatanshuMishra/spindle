@@ -5,7 +5,8 @@ import type { Finish, Lane, Role, RunView } from '../../types'
 import { LANE_NAME } from '../run/state'
 import { activityNow, currentActivity, elapsed } from '../run/summary'
 import { activitySignature, isFinishSettled } from '../run/view'
-import { CRAB_BOX, CRAB_CSS, colorOf, costumeOf, crab } from './crew'
+import { CRAB_CSS, celebrationSize, celebrationSvg, colorOf, costumeOf, crab } from './crew'
+import type { CelebrationLook } from './crew'
 import { cardSlot, cardTrigger, hint, tallestCard } from './hint'
 import type { Card } from './hint'
 import { stageSummary, togglePane } from './pane'
@@ -25,15 +26,9 @@ const TICK_W = 2
 const TICK_H = 8
 const CRAB_W = 24
 const CRAB_H = 22
-const CELEBRATION_SCALE = 0.8
-const CELEBRATION_STEP = 26
-const CELEBRATION_HOP_PX = 3
 const CELEBRATION_PARTNERS: readonly Role[] = ['captain', 'builder', 'judge']
 const CELEBRATION_SIZE = 3
-const CELEBRATION_W = CELEBRATION_STEP * CELEBRATION_SIZE
-const CELEBRATION_H = Math.ceil(CRAB_BOX * CELEBRATION_SCALE) + CELEBRATION_HOP_PX
-const HOP_SECONDS = 0.6
-const HOP_STAGGER_SECONDS = 0.2
+const CELEBRATION_FORM = { scale: 0.8, step: 26, inset: 0, hopPx: 3 } as const
 const BAR_SPARE_COLUMNS = 12
 const BAR_COLUMNS = 60
 const DOT_PX = 10
@@ -72,7 +67,7 @@ export function leadOf(view: RunView): Role {
 const roundPart = (view: RunView) =>
   view.stage === 'review' || view.stage === 'fix' ? Math.min(0.9, view.round * 0.25) : 0
 
-const isFinishedDone = (finish: Finish | null) => finish !== null && (finish.state === 'closed-done' || finish.state === 'cleaned')
+const isFinishedDone = (finish: Finish | null) => finish?.isFullyDone === true
 
 const progressOf = (view: RunView) =>
   isFinishedDone(view.finish) ? 1 : (Math.max(0, stageIndex(view.stage)) + roundPart(view)) / STAGE_TABLE.length
@@ -199,22 +194,7 @@ const celebrationCrewOf = (view: RunView): readonly Role[] => {
   return [lead, ...CELEBRATION_PARTNERS.filter(role => role !== lead)].slice(0, CELEBRATION_SIZE)
 }
 
-const HOP_CSS = `<style>
-.hop{animation-name:band-hop;animation-duration:${HOP_SECONDS}s;animation-timing-function:ease-out;animation-iteration-count:1;animation-fill-mode:both}
-${Array.from({ length: CELEBRATION_SIZE }, (_, i) => `.hop-${i}{animation-delay:${(i * HOP_STAGGER_SECONDS).toFixed(1)}s}`).join('')}
-@keyframes band-hop{0%,100%{transform:translateY(0)}45%{transform:translateY(-${CELEBRATION_HOP_PX}px)}}
-@media (prefers-reduced-motion: reduce){.hop{animation:none}}
-</style>`
-
-function celebrationSvg(view: RunView): string {
-  const crabs = celebrationCrewOf(view)
-    .map(
-      (role, i) =>
-        `<g class="hop hop-${i}">${crab(i * CELEBRATION_STEP, CELEBRATION_HOP_PX, costumeOf(role), colorOf(role), false, false, CELEBRATION_SCALE)}</g>`,
-    )
-    .join('')
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${CELEBRATION_W}" height="${CELEBRATION_H}" viewBox="0 0 ${CELEBRATION_W} ${CELEBRATION_H}">${HOP_CSS}${crabs}</svg>`
-}
+const celebrationLookOf = (view: RunView): CelebrationLook => ({ ...CELEBRATION_FORM, crew: celebrationCrewOf(view) })
 
 const blockBar = (view: RunView, blocks: number) => {
   const filled = Math.round(blocks * progressOf(view))
@@ -354,10 +334,9 @@ function desktopBand(
         {view.finish?.isCelebrated ? (
           <Svg
             key="spindle-celebration"
-            source={celebrationSvg(view)}
+            source={celebrationSvg(celebrationLookOf(view), false)}
             alt={`Celebration: ${view.slug} finished clean`}
-            width={CELEBRATION_W}
-            height={CELEBRATION_H}
+            {...celebrationSize(celebrationLookOf(view))}
           />
         ) : (
           <Svg source={crabSvg(view)} alt={`${costumeOf(leadOf(view))} crab`} width={CRAB_W} height={CRAB_H} />

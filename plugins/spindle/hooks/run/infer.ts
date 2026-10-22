@@ -8,6 +8,7 @@ import type {
   HomeFacts,
   LaneFact,
   Lifecycle,
+  LighthouseVerdict,
   MspRow,
   MspStatus,
   Outcome,
@@ -526,9 +527,10 @@ function followsLinkOf(file: FileText): FollowsLink | null {
 
 const lighthouseShape = (value: unknown): string | null => (isObject(value) && typeof value.verdict === 'string' ? value.verdict : null)
 
-function lighthouseVerdictOf(file: FileText): string | null {
+function lighthouseVerdictOf(file: FileText): LighthouseVerdict {
   const verdict = parsed(file, lighthouseShape)
-  return verdict.kind === 'ok' ? verdict.value : null
+  if (verdict.kind === 'ok') return { kind: 'verdict', value: verdict.value }
+  return verdict.kind === 'absent' ? { kind: 'absent' } : { kind: 'unreadable' }
 }
 
 const EVENT_STATUS: Readonly<Record<Outcome, MspStatus>> = {
@@ -626,7 +628,7 @@ export function eventRunFacts(location: RunLocation, events: EventFacts): HomeFa
     buildingTier: '',
     oldestMtimeMs: events.startedAt,
     follows: null,
-    lighthouseVerdict: null,
+    lighthouseVerdict: { kind: 'absent' },
   }
 }
 
@@ -753,13 +755,18 @@ function blockedMsps(rounds: readonly RoundRow[]): string[] {
   })
 }
 
-function plainDone(lighthouseVerdict: string | null, blocked: readonly string[]): readonly string[] {
-  if (lighthouseVerdict === null) return ['No celebration: no lighthouse verdict found']
-  if (lighthouseVerdict !== 'green') return [`No celebration: lighthouse verdict ${lighthouseVerdict}`]
+function plainDone(lighthouseVerdict: LighthouseVerdict, blocked: readonly string[]): readonly string[] {
+  if (lighthouseVerdict.kind === 'absent') return ['No celebration: no lighthouse verdict found']
+  if (lighthouseVerdict.kind === 'unreadable') return ['No celebration: the lighthouse verdict could not be read']
+  if (lighthouseVerdict.value !== 'green') return [`No celebration: lighthouse verdict ${lighthouseVerdict.value}`]
   return blocked.map(label => `No celebration: ${label} blocked`)
 }
 
-function finishWords(state: FinalState, end: RunEnd | null, lighthouseVerdict: string | null, blocked: readonly string[]) {
+const isGreen = (lighthouseVerdict: LighthouseVerdict) => lighthouseVerdict.kind === 'verdict' && lighthouseVerdict.value === 'green'
+
+const FULLY_DONE: ReadonlySet<FinalState> = new Set(['closed-done', 'cleaned'])
+
+function finishWords(state: FinalState, end: RunEnd | null, lighthouseVerdict: LighthouseVerdict, blocked: readonly string[]) {
   const status = end?.status ?? null
   if (state === 'closed-done') return { headline: 'Done', details: plainDone(lighthouseVerdict, blocked) }
   if (state === 'closed-draft') return { headline: 'Ended as a draft pull request', details: blocked.map(label => `${label} blocked`) }
@@ -770,14 +777,14 @@ function finishWords(state: FinalState, end: RunEnd | null, lighthouseVerdict: s
   return { headline: 'Status unknown', details: ['The event log could not be read'] }
 }
 
-function finishOf(lifecycle: Lifecycle, end: RunEnd | null, rounds: readonly RoundRow[], lighthouseVerdict: string | null): Finish {
+function finishOf(lifecycle: Lifecycle, end: RunEnd | null, rounds: readonly RoundRow[], lighthouseVerdict: LighthouseVerdict): Finish {
   const state = finalStateOf(lifecycle, end)
   const blocked = blockedMsps(rounds)
-  const isCelebrated = state === 'closed-done' && end?.isDraft !== true && blocked.length === 0 && lighthouseVerdict === 'green'
+  const isCelebrated = state === 'closed-done' && end?.isDraft !== true && blocked.length === 0 && isGreen(lighthouseVerdict)
   const words = isCelebrated
     ? { headline: 'Finished clean', details: ['Every MSP shipped and lighthouse is green'] }
     : finishWords(state, end, lighthouseVerdict, blocked)
-  return { state, word: FINISH_WORD[state], isCelebrated, ...words }
+  return { state, word: FINISH_WORD[state], isCelebrated, isFullyDone: FULLY_DONE.has(state), ...words }
 }
 
 const ownSignals = (files: FileFacts | null, signals: Signals): Signals =>
