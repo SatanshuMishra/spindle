@@ -20,6 +20,10 @@
   --accent-ink: #5a56c9;
   --done: #3B9C5F;
   --fail: #D0453F;
+  --pill-done: #2F7A4B;
+  --pill-fail: #B3261E;
+  --pill-accent: #5a56c9;
+  --pill-muted: #666662;
   --clay: #D97757;
   --ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
   --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
@@ -76,10 +80,12 @@ svg { display: block; max-width: 100%; overflow: visible; }
 .finish { display: grid; gap: 4px; padding: 10px 12px; border-radius: 10px; background: var(--tile); }
 .finish-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .finish-head strong { font-size: 14px; }
-.finish-word { flex: none; font-size: 11px; font-weight: 600; color: #fff; padding: 1px 8px; border-radius: 999px; background: var(--accent); }
-.finish-word[data-word="Done"], .finish-word[data-word="Cleaned"] { background: var(--done); }
-.finish-word[data-word="Stopped"], .finish-word[data-word="Draft"] { background: var(--fail); }
-.finish-word[data-word="Unknown"] { background: var(--m); }
+.finish-word { flex: none; font-size: 11px; font-weight: 600; color: #fff; padding: 1px 8px; border-radius: 999px; background: var(--pill-accent); }
+.finish-word[data-word="Done"], .finish-word[data-word="Cleaned"] { background: var(--pill-done); }
+.finish-word[data-word="Stopped"], .finish-word[data-word="Draft"] { background: var(--pill-fail); }
+.finish-word[data-word="Unknown"] { background: var(--pill-muted); }
+.past-run { display: flex; align-items: center; gap: 8px; font-size: 12.5px; min-width: 0; padding: 2px 0; }
+.past-slug { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .finish-detail { font-size: 12.5px; color: var(--s); }
 
 @media (prefers-reduced-motion: reduce) {
@@ -98,6 +104,12 @@ svg { display: block; max-width: 100%; overflow: visible; }
 
   <article class="frame" data-state="running">
     <div class="caption"><h2>running</h2><p class="muted">The run works: round 1 of review, three reviewers at work.</p></div>
+    <div class="band"></div>
+    <div class="pane"></div>
+  </article>
+
+  <article class="frame" data-state="running-msp">
+    <div class="caption"><h2>running · MSP selected</h2><p class="muted">The same run with limiter-core selected: its live reviewers under Working, its finished workers under Done.</p></div>
     <div class="band"></div>
     <div class="pane"></div>
   </article>
@@ -630,21 +642,32 @@ const FINISHED_CREW = [
 ]
 const doneCrewOf = run => FINISHED_CREW.filter(worker => stageIndex(worker.reached) <= stageIndex(run.stage))
 
-const base = { slug: SLUG, lane: 'Full', cost: '$9.80', agentsTotal: 12, rounds: [ROUND_1, ROUND_2], crew: [] }
+const base = { slug: SLUG, lane: 'Full', cost: '$9.80', agentsTotal: 12, rounds: [ROUND_1, ROUND_2], crew: [], finishedCrew: [] }
+
+const PAST_RUNS = [
+  { slug: 'search-index-v2', word: 'Done', age: '2d ago' },
+  { slug: 'billing-retries', word: 'Draft', age: '4d ago' },
+  { slug: 'auth-session-ttl', word: 'Stopped', age: '1w ago' },
+]
+
+const RUNNING = {
+  ...base, stage: 'review', stageProgress: 0.3, round: 1, elapsed: '48m', cost: '$5.64', agentsTotal: 6,
+  crew: [
+    { ...agent('detective', 'Detective', 'code-reviewer · round 1', 'Opus 5.5', '4m', 22), msp: 'limiter-core' },
+    { ...agent('guard', 'Guard', 'security-reviewer · round 1', 'Opus 5.5', '3m', 18), msp: 'limiter-core' },
+    { ...agent('auditor', 'Auditor', 'conformance-auditor · round 1', 'Sonnet 5.5', '2m', 11), msp: 'redis-store' },
+  ],
+  finishedCrew: [
+    { ...agent('builder', 'Builder', 'mitosis worker · 5 Steps', 'Opus 5.5', '11m', 35), msp: 'limiter-core' },
+    { ...agent('builder', 'Builder', 'mitosis worker · 4 Steps', 'Opus 5.5', '9m', 30), msp: 'redis-store' },
+  ],
+  msps: msps([{ status: 'review', done: 5, round: 1, proof: 'green' }, { status: 'review', done: 4, round: 1, proof: 'green' }, { status: 'review', done: 3, round: 1, proof: 'green' }]),
+  rounds: [],
+}
 
 const FRAMES = {
-  running: {
-    run: {
-      ...base, stage: 'review', stageProgress: 0.3, round: 1, elapsed: '48m', cost: '$5.64', agentsTotal: 6,
-      crew: [
-        agent('detective', 'Detective', 'code-reviewer · limiter-core', 'Opus 5.5', '4m', 22),
-        agent('guard', 'Guard', 'security-reviewer · limiter-core', 'Opus 5.5', '3m', 18),
-        agent('auditor', 'Auditor', 'conformance-auditor · redis-store', 'Sonnet 5.5', '2m', 11),
-      ],
-      msps: msps([{ status: 'review', done: 5, round: 1, proof: 'green' }, { status: 'review', done: 4, round: 1, proof: 'green' }, { status: 'review', done: 3, round: 1, proof: 'green' }]),
-      rounds: [],
-    },
-  },
+  running: { run: RUNNING },
+  'running-msp': { run: { ...RUNNING, selected: 'limiter-core' } },
   shipped: {
     run: {
       ...base, stage: 'integrate', stageProgress: 0.4, round: 2, elapsed: '1h 32m', cost: '$9.10',
@@ -747,13 +770,14 @@ const celebrationSvg = (W, H, scale, slug) => {
   const gap = Math.max(4, Math.min(18, (W - box * CELEBRATION_CREW.length) / (CELEBRATION_CREW.length - 1)))
   const rowW = box * CELEBRATION_CREW.length + gap * (CELEBRATION_CREW.length - 1)
   const left = Math.max(0, (W - rowW) / 2)
+  const hop = `cel-hop-${Math.round(6 * scale)}`
   const crabs = CELEBRATION_CREW.map(
     (id, i) =>
-      `<g class="cel-hop" style="animation-delay:${(i * HOP_STAGGER).toFixed(2)}s">${crab(left + i * (box + gap), H - 28 * scale - 1, id, role(id).color, false, false, scale)}</g>`,
+      `<g class="cel-hop ${hop}" style="animation-delay:${(i * HOP_STAGGER).toFixed(2)}s">${crab(left + i * (box + gap), H - 28 * scale - 1, id, role(id).color, false, false, scale)}</g>`,
   )
   return svg(W, H, `<style>
-.cel-hop{animation:cel-hop ${HOP_SECONDS}s cubic-bezier(.3,0,.3,1) 1 both}
-@keyframes cel-hop{0%,100%{transform:translateY(0)}40%{transform:translateY(-${Math.round(6 * scale)}px)}}
+.${hop}{animation:${hop} ${HOP_SECONDS}s cubic-bezier(.3,0,.3,1) 1 both}
+@keyframes ${hop}{0%,100%{transform:translateY(0)}40%{transform:translateY(-${Math.round(6 * scale)}px)}}
 @media (prefers-reduced-motion: reduce){.cel-hop{animation:none}}
 </style>${crabs.join('')}`, `Celebration: ${slug} finished clean`)
 }
@@ -782,6 +806,24 @@ const finishBlock = (W, run, finish) => {
 <div class="finish-head"><span class="finish-word" data-word="${xml(finish.word)}">${xml(finish.word)}</span><strong>${xml(finish.headline)}</strong></div>${details}</div>`
 }
 
+const taggedOf = worker => (worker.msp ? { ...worker, name: `${worker.name} · ${worker.msp}` } : worker)
+
+const workingSections = (W, run) => {
+  if (run.selected === undefined) {
+    const rows = run.crew.length ? run.crew.map(a => agentSvg(W, taggedOf(a))).join('') : '<div class="empty">Nobody is working; the run has ended.</div>'
+    return [section('Working now', run.crew.length, rows)]
+  }
+  const live = run.crew.filter(a => a.msp === run.selected)
+  const done = run.finishedCrew.filter(a => a.msp === run.selected)
+  return [
+    section(`Working · ${live.length}`, run.selected, live.map(a => agentSvg(W, a)).join('')),
+    section(`Done · ${done.length}`, run.selected, done.map(a => still(agentSvg(W, a))).join('')),
+  ]
+}
+
+const pastRunRow = past =>
+  `<div class="past-run"><span class="past-slug">${xml(past.slug)}</span><span class="finish-word" data-word="${xml(past.word)}">${xml(past.word)}</span><span class="muted">${xml(past.age)}</span></div>`
+
 const paneHtml = (W, run, finish) => {
   const isLive = finish === undefined
   const draw = markup => (isLive ? markup : still(markup))
@@ -790,10 +832,11 @@ const paneHtml = (W, run, finish) => {
     headerSvg(W, isLive ? run : { ...run, crew: [] }),
     finish ? still(finishRailSvg(W, run, finish)) : draw(railSvg(W, run)),
     section('MSPs', run.msps.length, run.msps.map((m, i) => draw(mspSvg(W, m, i))).join('')),
-    section('Working now', run.crew.length, run.crew.length ? run.crew.map(a => agentSvg(W, a)).join('') : '<div class="empty">Nobody is working; the run has ended.</div>'),
+    ...workingSections(W, run),
   ]
   if (!isLive) parts.push(section('Done', doneCrewOf(run).length, doneCrewOf(run).map(a => still(agentSvg(W, a))).join('')))
   if (run.rounds.length) parts.push(section('Review rounds', run.rounds.length, run.rounds.map(r => roundSvg(W, r)).join('')))
+  parts.push(section('Past runs', PAST_RUNS.length, PAST_RUNS.map(pastRunRow).join('')))
   return `<div class="pane-head"><span>Pipeline</span><span class="x">⌄ ×</span></div><div class="pane-body">${parts.join('')}</div>`
 }
 

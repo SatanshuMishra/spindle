@@ -59,7 +59,14 @@ frame_lacks() {
 has_reduced_motion_rule() {
   markup_outside_scripts | perl -0777 -ne '
     my @styles = /<style\b[^>]*>(.*?)<\/style>/gis;
-    exit((grep { /\@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)\s*\{[^@]*?animation\s*:\s*none/is } @styles) ? 0 : 1);
+    my $sets_no_animation = sub {
+      my ($style) = @_;
+      while ($style =~ /\@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)\s*(\{(?:[^{}]++|(?1))*\})/gis) {
+        return 1 if $1 =~ /animation\s*:\s*none/i;
+      }
+      return 0;
+    };
+    exit((grep { $sets_no_animation->($_) } @styles) ? 0 : 1);
   '
 }
 
