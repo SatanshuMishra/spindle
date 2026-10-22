@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: parked
-Updated: 2026-10-22T18:57:51.933Z
+Updated: 2026-10-22T18:57:58.233Z
 Next ids: c6 D3 R2 S1
 
 ## Goal
@@ -37,10 +37,8 @@ Needs: D2.
 
 ## Where the details live
 
-- Decisions: docs/specs/spindle-run-lifecycle.decisions.md (Q9 to Q13, Q18) in the spindle checkout
-- Lifecycle table: docs/run-lifecycle.md on mitosis/lifecycle-table (spindle pull request 22)
-- Reader it builds on: mitosis/run-record-reader (spindle pull request 21)
+- Lifecycle table: docs/run-lifecycle.md in main
+- Mock-up and its checks: docs/mockups/finish-states.html, scripts/check-mockup.sh, scripts/stage-finish-fixtures.sh in main
+- Decision record: docs/adr/0009-only-a-clean-success-celebrates.md in main
 - Design source: ~/Documents/DevLabs/spindle-design
-- Job 2 spec files: docs/specs/spindle-finish-states.{md,decisions.md,record.json,items.json} in the spindle checkout
-- Run home: ~/.mitosis/spindle/spindle-finish-states (charter, run.zsh, rounds.md, build logs); run directory ~/.mitosis/runs/spindle/spindle-finish-states (lane logs)
-- Review files: ~/.mitosis/spindle/spindle-finish-states/review (obligations, assumptions, proofs; round-1/ holds diffs, suite output, briefs, findings and candidates per MSP)
+- Run report: ~/.mitosis/spindle/reports/spindle-finish-states.json (stages, waits, bottleneck)
