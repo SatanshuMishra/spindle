@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: active
-Updated: 2026-10-22T03:24:41.600Z
+Updated: 2026-10-22T03:25:46.999Z
 Next ids: c6 D2 R2 S1
 
 ## Goal
@@ -17,7 +17,7 @@ Job 2 main part: mock up and build the band and run pane for every final lifecyc
 
 ## Where things stand
 
-FEATURE branch feat/spindle-finish-states is pushed at 1666367, a merge of mitosis/run-record-reader and mitosis/lifecycle-table, because Job 1's FEATURE branch holds none of their code until pull requests 21 and 22 merge; the run home's feature.json records it and pipeline feature-branch adopted it. The spec is handed off (7 Steps, 11 criteria, 5.11 screenshots unproven, review issues fixed). The event data records no worker's MSP; the pipeline's msp: brief line, mitosis lane.start and lane.end, and a mitosis per-lane agent log are what must emit it. Both MSPs are built and gated (finish-facts on mitosis/finish-facts, finish-mockup on mitosis/finish-mockup); both conformance audits found nothing (5.1 to 5.10 met, 5.11 unproven). Round 1 verdict is loop for both, every blocker diagnosed fixable. finish-facts' fix pass is done at e156024 (C1 and U1 fixed with receipts green and selecting checks empty, advisories C3 to C5 fixed; suite 263 pass) and waits for round 2. finish-mockup then needs: C1 install zsh in CI, C3 a finish rail wrapper in the mock-up, S1 the staging guard requiring its own thread slug, and advisories C2, C4, C5 and C6.
+FEATURE branch feat/spindle-finish-states is pushed at 1666367, a merge of mitosis/run-record-reader and mitosis/lifecycle-table, because Job 1's FEATURE branch holds none of their code until pull requests 21 and 22 merge; the run home's feature.json records it and pipeline feature-branch adopted it. The spec is handed off (7 Steps, 11 criteria, 5.11 screenshots unproven, review issues fixed). The event data records no worker's MSP; the pipeline's msp: brief line, mitosis lane.start and lane.end, and a mitosis per-lane agent log are what must emit it. Both MSPs are built and gated (finish-facts on mitosis/finish-facts, finish-mockup on mitosis/finish-mockup); both conformance audits found nothing (5.1 to 5.10 met, 5.11 unproven). Round 1 verdict is loop for both, every blocker diagnosed fixable. finish-facts' fix pass is done at e156024 (C1 and U1 fixed with receipts green and selecting checks empty, advisories C3 to C5 fixed; suite 263 pass) and waits for round 2. On finish-mockup the receipts are committed and red (a rail check in check-mockup.sh for C3, scripts/check-staging-guard.sh for S1); the fixes still to make are C1 install zsh in CI, C3 a finish rail wrapper in the mock-up, S1 the staging guard requiring its own thread slug, and advisories C2, C4, C5 and C6.
 
 ## Next step
 
