@@ -7,8 +7,8 @@ A run's lifecycle state is where it is in its life: running, shipped, reopened, 
 | State | Entered when | Event | Emitted by | Ledger status | Spindle reads |
 |---|---|---|---|---|---|
 | running | The run starts or works. | `run.start` (`lane`), `stage.start` (`spec`, `build`), `round.verdict` | `pipeline feature-branch` (`run.start`, `stage.start spec`), `pipeline check-run` (`stage.start build`), `pipeline verdict` (`round.verdict`) | active | The run home, the run directory and the event log. |
-| shipped | Every MSP's pull request is open; the run stays shipped through Integration until the FEATURE pull request merges. | `stage.start ship`, then `stage.start integrate` | `pipeline check-run` with `SHIP` set (`ship`), `pipeline integration-ready` (`integrate`); each pull request is opened by the session through the GitHub MCP `create_pull_request` tool and recorded by mitosis in `state.json` | parked | The pull requests in `state.json` and the session's `create_pull_request` calls. |
-| reopened | A shipped run takes a new round before its FEATURE pull request merges. | `round.verdict` or `stage.start build` after the latest `stage.start ship` | `pipeline verdict`, `pipeline check-run` | active | The order of the event log. |
+| shipped | Every MSP's pull request is open, or, for a run with no MSPs (a direct follow-up), the session opens its pull request through `create_pull_request`; a reopened run ships again when a `stage.start ship` follows its reopening round. The run stays shipped through Integration until the FEATURE pull request merges. | `stage.start ship`, then `stage.start integrate` | `pipeline check-run` with `SHIP` set (`ship`), `pipeline integration-ready` (`integrate`); each pull request is opened by the session through the GitHub MCP `create_pull_request` tool and recorded by mitosis in `state.json` | parked | The pull requests in `state.json` and the session's `create_pull_request` calls. |
+| reopened | A shipped run takes a new round before its FEATURE pull request merges. | `round.verdict` after the latest `stage.start ship`; spindle also counts a `stage.start build` there, which no emitter writes after ship today | `pipeline verdict` | active | The order of the event log. |
 | cleaned | `pipeline clean` deleted the run home after writing the run record. | `clean.done` (`record`, `kept`) | `pipeline clean` | parked when clean-up kept something; otherwise the thread closes at once | The run record, or the event log when there is no run record. |
 | closed-done | The thread closes done. | `run.end` (`status` done) | the pipeline continuity hook on `close_thread` | done | `run.end`. |
 | closed-draft | The run ended with a draft pull request. | `run.end` (`status` done, `draft` true) | the pipeline continuity hook on `close_thread` | done, with the line `Ended as draft pull request #N` and every unmet criterion struck `[~]` with its reason | `run.end`. |
@@ -49,6 +49,7 @@ The pipeline does not emit these yet. They are built by the pipeline spec `~/Doc
 | `clean.done` | `record` (the run record's path), `kept` (the count clean-up kept) | `pipeline clean` |
 | `run.end` | `status` (the ledger's closing line), `draft` (true for a closed-draft end) | the continuity hook on `close_thread` |
 | `run.start` | `follows` (the parent slug), and the `lane` value `direct` | the continuity hook on `open_thread` with `follows` |
+| `stage.start` (`ship`) | none; written again whenever a `round.verdict` or `stage.start build` follows the latest `stage.start ship`, not only when the last start is not `ship`, so a reopened run reads shipped once it ships again | `pipeline check-run` with `SHIP` set |
 
 A `run.end` line without a `status` field, written before these changes, reads closed-done.
 
@@ -56,6 +57,6 @@ A `run.end` line without a `status` field, written before these changes, reads c
 
 Once the pipeline and logbook changes ship, the owner proves the whole lifecycle once:
 
-1. Run one real pipeline run to clean-up, and see it stay in the band and the run pane with `lifecycle closed-done`.
+1. Run one real pipeline run to clean-up, see it stay in the band and the run pane, and see `/spindle status` show `lifecycle closed-done`.
 2. Open a follow-up thread with `follows` naming that run, make one deliberate fix, and see spindle show the follow-up with `follows <parent>`.
 3. See the parent's ledger document carry `Followed by: <child>`, and the child's carry `Follows: <parent>`.
