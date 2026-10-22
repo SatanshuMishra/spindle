@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: active
-Updated: 2026-10-22T02:24:33.127Z
+Updated: 2026-10-22T02:24:35.149Z
 Next ids: c6 D1 R2 S1
 
 ## Goal
@@ -37,3 +37,4 @@ Fix the spec review's issues in the record and spec, rerun the checks, promote t
 - Lifecycle table: docs/run-lifecycle.md on mitosis/lifecycle-table (spindle pull request 22)
 - Reader it builds on: mitosis/run-record-reader (spindle pull request 21)
 - Design source: ~/Documents/DevLabs/spindle-design
+- Job 2 spec files: docs/specs/spindle-finish-states.{md,decisions.md,record.json,items.json} in the spindle checkout
