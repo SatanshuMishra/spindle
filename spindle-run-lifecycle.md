@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: active
-Updated: 2026-10-22T01:51:14.673Z
+Updated: 2026-10-22T01:52:08.240Z
 Next ids: c5 D2 R2 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Diagnose and fix why the spindle bar and panel vanish when pipeline clean-up run
 
 ## Where things stand
 
-Two MSPs on FEATURE branch fix/spindle-run-lifecycle. lifecycle-table: green at round 2, head 297ecfa, ready to ship. run-record-reader: round 1 blockers C1, C2, C3 and advisories C4, C5 fixed at 0213fcc over red receipts at 36e903d; suite 210 pass and every diagnosis selecting check finds nothing; round 2 review next. No security reviewer (read-only local file parsing). Causes proven: (a) poll.ts:43 drops the view once clean-up deletes the run home; (b) session.ts:39 keeps the shipped run when the follow-up makes no run home, and poll.ts:53 freezes a finished view. The pipeline and logbook specs are written in their repositories and need a session launched in each, logbook first.
+Two MSPs on FEATURE branch fix/spindle-run-lifecycle. lifecycle-table: green at round 2, head 297ecfa, ready to ship. run-record-reader: round 1 blockers C1, C2, C3 and advisories C4, C5 fixed at 0213fcc over red receipts at 36e903d; suite 210 pass and every diagnosis selecting check finds nothing; round 2 code review running. No security reviewer (read-only local file parsing). Causes proven: (a) poll.ts:43 drops the view once clean-up deletes the run home; (b) session.ts:39 keeps the shipped run when the follow-up makes no run home, and poll.ts:53 freezes a finished view. The pipeline and logbook specs are written in their repositories and need a session launched in each, logbook first.
 
 ## Next step
 
