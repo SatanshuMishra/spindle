@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { CoreEngineInterface } from 'claude-code'
 
-import type { FinishSeen, RunView } from '../../types'
+import type { Finish, FinishKey, FinishSeen, RunView } from '../../types'
 import { buildView, isSameRun } from './infer'
 import { NO_SIGNALS } from './state'
 import { currentActivity } from './summary'
@@ -18,7 +18,11 @@ const dismissedState = atom({ plugin: 'spindle', key: 'dismissedAt' } as const, 
 const selectedState = atom({ plugin: 'spindle', key: 'selectedMsp' } as const, null)
 const finishSeenState = atom({ plugin: 'spindle', key: 'finishSeen' } as const, null)
 
-const isSeenRun = (seen: FinishSeen | null, view: RunView): seen is FinishSeen => seen !== null && isSameRun(seen, view)
+const isSameFinish = (one: FinishKey | null, other: FinishKey | null): boolean =>
+  one !== null && other !== null && one.state === other.state && one.isCelebrated === other.isCelebrated
+
+const isSeenRun = (seen: FinishSeen | null, view: RunView): seen is FinishSeen =>
+  seen !== null && isSameRun(seen, view) && isSameFinish(seen.finish, view.finish)
 
 export const isFinishSettled = (seen: FinishSeen | null, view: RunView): boolean =>
   !(isSeenRun(seen, view) && seen.isLive && !seen.isSettled)
@@ -26,11 +30,16 @@ export const isFinishSettled = (seen: FinishSeen | null, view: RunView): boolean
 const isSettleDue = (seen: FinishSeen | null, now: number): seen is FinishSeen =>
   seen !== null && !seen.isSettled && now >= seen.at + SETTLE_MS
 
+const finishKeyOf = (finish: Finish): FinishKey => ({ state: finish.state, isCelebrated: finish.isCelebrated })
+
 function seenAfter(seen: FinishSeen | null, before: RunView | null, after: RunView | null, now: number): FinishSeen | null {
   if (after === null || after.finish === null) return null
   if (isSeenRun(seen, after)) return seen
-  const isLive = before !== null && isSameRun(before, after) && before.finish === null
-  return { slug: after.slug, home: after.home, at: now, isLive, isSettled: !isLive }
+  const finish = finishKeyOf(after.finish)
+  const hadCelebrated = seen !== null && isSameRun(seen, after) && seen.hasCelebrated
+  const isTurn = before !== null && isSameRun(before, after) && !isSameFinish(before.finish, finish)
+  const isLive = isTurn && !(finish.isCelebrated && hadCelebrated)
+  return { slug: after.slug, home: after.home, finish, at: now, isLive, isSettled: !isLive, hasCelebrated: hadCelebrated || finish.isCelebrated }
 }
 
 export const activitySignature = (view: RunView): string =>

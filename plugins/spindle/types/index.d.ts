@@ -132,12 +132,16 @@ export type Finish = {
   details: readonly string[]
 }
 
+export type FinishKey = Pick<Finish, 'state' | 'isCelebrated'>
+
 export type FinishSeen = {
   slug: string
   home: string | null
+  finish: FinishKey
   at: number
   isLive: boolean
   isSettled: boolean
+  hasCelebrated: boolean
 }
 
 export type Role = 'captain' | 'scribe' | 'builder' | 'detective' | 'judge' | 'courier' | 'plain'
