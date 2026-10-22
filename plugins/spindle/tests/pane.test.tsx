@@ -458,9 +458,9 @@ test('a second press clears the filter', async ($, on) => {
   const tree = await pane.drawn()
 
   expect(seenOf(tree).texts).toContain('Working now')
-  expect(rowsOf(tree).map(row => row.seen.texts.slice(0, 2))).toEqual([
-    ['Judge', 'Round 5 · validating'],
-    ['Detective', 'Round 4 · reviewing'],
+  expect(rowsOf(tree).map(row => row.seen.texts.slice(0, 3))).toEqual([
+    ['Judge', '· video-starts-like-a-camera', 'Round 5 · validating'],
+    ['Detective', '· button-consistency', 'Round 4 · reviewing'],
   ])
 })
 

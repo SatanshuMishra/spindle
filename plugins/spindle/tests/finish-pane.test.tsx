@@ -43,6 +43,7 @@ const event = (ev: string, fields: Readonly<Record<string, unknown>> = {}) =>
   JSON.stringify({ v: 1, ev, ts: '2026-10-21T20:00:00Z', run: 'api/rate-limit-api', ...fields })
 
 const STARTED = [event('run.start', { lane: 'full' }), event('stage.start', { stage: 'spec' }), event('stage.start', { stage: 'build' })]
+const AT_INTEGRATE = [...STARTED, event('stage.start', { stage: 'integrate' })]
 const CLEANED = [...STARTED, event('stage.start', { stage: 'clean' }), event('clean.done', { record: RECORD, kept: 0 })]
 const DONE = event('run.end', { status: 'done' })
 const STOPPED = event('run.end', { status: 'abandoned: stopped at review: hard failure' })
@@ -234,4 +235,49 @@ test('a live run draws no finish', async ($, on) => {
   const tree = await desktopTree($)
   expect(celebrationOf(tree)).toEqual([])
   expect(textsOf(tree).filter(text => text === 'Finished clean' || text.startsWith('No celebration'))).toEqual([])
+})
+
+test('a settled cleaned run that closes done still celebrates in the pane', async ($, on) => {
+  const world = harness(on, logged(greenIntegrate, AT_INTEGRATE), { now: NOW })
+  await world.start($)
+  world.use(recorded(logged(greenIntegrate, CLEANED, NOW + 1_000)))
+  await world.clock.advance(2000)
+  await world.clock.advance(5000)
+  await world.clock.advance(2000)
+  world.use(recorded(logged(greenIntegrate, [...CLEANED, DONE], NOW + 20_000)))
+  await world.clock.advance(2000)
+
+  const celebration = celebrationOf(await desktopTree($))
+  expect(celebration.map(svg => svg.alt)).toEqual(['Celebration: rate-limit-api finished clean'])
+  expect(celebration[0]?.source).toContain('@keyframes')
+})
+
+test('a celebration after a cleaned finish runs its own five seconds', async ($, on) => {
+  const world = harness(on, logged(greenIntegrate, AT_INTEGRATE), { now: NOW })
+  await world.start($)
+  world.use(recorded(logged(greenIntegrate, CLEANED, NOW + 1_000)))
+  await world.clock.advance(2000)
+  await world.clock.advance(2000)
+  world.use(recorded(logged(greenIntegrate, [...CLEANED, DONE], NOW + 5_000)))
+  await world.clock.advance(2000)
+  await world.clock.advance(2000)
+
+  expect(celebrationOf(await desktopTree($))[0]?.source).toContain('@keyframes')
+})
+
+test('a run that celebrated never replays after its finish changes and returns', async ($, on) => {
+  const world = harness(on, logged(greenIntegrate, AT_INTEGRATE), { now: NOW })
+  await world.start($)
+  world.use(logged(greenIntegrate, [...AT_INTEGRATE, DONE], NOW + 1_000))
+  await world.clock.advance(2000)
+  await world.clock.advance(5000)
+  await world.clock.advance(2000)
+  world.use(logged(withLighthouse(integrate, 'failures'), [...AT_INTEGRATE, DONE], NOW + 10_000))
+  await world.clock.advance(2000)
+  world.use(logged(greenIntegrate, [...AT_INTEGRATE, DONE], NOW + 12_000))
+  await world.clock.advance(2000)
+
+  const celebration = celebrationOf(await desktopTree($))
+  expect(celebration.map(svg => svg.alt)).toEqual(['Celebration: rate-limit-api finished clean'])
+  expect(celebration[0]?.source).not.toContain('@keyframes')
 })

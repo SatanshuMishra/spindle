@@ -194,3 +194,18 @@ test('/spindle on a finished run hides it from the band and keeps it in the pane
   await pane.unmount()
   expect((await status($)).some(line => line.startsWith(`run ${SLUG}`))).toBe(true)
 })
+
+test('a settled cleaned run that closes done still celebrates', async ($, on) => {
+  const world = harness(on, logged(greenIntegrate, AT_INTEGRATE), { now: NOW })
+  await world.start($)
+  world.use(recorded(logged(greenIntegrate, CLEANED, NOW + 1_000)))
+  await world.clock.advance(2000)
+  await world.clock.advance(5000)
+  await world.clock.advance(2000)
+  world.use(recorded(logged(greenIntegrate, [...CLEANED, DONE], NOW + 20_000)))
+  await world.clock.advance(2000)
+
+  const celebration = celebrationOf(await drawnOnce($, 'desktop'))
+  expect(celebration.map(svg => svg.alt)).toEqual([`Celebration: ${SLUG} finished clean`])
+  expect(celebration[0]?.source).toContain('@keyframes')
+})
