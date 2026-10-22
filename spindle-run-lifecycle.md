@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: active
-Updated: 2026-10-22T01:34:56.454Z
+Updated: 2026-10-22T01:35:01.439Z
 Next ids: c5 D2 R2 S1
 
 ## Goal
