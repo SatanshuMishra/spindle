@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: parked
-Updated: 2026-10-22T04:01:12.625Z
+Updated: 2026-10-22T18:57:04.850Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Diagnose and fix why the spindle bar and panel vanish when pipeline clean-up run
 
 ## Where things stand
 
-Integration done: lighthouse run 1 is green against main (suite passes on both builds; cleaned run, follow-up link and lifecycle table pass 3 of 3; four paths unproven: same-session follow-up after Done, band and pane paint, the next real run, the ledger link), and the FEATURE pull request 25 (fix/spindle-run-lifecycle into main) is open, assigned and bound; waiting for the owner to merge it. Causes proven: (a) poll.ts:43 drops the view once clean-up deletes the run home; (b) session.ts:39 keeps the shipped run when the follow-up makes no run home, and poll.ts:53 freezes a finished view. The pipeline and logbook specs are written in their repositories and need a session launched in each, logbook first.
+Merged and cleaned: FEATURE pull request 25 is in main, and pipeline clean removed every run worktree, branch, folder and spec file, keeping nothing; the frozen run report is ~/.mitosis/spindle/reports/spindle-run-lifecycle.json. The thread stays open only for c2 and c3, which the logbook and pipeline repositories must deliver. Causes proven: (a) poll.ts:43 drops the view once clean-up deletes the run home; (b) session.ts:39 keeps the shipped run when the follow-up makes no run home, and poll.ts:53 freezes a finished view. The pipeline and logbook specs are written in their repositories and need a session launched in each, logbook first.
 
 ## Next step
 
