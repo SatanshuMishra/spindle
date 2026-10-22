@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: active
-Updated: 2026-10-22T01:22:56.734Z
+Updated: 2026-10-22T01:22:59.655Z
 Next ids: c5 D2 R1 S1
 
 ## Goal
@@ -41,3 +41,6 @@ Needs: D1.
 - Interphase files: docs/specs/spindle-run-lifecycle.decisions.md and .record.json in the spindle checkout
 - Probe replay: /var/folders/tz/b798spt96sjfyy924nf0cw4c0000gn/T/interphase-probe-_w7ed32t/plugins/spindle/tests/probe-lifecycle.test.ts
 - Glossary: GLOSSARY.md in the spindle checkout
+- Run home: ~/.mitosis/spindle/spindle-run-lifecycle (charter, run.zsh, rounds.md, review/, MSP assumptions)
+- Pipeline spec: ~/Documents/DevLabs/pipeline/docs/specs/pipeline-run-record.md (run record, clean.done, run.end status and draft, follow-up registration, brief msp line)
+- Logbook spec: ~/Documents/DevLabs/logbook/docs/specs/logbook-thread-follows.md (open_thread follows, Followed by on the parent)
