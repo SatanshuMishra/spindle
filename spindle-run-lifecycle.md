@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: parked
-Updated: 2026-10-22T02:03:59.315Z
+Updated: 2026-10-22T03:56:41.889Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Diagnose and fix why the spindle bar and panel vanish when pipeline clean-up run
 
 ## Where things stand
 
-Shipped: run-record-reader is pull request 21 (head 0bde27c, gate 12 of 12 again at ship) and lifecycle-table is pull request 22 (head 297ecfa), both into FEATURE branch fix/spindle-run-lifecycle, assigned and commented; waiting for the owner to merge. No security reviewer (read-only local file parsing). Causes proven: (a) poll.ts:43 drops the view once clean-up deletes the run home; (b) session.ts:39 keeps the shipped run when the follow-up makes no run home, and poll.ts:53 freezes a finished view. The pipeline and logbook specs are written in their repositories and need a session launched in each, logbook first.
+Integration: pull requests 21 (run-record-reader) and 22 (lifecycle-table) are merged into FEATURE branch fix/spindle-run-lifecycle, and pipeline integration-ready reports it ready; lighthouse run 1 tests it against main. Causes proven: (a) poll.ts:43 drops the view once clean-up deletes the run home; (b) session.ts:39 keeps the shipped run when the follow-up makes no run home, and poll.ts:53 freezes a finished view. The pipeline and logbook specs are written in their repositories and need a session launched in each, logbook first.
 
 ## Next step
 
