@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: parked
-Updated: 2026-10-22T04:01:25.103Z
+Updated: 2026-10-22T04:05:22.694Z
 Next ids: c6 D3 R2 S1
 
 ## Goal
@@ -17,7 +17,7 @@ Job 2 main part: mock up and build the band and run pane for every final lifecyc
 
 ## Where things stand
 
-Shipped: pull requests 23 (finish-facts) and 24 (finish-mockup) are open, ready for review, assigned to the owner, with their review comments, into feat/spindle-finish-states, which is a merge of Job 1's mitosis/run-record-reader and mitosis/lifecycle-table at 1666367. Both were green at round 2. The event data records no worker's MSP; the pipeline's msp: brief line, mitosis lane.start and lane.end, and a mitosis per-lane agent log are what must emit it. Unproven: the 5.11 screenshot comparison, a desktop smoke run, and a live CI run of the zsh install until pull request 24's checks finish.
+Integration done: pull requests 23 and 24 are merged into feat/spindle-finish-states, lighthouse run 1 is green against main (suite passes on both builds; every finish line passes 3 of 3; the pane, band, Past runs, Working and Done sections and 5.11 screenshots are unproven for want of a live paint), and the FEATURE pull request 26 (feat/spindle-finish-states into main) is open, assigned and bound; it carries Job 1's code, so pull request 25 merges first. CI passed on pull request 24, proving the zsh install. The event data records no worker's MSP; the pipeline's msp: brief line, mitosis lane.start and lane.end, and a mitosis per-lane agent log are what must emit it.
 
 ## Next step
 
