@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: active
-Updated: 2026-10-22T01:12:47.456Z
+Updated: 2026-10-22T01:22:56.734Z
 Next ids: c5 D2 R1 S1
 
 ## Goal
@@ -16,11 +16,11 @@ Diagnose and fix why the spindle bar and panel vanish when pipeline clean-up run
 
 ## Where things stand
 
-interphase:bug interview in progress (slug spindle-run-lifecycle): intent I1 to I4 and round 1 (Q1 to Q13) settled in the decisions file; glossary terms added; round 2 (Q14 to Q19: follow-up mechanism, final-status events, shape and order, unchanged behaviour, pre-mortem, out of scope) is out to the owner. Both symptoms reproduce in a probe replay: (a) the first poll after pipeline clean deletes the run home drops the view (poll.ts:43, deliberate since commit 94831ff); (b) spindle stays at stage ship when the old run home exists and the follow-up makes no new run home (session.ts:39), or freezes once a finished view stops polling (poll.ts:53). The event log and frozen report survive clean-up but spindle does not read them.
+First mitosis build running on FEATURE branch fix/spindle-run-lifecycle as two MSPs: lifecycle-table (built, suite green) and run-record-reader (run-record-reader and follow-up-run Steps, still building). Causes proven: (a) poll.ts:43 drops the view once clean-up deletes the run home; (b) session.ts:39 keeps the shipped run when the follow-up makes no run home, and poll.ts:53 freezes a finished view. The pipeline and logbook specs are written in their repositories and need a session launched in each, logbook first.
 
 ## Next step
 
-Cut the FEATURE branch with pipeline feature-branch, write the run home ~/.mitosis/spindle/spindle-run-lifecycle (CHARTER.md, worker-rules.txt, dispatch.zsh, run.zsh, items.json, graph.json), run --plan-only, then the first build.
+When the build exits, run Stage 3 review on both MSPs (code-reviewer and conformance-auditor, round 1), validate, fix, then ship with SHIP=1 after recording the ship decision.
 
 Needs: D1.
 
