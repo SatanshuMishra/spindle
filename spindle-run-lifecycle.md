@@ -1,7 +1,7 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: active
-Updated: 2026-10-22T02:00:35.954Z
-Next ids: c5 D2 R2 S1
+Updated: 2026-10-22T02:01:00.056Z
+Next ids: c5 D3 R2 S1
 
 ## Goal
 
@@ -27,6 +27,7 @@ Needs: D1.
 ## Decisions in force
 
 - D1 Interphase hand-off: spindle-run-lifecycle spec approved for build: Build as one MSP, run-lifecycle, on the FEATURE branch; the pipeline and logbook specs are written while it builds; Job 2 follows once its pull request opens.
+- D2 Ship: run-record-reader and lifecycle-table open as two ready pull requests into fix/spindle-run-lifecycle: Ship both MSPs now: SHIP=1 run.zsh --resume with --proven-head lifecycle-table=297ecfa91d474c73f30bffcbae111948a27e4e40 and run-record-reader=0213fcc92fcc7188a6b50fb7c3e1d6e2a011f0b0 (mitosis gates run-record-reader again because its head moved to 0bde27c), then open both pull requests ready for review.
 
 ## Open risks
 
