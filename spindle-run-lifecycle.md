@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: active
-Updated: 2026-10-22T02:01:00.056Z
+Updated: 2026-10-22T02:01:02.461Z
 Next ids: c5 D3 R2 S1
 
 ## Goal
@@ -20,9 +20,9 @@ Two MSPs on FEATURE branch fix/spindle-run-lifecycle. Both MSPs green at round 2
 
 ## Next step
 
-Record the ship decision, run pipeline comment and promote, run SHIP=1 run.zsh --resume, and open both MSP pull requests.
+Run SHIP=1 ~/.mitosis/spindle/spindle-run-lifecycle/run.zsh --resume with the two --proven-head values D2 names, then open both MSP pull requests with create_pull_request, assign them and post each saved comment.
 
-Needs: D1.
+Needs: D2.
 
 ## Decisions in force
 
