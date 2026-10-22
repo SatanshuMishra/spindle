@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: active
-Updated: 2026-10-22T03:39:05.886Z
+Updated: 2026-10-22T03:39:18.820Z
 Next ids: c6 D3 R2 S1
 
 ## Goal
@@ -17,7 +17,7 @@ Job 2 main part: mock up and build the band and run pane for every final lifecyc
 
 ## Where things stand
 
-FEATURE branch feat/spindle-finish-states is pushed at 1666367, a merge of mitosis/run-record-reader and mitosis/lifecycle-table, because Job 1's FEATURE branch holds none of their code until pull requests 21 and 22 merge; the run home's feature.json records it and pipeline feature-branch adopted it. The spec is handed off (7 Steps, 11 criteria, 5.11 screenshots unproven, review issues fixed). The event data records no worker's MSP; the pipeline's msp: brief line, mitosis lane.start and lane.end, and a mitosis per-lane agent log are what must emit it. Both MSPs are built and gated (finish-facts on mitosis/finish-facts, finish-mockup on mitosis/finish-mockup); both conformance audits found nothing (5.1 to 5.10 met, 5.11 unproven). Both MSPs are green at round 2: finish-facts at e156024 (suite 263 pass, no slow checks to rerun), with the glossary terms and ADR 0009 in d249ddb on top, and finish-mockup at f50fbdd, with advisory C1 (the staging guard now also requires re-staging a session it staged) fixed in 88c6617 (check.sh exit 0); S1 was rejected as unreachable. finish-facts' review comment is saved, and one withheld assumption (a selected MSP keeps its label-and-workers title) goes to the final report. finish-mockup's pull request must name .github/workflows/check.yml and scripts/check-staging-guard.sh under risk, as files no Step owned.
+FEATURE branch feat/spindle-finish-states is pushed at 1666367, a merge of mitosis/run-record-reader and mitosis/lifecycle-table, because Job 1's FEATURE branch holds none of their code until pull requests 21 and 22 merge; the run home's feature.json records it and pipeline feature-branch adopted it. The spec is handed off (7 Steps, 11 criteria, 5.11 screenshots unproven, review issues fixed). The event data records no worker's MSP; the pipeline's msp: brief line, mitosis lane.start and lane.end, and a mitosis per-lane agent log are what must emit it. Both MSPs are built and gated (finish-facts on mitosis/finish-facts, finish-mockup on mitosis/finish-mockup); both conformance audits found nothing (5.1 to 5.10 met, 5.11 unproven). Both MSPs are green at round 2: finish-facts at e156024 (suite 263 pass, no slow checks to rerun), with the glossary terms and ADR 0009 in d249ddb on top, and finish-mockup at f50fbdd, with advisory C1 (the staging guard now also requires re-staging a session it staged) fixed in 88c6617 (check.sh exit 0); S1 was rejected as unreachable. Both review comments are saved, pipeline promote added the do-not-flag kind stale test expectation, the ship run is gating and pushing both MSPs, and one withheld assumption (a selected MSP keeps its label-and-workers title) goes to the final report. finish-mockup's pull request must name .github/workflows/check.yml and scripts/check-staging-guard.sh under risk, as files no Step owned.
 
 ## Next step
 
