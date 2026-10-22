@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: active
-Updated: 2026-10-22T01:39:34.828Z
+Updated: 2026-10-22T01:39:36.875Z
 Next ids: c5 D2 R2 S1
 
 ## Goal
@@ -20,7 +20,7 @@ Two MSPs on FEATURE branch fix/spindle-run-lifecycle. lifecycle-table: round 1 b
 
 ## Next step
 
-When the four round 1 reviewers return, collect each MSP's findings, run pipeline candidates, the validator, record and verdict, fix what is confirmed, then ship with SHIP=1 after recording the ship decision.
+When run-record-reader's validator returns, record its verdict, diagnose and fix what is confirmed, and run round 2 on it; once both MSPs are green, ship with SHIP=1 after recording the ship decision.
 
 Needs: D1.
 
