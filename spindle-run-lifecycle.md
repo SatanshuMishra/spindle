@@ -1,6 +1,6 @@
 # spindle-run-lifecycle: Spindle keeps a run through clean-up and follows a follow-up fix
 Status: active
-Updated: 2026-10-22T00:47:30.935Z
+Updated: 2026-10-22T00:50:15.292Z
 Next ids: c5 D1 R1 S1
 
 ## Goal
@@ -16,7 +16,7 @@ Diagnose and fix why the spindle bar and panel vanish when pipeline clean-up run
 
 ## Where things stand
 
-interphase:bug interview in progress (slug spindle-run-lifecycle): intent I1 to I4 approved and recorded; frontier round 1 (Q1 to Q13: record shape, follow-up rule, ledger link, ledger statuses, table home, seams, and Job 2's past runs, celebration, worker ownership, mock-up home, screenshots) is out to the owner. Both symptoms reproduce in a probe replay: (a) the first poll after pipeline clean deletes the run home drops the view (poll.ts:43, deliberate since commit 94831ff); (b) spindle stays at stage ship when the old run home exists and the follow-up makes no new run home (session.ts:39), or freezes once a finished view stops polling (poll.ts:53). The event log and frozen report survive clean-up but spindle does not read them.
+interphase:bug interview in progress (slug spindle-run-lifecycle): intent I1 to I4 and round 1 (Q1 to Q13) settled in the decisions file; glossary terms added; round 2 (Q14 to Q19: follow-up mechanism, final-status events, shape and order, unchanged behaviour, pre-mortem, out of scope) is out to the owner. Both symptoms reproduce in a probe replay: (a) the first poll after pipeline clean deletes the run home drops the view (poll.ts:43, deliberate since commit 94831ff); (b) spindle stays at stage ship when the old run home exists and the follow-up makes no new run home (session.ts:39), or freezes once a finished view stops polling (poll.ts:53). The event log and frozen report survive clean-up but spindle does not read them.
 
 ## Next step
 
