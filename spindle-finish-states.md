@@ -1,6 +1,6 @@
 # spindle-finish-states: Spindle finish screens for every final run state, past runs and Working now by MSP
 Status: active
-Updated: 2026-10-22T02:31:02.057Z
+Updated: 2026-10-22T03:03:59.833Z
 Next ids: c6 D2 R2 S1
 
 ## Goal
@@ -17,11 +17,11 @@ Job 2 main part: mock up and build the band and run pane for every final lifecyc
 
 ## Where things stand
 
-FEATURE branch feat/spindle-finish-states is pushed at 1666367, a merge of mitosis/run-record-reader and mitosis/lifecycle-table, because Job 1's FEATURE branch holds none of their code until pull requests 21 and 22 merge; the run home's feature.json records it and pipeline feature-branch adopted it. The spec is handed off (7 Steps, 11 criteria, 5.11 screenshots unproven, review issues fixed). The event data records no worker's MSP; the pipeline's msp: brief line, mitosis lane.start and lane.end, and a mitosis per-lane agent log are what must emit it. The first build wrote nothing because the claude CLI login had expired; the owner signed in again and run.zsh --resume is building (build-2.log).
+FEATURE branch feat/spindle-finish-states is pushed at 1666367, a merge of mitosis/run-record-reader and mitosis/lifecycle-table, because Job 1's FEATURE branch holds none of their code until pull requests 21 and 22 merge; the run home's feature.json records it and pipeline feature-branch adopted it. The spec is handed off (7 Steps, 11 criteria, 5.11 screenshots unproven, review issues fixed). The event data records no worker's MSP; the pipeline's msp: brief line, mitosis lane.start and lane.end, and a mitosis per-lane agent log are what must emit it. Both MSPs are committed and gated: finish-facts (mitosis/finish-facts, 46 of 46 acceptance tests) and finish-mockup (mitosis/finish-mockup, 1 of 1); the finish-facts suite has one failure, pane.test.tsx "a second press clears the filter", which expects the untagged role lines criterion 5.7 changed. Round 1 review is running: code reviewer and conformance auditor on both MSPs, security reviewer on finish-mockup for the staging script's rm -rf.
 
 ## Next step
 
-When the resumed build ends, read its JSON result, then review each committed MSP from round 1.
+Collect the round 1 reviewers' arrays into review/round-1/<msp>.findings.json with the suite finding, then run candidates, the validator, record and verdict for each MSP.
 
 Needs: D1, R1.
 
